@@ -219,3 +219,10 @@ def test_asp_subsidy_covers_only_the_loan_up_to_the_cap(simple_scenario):
 def test_no_asp_subsidy_below_the_threshold_rate(simple_scenario):
     mortgage = simple_scenario.buy.mortgage.model_copy(update={"asp_loan": True})
     assert _buy_paid(_with_buy(simple_scenario, mortgage=mortgage)) == _buy_paid(simple_scenario)
+
+
+def test_loan_repayment_is_reported_separately(simple_scenario):
+    # Equal principal: 180 000 € over 10 years = 1 500 € of principal a month, 18 000 € a year.
+    result = simulate(simple_scenario)
+    assert result.years[0].loan_repaid == pytest.approx(18_000)
+    assert result.years[1].loan_repaid == pytest.approx(36_000)

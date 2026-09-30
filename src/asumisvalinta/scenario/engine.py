@@ -165,6 +165,10 @@ def simulate(scenario: ScenarioInput) -> ScenarioResult:
             year=year,
             wealth={option: track.wealth_by_year[year] for option, track in tracks.items()},
             total_paid={option: track.paid_by_year[year] for option, track in tracks.items()},
+            loan_repaid=mortgage_principal
+            - mortgage.balance[year * 12 - 1]
+            + buy.housing_company_loan_share
+            - company_loan.balance[year * 12 - 1],
         )
         for year in range(1, MAX_YEARS + 1)
     )

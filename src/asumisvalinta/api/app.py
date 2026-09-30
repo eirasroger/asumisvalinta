@@ -286,6 +286,10 @@ def planner_start(
     return {
         "scenario": defaults.scenario.model_dump(),
         "sources": defaults.sources,
+        "rent_growth": {
+            "market": defaults.rent_growth_market,
+            "lease_clause": defaults.rent_growth_lease_clause,
+        },
         "market": {
             "postal_code": postal_code,
             "postal_area_name": level["postal_area_name"],
@@ -386,13 +390,20 @@ def planner_run(scenario: ScenarioInput) -> dict[str, Any]:
 
 
 def _monthly_costs(result: ScenarioResult) -> list[dict[str, Any]]:
-    """Average monthly housing cost of each option in each year of the horizon."""
+    """Average monthly housing cost of each option in each year of the horizon.
+
+    `buy_repayment` is the part of the buyer's cost that repays loan principal.
+    """
     paid = {option.option: option.upfront_payment for option in result.options}
+    repaid = 0.0
     rows = []
     for point in result.years[: result.horizon_years]:
         costs = {option: (total - paid[option]) / 12 for option, total in point.total_paid.items()}
-        rows.append({"year": point.year, **costs})
+        rows.append(
+            {"year": point.year, **costs, "buy_repayment": (point.loan_repaid - repaid) / 12}
+        )
         paid = dict(point.total_paid)
+        repaid = point.loan_repaid
     return rows
 
 

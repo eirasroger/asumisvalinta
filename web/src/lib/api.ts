@@ -121,6 +121,7 @@ export interface Range {
 export interface PlannerStart {
   scenario: ScenarioInput;
   sources: Record<string, string>;
+  rent_growth: { market: number; lease_clause: number };
   market: {
     postal_code: string;
     postal_area_name: string;
@@ -179,7 +180,7 @@ export interface WhatIf {
 
 export interface PlannerRun {
   result: ScenarioResult;
-  monthly_costs: ({ year: number } & Partial<Record<Option, number>>)[];
+  monthly_costs: ({ year: number; buy_repayment: number } & Partial<Record<Option, number>>)[];
   what_ifs: WhatIf[];
 }
 

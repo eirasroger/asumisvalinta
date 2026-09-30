@@ -31,6 +31,13 @@ export function AssumptionInputs({ start, assumptions, onChange, price }: Props)
   const savingsRate = assumptions.parked_cash_return ?? base.investment.parked_cash_return;
   const taxRate = formatPercent(policy.capital_income_tax_rate, 0);
   const percent = { suffix: "%", scale: 100, digits: 1, min: -0.5, max: 0.5 };
+  const rentGrowth = assumptions.rent_growth ?? base.rent.rent_growth;
+  const near = (a: number, b: number) => Math.abs(a - b) < 0.00005;
+  const rentRule = near(rentGrowth, start.rent_growth.market)
+    ? "market"
+    : near(rentGrowth, start.rent_growth.lease_clause)
+      ? "lease"
+      : "custom";
 
   return (
     <>
@@ -52,17 +59,13 @@ export function AssumptionInputs({ start, assumptions, onChange, price }: Props)
 
       <Sheet open={open} onOpenChange={setOpen} title="Assumptions">
         <div className="space-y-8">
-          <Group title="Money you do not spend on housing">
-            <p className="text-[13px] leading-relaxed text-ink-3">
-              Each option starts with the same savings and the same monthly budget. Whatever an option does not spend
-              on housing goes here.
-            </p>
-            <div className="mt-3 grid gap-2">
+          <Group title="Money not spent on housing">
+            <div className="grid gap-2">
               <Choice
                 selected={strategy === "park"}
                 onSelect={() => set("surplus_strategy")("park")}
                 title="Savings account"
-                detail={`${taxRate} of the interest is withheld every year.`}
+                detail={`${taxRate} tax on interest each year`}
               >
                 <NumberField label="Savings interest" className="w-28" value={savingsRate} onChange={set("parked_cash_return")} {...percent} digits={2} />
               </Choice>
@@ -70,22 +73,21 @@ export function AssumptionInputs({ start, assumptions, onChange, price }: Props)
                 selected={strategy === "invest"}
                 onSelect={() => set("surplus_strategy")("invest")}
                 title="Index funds"
-                detail={`${taxRate} tax on the gain when you sell at the end.`}
+                detail={`${taxRate} tax on gains when sold`}
               >
                 <NumberField label="Expected return" className="w-28" value={investmentReturn} onChange={set("investment_return")} {...percent} />
               </Choice>
             </div>
-            <p className="mt-2 text-xs text-ink-3">Savings interest: {sources.savings_rate}.</p>
           </Group>
 
           <Group title="Mortgage">
-            <Setting label="Down payment" about={`Your own money towards the price: ${formatEuro(price * downPayment)}. The rest is borrowed.`}>
+            <Setting label="Down payment" about={`${formatEuro(price * downPayment)} of your own money.`}>
               <NumberField label="Down payment" value={downPayment} onChange={set("down_payment_share")} suffix="%" scale={100} digits={1} min={0} max={1} />
             </Setting>
-            <Setting label="Interest rate" about={`The rate today. Default: ${sources.mortgage_rate}.`}>
+            <Setting label="Interest rate" about={sources.mortgage_rate}>
               <NumberField label="Interest rate" value={startRate} onChange={set("start_rate")} suffix="%" scale={100} digits={2} min={-0.05} max={0.3} />
             </Setting>
-            <Setting label="Rate type" about="A variable rate changes with market rates. A fixed rate stays the same for the years you choose, then turns variable.">
+            <Setting label="Rate type" about="A fixed rate turns variable after the fixed period.">
               <Segmented
                 label="Rate type"
                 size="sm"
@@ -99,7 +101,7 @@ export function AssumptionInputs({ start, assumptions, onChange, price }: Props)
             </Setting>
             {rateType === "fixed" && (
               <>
-                <Setting label="Fixed rate" about="The rate during the fixed period.">
+                <Setting label="Fixed rate" about="Rate during the fixed period.">
                   <NumberField
                     label="Fixed rate"
                     value={assumptions.fixed_rate ?? mortgage.fixed_rate ?? startRate}
@@ -111,7 +113,7 @@ export function AssumptionInputs({ start, assumptions, onChange, price }: Props)
                     max={0.3}
                   />
                 </Setting>
-                <Setting label="Fixed for" about="How long the fixed rate lasts.">
+                <Setting label="Fixed for" about="Length of the fixed period.">
                   <NumberField
                     label="Fixed for"
                     value={assumptions.fixed_years ?? mortgage.fixed_years ?? 5}
@@ -123,7 +125,7 @@ export function AssumptionInputs({ start, assumptions, onChange, price }: Props)
                 </Setting>
               </>
             )}
-            <Setting label="Rate outlook" about="Whether the variable rate stays where it is, rises or falls each year.">
+            <Setting label="Rate outlook" about="How the variable rate moves each year.">
               <Segmented
                 label="Rate outlook"
                 size="sm"
@@ -137,7 +139,7 @@ export function AssumptionInputs({ start, assumptions, onChange, price }: Props)
               />
             </Setting>
             {rateKind !== "flat" && (
-              <Setting label="Change per year" about="Percentage points added or taken off the rate each year.">
+              <Setting label="Change per year" about="Percentage points a year.">
                 <NumberField
                   label="Change per year"
                   value={assumptions.change_per_year ?? (mortgage.rate_path.change_per_year || 0.0025)}
@@ -150,7 +152,7 @@ export function AssumptionInputs({ start, assumptions, onChange, price }: Props)
                 />
               </Setting>
             )}
-            <Setting label="Loan term" about="Years to repay the mortgage.">
+            <Setting label="Loan term" about="Years to repay.">
               <NumberField
                 label="Loan term"
                 value={assumptions.term_years ?? mortgage.term_years}
@@ -160,7 +162,7 @@ export function AssumptionInputs({ start, assumptions, onChange, price }: Props)
                 max={40}
               />
             </Setting>
-            <Setting label="Repayment" about="Annuity: the same payment every month. Equal principal: higher payments first, falling over time.">
+            <Setting label="Repayment" about="Annuity keeps the payment level. Equal principal starts higher and falls.">
               <Segmented
                 label="Repayment"
                 size="sm"
@@ -177,31 +179,61 @@ export function AssumptionInputs({ start, assumptions, onChange, price }: Props)
           <Group title="First home">
             <Setting
               label="ASP loan"
-              about={`For first-time buyers who saved ${formatPercent(policy.asp_min_savings_share, 0)} of the price in an ASP account. For ${policy.asp_interest_subsidy_max_years} years the state pays ${formatPercent(policy.asp_interest_subsidy_share, 0)} of the interest above ${formatPercent(policy.asp_interest_subsidy_threshold_rate, 1)} on up to ${formatEuro(policy.asp_loan_max)} of the loan. The first-home transfer tax exemption ended on 1 January 2024.`}
+              about={`First home with ${formatPercent(policy.asp_min_savings_share, 0)} saved in an ASP account: the state pays ${formatPercent(policy.asp_interest_subsidy_share, 0)} of interest above ${formatPercent(policy.asp_interest_subsidy_threshold_rate, 1)} for ${policy.asp_interest_subsidy_max_years} years, on up to ${formatEuro(policy.asp_loan_max)}.`}
             >
               <Switch label="ASP loan" checked={assumptions.asp_loan ?? false} onChange={set("asp_loan")} />
             </Setting>
           </Group>
 
           <Group title="Growth per year">
-            <Setting label="Flat prices" about={`Default: ${sources.price_growth.toLowerCase()} in this area.`}>
+            <Setting label="Flat prices" about={`${sources.price_growth} in this area.`}>
               <NumberField label="Flat price growth" value={assumptions.price_growth ?? base.buy.price_growth} onChange={set("price_growth")} {...percent} />
             </Setting>
-            <Setting label="Rents" about={`Default: ${sources.rent_growth}.`}>
-              <NumberField label="Rent growth" value={assumptions.rent_growth ?? base.rent.rent_growth} onChange={set("rent_growth")} {...percent} />
-            </Setting>
-            <Setting label="Charges" about="Maintenance, renovation and right-of-occupancy charges. Default: housing company charges over the last 10 years.">
+            <div className="py-2.5">
+              <div className="grid grid-cols-[1fr_auto] items-center gap-3">
+                <InfoLabel label="Rents">
+                  <p className="leading-relaxed">
+                    Market trend: {sources.rent_growth.toLowerCase()}. Lease clause: {sources.rent_growth_lease_clause}.
+                  </p>
+                </InfoLabel>
+                <div className="flex min-w-40 justify-end">
+                  <NumberField label="Rent growth" value={rentGrowth} onChange={set("rent_growth")} {...percent} />
+                </div>
+              </div>
+              <Segmented
+                label="Rent growth rule"
+                size="sm"
+                className="mt-2 w-full"
+                value={rentRule}
+                onChange={(rule) =>
+                  set("rent_growth")(rule === "lease" ? start.rent_growth.lease_clause : start.rent_growth.market)
+                }
+                options={[
+                  { value: "market", label: `Market trend ${formatPercent(start.rent_growth.market)}` },
+                  { value: "lease", label: `Lease clause ${formatPercent(start.rent_growth.lease_clause)}` },
+                ]}
+              />
+            </div>
+            <Setting label="Housing company charges" about={`${sources.maintenance_charge_growth}.`}>
               <NumberField
-                label="Charge growth"
+                label="Housing company charge growth"
                 value={assumptions.charge_growth ?? base.buy.maintenance_charge_growth}
                 onChange={set("charge_growth")}
+                {...percent}
+              />
+            </Setting>
+            <Setting label="Right-of-occupancy charges" about={`${sources.aso_charge_growth}.`}>
+              <NumberField
+                label="Right-of-occupancy charge growth"
+                value={assumptions.aso_charge_growth ?? base.aso?.charge_growth ?? 0}
+                onChange={set("aso_charge_growth")}
                 {...percent}
               />
             </Setting>
           </Group>
 
           <Group title="Selling">
-            <Setting label="Selling costs" about="Estate agent fee and other costs when you sell the flat at the end, as a share of the price.">
+            <Setting label="Selling costs" about="Agent fee when you sell.">
               <NumberField
                 label="Selling costs"
                 value={assumptions.selling_cost_rate ?? base.buy.selling_cost_rate}

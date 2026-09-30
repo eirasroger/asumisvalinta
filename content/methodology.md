@@ -24,6 +24,7 @@ Each option starts with the same amount of money and spends the same amount each
 | g_M | Annual growth of housing company charges |
 | F | Right-of-occupancy fee per m² |
 | K₀ | Right-of-occupancy monthly charge (käyttövastike) per m² today |
+| g_K | Annual growth of the right-of-occupancy charge |
 | g_I | Annual growth of the building cost index |
 | r | Annual interest rate or expected return on savings |
 
@@ -51,10 +52,12 @@ Every option starts with the same capital C₀ = max(U_buy, U_aso). Whatever an 
 Costs that grow do so once a year, at the start of each year:
 
 - Rent: R₀ × (1 + g_R)^y × A
-- Right of occupancy: K₀ × (1 + g_M)^y × A
+- Right of occupancy: K₀ × (1 + g_K)^y × A
 - Buying: mortgage payment + housing company loan payment + (M₀ + C_y + W / 12) × (1 + g_M)^y × A − ASP interest subsidy
 
 The monthly budget is the highest of these costs in that month. Each option saves (budget minus its own cost) at the end of the month.
+
+Part of the buyer's payment repays the loan and becomes equity in the flat. The app shows that repayment separately from the money spent on interest, charges and repairs.
 
 ### Renovation charges follow the age of the building
 
@@ -129,13 +132,14 @@ The what-if table reruns the whole calculation with one assumption changed: inte
 | Price per m² | Latest published average for the postal code and room group, or the nearest larger area with published data (price sub-area, municipality, region, country) |
 | Rent per m² | Latest free-market rent for new agreements in the rent sub-area, or the municipality, region or country |
 | Price growth | Compound annual growth of the price index over the last 10 years for the nearest area with an index |
-| Rent growth | Inflation over the last 10 years (consumer price index), at least 2 % a year, as in a common lease indexation clause |
-| Maintenance charge and charge growth | Housing company finances for Greater Helsinki or the rest of Finland, latest year and 10-year growth, scaled by construction period |
+| Rent growth | Growth of market rents in the rent area over the last 10 years. The alternative is a common lease clause: inflation over the last 10 years (consumer price index), at least 2 % a year |
+| Maintenance charge and its growth | Housing company finances for Greater Helsinki or the rest of Finland, latest year and 10-year growth, scaled by construction period |
 | Renovation charges | Housing company capital charges by construction period, following the building's age |
 | Repairs inside the flat | Owner-occupiers' contracted renovations per m², average of the last five years |
 | Interest rate | Latest average rate on new variable-rate housing loans in Finland (ECB statistics), held level |
 | Savings account rate | Latest average rate on new household deposits with a maturity of up to one year in Finland (ECB statistics) |
-| Right-of-occupancy fee and charge | Sampled right-of-occupancy buildings: each building's charge divided by the market rent per m² where it stands, and its fee divided by the market price per m² there. The medians of these ratios, from buildings of a similar age when there are enough, are applied to the rent and price of the chosen area. Charges follow housing company charge growth, as the law sets them to cover the building's costs |
+| Right-of-occupancy fee and charge | Sampled right-of-occupancy buildings: each building's charge divided by the market rent per m² where it stands, and its fee divided by the market price per m² there. The medians of these ratios, from buildings of a similar age when there are enough, are applied to the rent and price of the chosen area |
+| Right-of-occupancy charge growth | Average yearly change of right-of-occupancy charges in the whole country, 2019 to 2025, from the market reviews of Varke |
 | Building cost index growth | Growth of the building cost index over the last 10 years |
 | Selling costs, investment return, loan term, down payment | Assumptions in the `assumptions` table, all editable |
 
@@ -154,6 +158,7 @@ The what-if table reruns the whole calculation with one assumption changed: inte
 - Finnish Tax Administration (vero.fi): transfer tax, capital income tax, taxation of home sales, fund units and right-of-occupancy transfers.
 - Ministry of Finance (vm.fi): tax at source on deposit interest.
 - State Treasury (Valtiokonttori): the ASP scheme.
+- Varke (Housing Finance and Development Centre of Finland): market reviews of right-of-occupancy dwellings, 2019 to 2025.
 - Finlex: Act on right-of-occupancy dwellings 393/2021.
 - Financial Supervisory Authority (FIN-FSA): maximum loan-to-collateral ratio.
 - Asuntosäätiö: public listings of right-of-occupancy buildings, used as a sample for fees and charges.

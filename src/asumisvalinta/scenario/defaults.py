@@ -62,9 +62,13 @@ class AgeClass:
 
 @dataclass(frozen=True)
 class Defaults:
+    """Default scenario, where each value comes from, and the alternative rent growth rule."""
+
     scenario: ScenarioInput
     sources: dict[str, str]
     aso_sample: AsoSample
+    rent_growth_market: float
+    rent_growth_lease_clause: float
 
 
 class DefaultsError(LookupError):
@@ -152,12 +156,13 @@ def load_defaults(
             maintenance_charge,
             charge_area,
             price_growth,
+            market_rent_growth,
         ) = one(
             """
             select municipality_code, price_per_m2, price_geography_level, price_period_label,
                 rent_per_m2, rent_geography_level, rent_period_label,
                 maintenance_charge_per_m2, maintenance_charge_area_code,
-                coalesce(price_cagr_10y, price_cagr_5y)
+                coalesce(price_cagr_10y, price_cagr_5y), coalesce(rent_cagr_10y, rent_cagr_5y)
             from marts.mart_market_levels
             where postal_code = ? and room_type = ?
             """,
@@ -279,6 +284,16 @@ def load_defaults(
         if not offers:
             raise DefaultsError("No right-of-occupancy sample")
 
+        aso_changes = [
+            row[0]
+            for row in connection.execute(
+                "select annual_change_pct / 100 from seeds.aso_charge_changes order by year"
+            ).fetchall()
+        ]
+        aso_change_years = connection.execute(
+            "select min(year), max(year) from seeds.aso_charge_changes"
+        ).fetchone()
+
         asp_major_city = (
             connection.execute(
                 "select count(*) from seeds.asp_major_cities where municipality_code = ?",
@@ -300,7 +315,8 @@ def load_defaults(
     maintenance_growth = _cagr(charge_start, charge_end, GROWTH_YEARS)
     index_growth = _cagr(index_start, index_end, GROWTH_YEARS)
     inflation = _cagr(cpi_start, cpi_end, GROWTH_YEARS)
-    rent_growth = max(assumptions["rent_growth_floor"], inflation)
+    lease_clause_growth = max(assumptions["rent_growth_floor"], inflation)
+    aso_charge_growth = statistics.geometric_mean(1 + change for change in aso_changes) - 1
 
     age_note = "all building ages"
     if building_year is not None:
@@ -341,11 +357,11 @@ def load_defaults(
                 rate_path=RatePath(kind="flat", start_rate=variable_rate),
             ),
         ),
-        rent=RentInput(rent_per_m2_month=rent_per_m2, rent_growth=rent_growth),
+        rent=RentInput(rent_per_m2_month=rent_per_m2, rent_growth=market_rent_growth),
         aso=AsoInput(
             fee_per_m2=aso_sample.fee_per_m2[1],
             charge_per_m2_month=aso_sample.charge_per_m2[1],
-            charge_growth=maintenance_growth,
+            charge_growth=aso_charge_growth,
             building_cost_index_growth=index_growth,
         ),
         investment=InvestmentInput(
@@ -361,9 +377,10 @@ def load_defaults(
             f"Statistics Finland, non-subsidised, {rent_level} level, {rent_period}"
         ),
         "price_growth": f"Price index, average growth over {GROWTH_YEARS} years",
-        "rent_growth": (
-            f"Inflation {inflation:.1%} a year over {GROWTH_YEARS} years to {cpi_year} "
-            f"(consumer price index), at least {assumptions['rent_growth_floor']:.0%}"
+        "rent_growth": f"Market rents here, average growth over {GROWTH_YEARS} years",
+        "rent_growth_lease_clause": (
+            f"Inflation {inflation:.1%} a year over {GROWTH_YEARS} years to {cpi_year}, "
+            f"at least {assumptions['rent_growth_floor']:.0%}"
         ),
         "maintenance_charge": (
             f"Housing company finances, area {charge_area}, {charge_end_year}, {age_note}"
@@ -385,11 +402,20 @@ def load_defaults(
             f"{aso_sample.charge_to_rent:.0%} of the market rent and fees "
             f"{aso_sample.fee_to_price:.0%} of the price per m² where each building stands"
         ),
-        "aso_charge_growth": "Cost-based, equal to housing company charge growth",
+        "aso_charge_growth": (
+            f"Right-of-occupancy charges in Finland, average change "
+            f"{aso_change_years[0]} to {aso_change_years[1]} (Varke)"
+        ),
         "building_cost_index_growth": (
             f"Building cost index, {GROWTH_YEARS}-year growth to {index_month:%Y-%m}"
         ),
         "policy": f"Tax and lending rules valid on {purchase_date:%Y-%m-%d}",
         "assumptions": "Calculator assumptions (editable)",
     }
-    return Defaults(scenario=scenario, sources=sources, aso_sample=aso_sample)
+    return Defaults(
+        scenario=scenario,
+        sources=sources,
+        aso_sample=aso_sample,
+        rent_growth_market=market_rent_growth,
+        rent_growth_lease_clause=lease_clause_growth,
+    )

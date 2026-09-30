@@ -135,7 +135,12 @@ export function Outcome({ run, loading }: { run: PlannerRun; loading: boolean })
                     <Breakdown item={item} />
                   </Popover>
                 </td>
-                <td className="py-3 text-right max-sm:hidden">{formatEuro(firstYear[item.option] ?? 0)}</td>
+                <td className="py-3 text-right max-sm:hidden">
+                  {formatEuro((firstYear[item.option] ?? 0) - (item.option === "buy" ? (firstYear.buy_repayment ?? 0) : 0))}
+                  {item.option === "buy" && (firstYear.buy_repayment ?? 0) > 0 && (
+                    <span className="block text-[11px] text-ink-3">+{formatEuro(firstYear.buy_repayment ?? 0)} loan repayment</span>
+                  )}
+                </td>
                 <td className="py-3 pr-5 text-right">{formatEuro(item.upfront_payment)}</td>
               </tr>
             ))}
@@ -248,14 +253,20 @@ function WealthChart({ run }: { run: PlannerRun }) {
 function CostChart({ run }: { run: PlannerRun }) {
   const option = useMemo(() => {
     const { options } = ordered(run);
-    return {
-      ...baseLine(run.monthly_costs.map((row) => row.year)),
-      series: lineSeries(
-        options.map((item) => item.option),
-        (option) => run.monthly_costs.map((row) => row[option] ?? 0),
-        true,
-      ),
-    };
+    const spent = (option: Option, row: PlannerRun["monthly_costs"][number]) =>
+      (row[option] ?? 0) - (option === "buy" ? row.buy_repayment : 0);
+    const series = lineSeries(
+      options.map((item) => item.option),
+      (option) => run.monthly_costs.map((row) => spent(option, row)),
+      true,
+    );
+    series.push({
+      ...series[0],
+      name: "Buy with loan repayment",
+      data: run.monthly_costs.map((row) => row.buy ?? 0),
+      lineStyle: { width: 1.5, color: COLORS.buy, type: [5, 4] },
+    } as (typeof series)[number]);
+    return { ...baseLine(run.monthly_costs.map((row) => row.year)), series };
   }, [run]);
   return <EChart option={option} height={260} label="Average monthly housing cost of each option by year" />;
 }

@@ -4,6 +4,7 @@ import datetime as dt
 
 import pytest
 
+from asumisvalinta.config import connect_read_only
 from asumisvalinta.scenario import simulate
 from asumisvalinta.scenario.defaults import load_defaults
 from tests.warehouse import WAREHOUSE, requires_warehouse
@@ -39,9 +40,28 @@ def test_aso_defaults_follow_the_local_market(defaults):
     assert defaults.scenario.aso.fee_per_m2 == pytest.approx(sample.fee_to_price * 7167)
 
 
-def test_rent_grows_with_inflation_but_at_least_two_percent(defaults):
+def test_rent_grows_like_market_rents_here(defaults):
+    with connect_read_only(WAREHOUSE) as connection:
+        market = connection.execute(
+            "select rent_cagr_10y from marts.mart_market_levels "
+            "where postal_code = '00100' and room_type = 'two_room'"
+        ).fetchone()[0]
+    assert defaults.scenario.rent.rent_growth == pytest.approx(market)
+    assert defaults.rent_growth_market == pytest.approx(market)
+
+
+def test_lease_clause_follows_inflation_but_at_least_two_percent(defaults):
     # Consumer price index 2015 = 100.0, 2025 = 122.7: 1.227 ** 0.1 - 1 = 2.07 % a year.
-    assert defaults.scenario.rent.rent_growth == pytest.approx(1.227**0.1 - 1)
+    assert defaults.rent_growth_lease_clause == pytest.approx(1.227**0.1 - 1)
+
+
+def test_aso_charges_grow_like_the_varke_series(defaults):
+    # Whole-country changes 2019 to 2025: 0.6, 1.2, 0.6, 0.9, 3.8, 5.7 and 3.8 %.
+    changes = [0.006, 0.012, 0.006, 0.009, 0.038, 0.057, 0.038]
+    product = 1.0
+    for change in changes:
+        product *= 1 + change
+    assert defaults.scenario.aso.charge_growth == pytest.approx(product ** (1 / 7) - 1)
 
 
 def test_savings_default_to_a_deposit_account_at_the_ecb_rate(defaults):

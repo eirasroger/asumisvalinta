@@ -11,5 +11,6 @@ select
     rate_pct,
     obs_status
 from {{ source('ecb', 'mir_interest_rates') }}
-where rate_pct is not null
+where
+    rate_pct is not null
     and balance_sheet_item = 'A2C'

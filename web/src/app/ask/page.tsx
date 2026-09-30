@@ -51,10 +51,6 @@ export default function AskPage() {
     <div className="mx-auto max-w-3xl space-y-6 px-4 pt-10 pb-16 sm:px-6">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">Ask about the housing market</h1>
-        <p className="mt-1 text-sm text-ink-2">
-          An assistant answers with the governed metrics of this site and the scenario calculator. It reports only numbers
-          the tools return and tells you which data it used.
-        </p>
       </header>
 
       <form

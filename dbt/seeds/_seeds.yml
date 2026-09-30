@@ -103,3 +103,25 @@ seeds:
         data_tests: [unique, not_null]
       - name: source_url
         data_tests: [not_null]
+
+  - name: aso_charge_changes
+    description: >
+      Yearly change of the average right-of-occupancy charge (käyttövastike) in the whole country, from
+      the yearly market reviews of right-of-occupancy dwellings by Varke (formerly ARA).
+    config:
+      column_types:
+        year: integer
+        annual_change_pct: double
+        retrieved_on: date
+    columns:
+      - name: year
+        data_tests: [unique, not_null]
+      - name: annual_change_pct
+        data_tests:
+          - not_null
+          - value_between:
+              arguments:
+                min_value: -10
+                max_value: 20
+      - name: source_url
+        data_tests: [not_null]

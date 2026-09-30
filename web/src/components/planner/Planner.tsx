@@ -8,7 +8,7 @@ import { Outcome } from "@/components/planner/Outcome";
 import { YourNumbers } from "@/components/planner/YourNumbers";
 import { PostalCodeSearch } from "@/components/PostalCodeSearch";
 import { Hint, NumberField, Popover, Segmented, Slider } from "@/components/ui";
-import { api, type PlannerRun, type PlannerStart, ROOM_NOTE, ROOM_TYPES } from "@/lib/api";
+import { ApiError, api, type PlannerRun, type PlannerStart, ROOM_NOTE, ROOM_TYPES } from "@/lib/api";
 import {
   type Assumptions,
   buildScenario,
@@ -37,6 +37,7 @@ export function Planner() {
   const [run, setRun] = useState<PlannerRun | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
+  const [refresh, setRefresh] = useState(0);
 
   const update = (patch: Partial<Flat>) => setFlat((current) => ({ ...current, ...patch }));
 
@@ -58,7 +59,7 @@ export function Planner() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [flat.postal_code, flat.room_type, flat.size_m2, flat.building_year]);
+  }, [flat.postal_code, flat.room_type, flat.size_m2, flat.building_year, refresh]);
 
   useEffect(() => {
     const timer = setTimeout(() => router.replace(`/compare?${flatToParams(flat)}`, { scroll: false }), 400);
@@ -82,14 +83,19 @@ export function Planner() {
           setRun(next);
           setRunError(null);
         })
-        .catch((error) => !isAbort(error) && setRunError(error.message))
+        .catch((error) => {
+          if (isAbort(error)) return;
+          // Defaults loaded before an update of the service no longer match it: load them again once.
+          if (error instanceof ApiError && error.status === 422 && refresh === 0) setRefresh(1);
+          else setRunError(error.message);
+        })
         .finally(() => !controller.signal.aborted && setRunning(false));
     }, 120);
     return () => {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [scenario]);
+  }, [scenario, refresh]);
 
   const area = start?.market;
 

@@ -1,5 +1,7 @@
 with deposits as (
-    select month_start_date, rate_pct
+    select
+        month_start_date,
+        rate_pct
     from {{ ref('stg_ecb__deposit_rates') }}
 ),
 
