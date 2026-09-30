@@ -141,7 +141,7 @@ class Agent:
 def semantic_agent(model: ChatModel, warehouse: Path | None = None) -> Agent:
     warehouse = warehouse or duckdb_path()
     tools = [
-        *semantic_tools(SemanticLayer(warehouse=warehouse)),
+        *semantic_tools(SemanticLayer(warehouse=warehouse), warehouse),
         *scenario_tools(warehouse),
         answer_tool(),
     ]

@@ -27,6 +27,45 @@ class MetricInfo:
     description: str
 
 
+OPERATORS = ("=", "!=", ">", ">=", "<", "<=", "in")
+TIME_PREFIX = "metric_time__"
+
+
+@dataclass(frozen=True)
+class Filter:
+    """A condition on an entity (postal_area), a dimension (entity__name) or a time grain
+    (metric_time__quarter), rendered into MetricFlow's filter syntax."""
+
+    field: str
+    operator: str
+    value: str | float | list[str]
+
+    def to_where(self) -> str:
+        if self.operator not in OPERATORS:
+            raise ValueError(f"Unknown operator {self.operator}; use one of {', '.join(OPERATORS)}")
+        if self.field.startswith(TIME_PREFIX):
+            grain = self.field.removeprefix(TIME_PREFIX)
+            target = f"{{{{ TimeDimension('metric_time', '{grain}') }}}}"
+        elif "__" in self.field:
+            target = f"{{{{ Dimension('{self.field}') }}}}"
+        else:
+            target = f"{{{{ Entity('{self.field}') }}}}"
+        if self.operator == "in":
+            values = self.value if isinstance(self.value, list) else [self.value]
+            return f"{target} in ({', '.join(_literal(v) for v in values)})"
+        if isinstance(self.value, list):
+            raise ValueError(f"Operator {self.operator} takes a single value")
+        return f"{target} {self.operator} {_literal(self.value)}"
+
+
+def _literal(value: str | float) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, int | float):
+        return str(value)
+    return "'" + str(value).replace("'", "''") + "'"
+
+
 @dataclass(frozen=True)
 class MetricQuery:
     metrics: tuple[str, ...]
@@ -34,6 +73,11 @@ class MetricQuery:
     where: tuple[str, ...] = ()
     order_by: tuple[str, ...] = ()
     limit: int | None = None
+    filters: tuple[Filter, ...] = ()
+
+    @property
+    def where_constraints(self) -> list[str]:
+        return [*self.where, *(condition.to_where() for condition in self.filters)]
 
 
 @dataclass(frozen=True)
@@ -89,12 +133,19 @@ class SemanticLayer:
         }
         return sorted(names)
 
+    def dimension_values(self, metric_names: list[str], dimension: str) -> list[str]:
+        """Distinct values of a dimension or time grain for the given metrics."""
+        self._check_metrics(metric_names)
+        return self._engine.get_dimension_values(
+            metric_names=list(metric_names), get_group_by_values=dimension
+        )
+
     def query(self, query: MetricQuery) -> MetricResult:
         self._check_metrics(query.metrics)
         request = MetricFlowQueryRequest.create(
             metric_names=list(query.metrics),
             group_by_names=list(query.group_by) or None,
-            where_constraints=list(query.where) or None,
+            where_constraints=query.where_constraints or None,
             order_by_names=list(query.order_by) or None,
             limit=query.limit,
         )

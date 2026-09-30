@@ -11,6 +11,7 @@ from asumisvalinta.agent.llm import ChatResponse, ToolCall
 from asumisvalinta.agent.tools import ToolError, answer_tool, sql_tools
 from asumisvalinta.evaluation.golden import GoldenQuestion, Tolerance, load_golden_set
 from asumisvalinta.evaluation.grading import grade, summarise
+from asumisvalinta.semantic import Filter
 from tests.warehouse import WAREHOUSE, requires_warehouse
 
 
@@ -127,10 +128,10 @@ class TestWithWarehouse:
     pytestmark = requires_warehouse
 
     def test_semantic_agent_answers_through_metricflow(self):
-        where = [
-            "{{ Entity('postal_area') }} = '00100'",
-            "{{ Dimension('dwelling_price__building_type') }} = 'block_of_flats'",
-            "{{ TimeDimension('metric_time', 'quarter') }} = '2025-10-01'",
+        filters = [
+            {"field": "postal_area", "operator": "=", "value": "00100"},
+            {"field": "dwelling_price__building_type", "operator": "=", "value": "block_of_flats"},
+            {"field": "metric_time__quarter", "operator": "=", "value": "2025-10-01"},
         ]
         model = ScriptedModel(
             [
@@ -140,7 +141,7 @@ class TestWithWarehouse:
                     {
                         "metrics": ["avg_price_per_m2"],
                         "group_by": ["metric_time__quarter"],
-                        "where": where,
+                        "filters": filters,
                     },
                 ),
                 submit(value=7341.55),
@@ -193,3 +194,60 @@ class TestWithWarehouse:
         result = json.loads(run.tool_calls[0].result)
         assert set(result["options"]) == {"buy", "rent", "aso"}
         assert result["inputs"]["interest_rate"] == 0.05
+
+
+def test_filters_render_metricflow_syntax():
+    assert Filter("postal_area", "=", "00100").to_where() == "{{ Entity('postal_area') }} = '00100'"
+    assert (
+        Filter("dwelling_price__building_type", "!=", "all").to_where()
+        == "{{ Dimension('dwelling_price__building_type') }} != 'all'"
+    )
+    assert (
+        Filter("metric_time__quarter", ">=", "2025-01-01").to_where()
+        == "{{ TimeDimension('metric_time', 'quarter') }} >= '2025-01-01'"
+    )
+    assert (
+        Filter("room_type", "in", ["one_room", "two_room"]).to_where()
+        == "{{ Entity('room_type') }} in ('one_room', 'two_room')"
+    )
+    assert Filter("area", "=", "x' or '1'='1").to_where() == (
+        "{{ Entity('area') }} = 'x'' or ''1''=''1'"
+    )
+    with pytest.raises(ValueError):
+        Filter("area", "like", "x").to_where()
+
+
+@pytest.fixture(scope="module")
+def tools():
+    agent = semantic_agent(ScriptedModel([]), WAREHOUSE)
+    return {tool.name: tool.handler for tool in agent.tools}
+
+
+class TestLookupsWithWarehouse:
+    pytestmark = requires_warehouse
+
+    def test_dimension_values_list_the_building_types(self, tools):
+        values = tools["list_dimension_values"](
+            metrics=["avg_price_per_m2"], dimension="dwelling_price__building_type"
+        )
+        assert values == ["all", "block_of_flats", "terraced_house"]
+
+    def test_search_areas_finds_helsinki(self, tools):
+        result = tools["search_areas"](text="Helsinki")
+        keys = {area["area"] for area in result["areas"]}
+        assert {"price_area:091", "rent_area:091", "rent_area:091_1"} <= keys
+        assert any(area["postal_area"] == "00100" for area in result["postal_areas"])
+
+    def test_empty_result_comes_with_a_hint(self, tools):
+        result = tools["query_metrics"](
+            metrics=["avg_price_per_m2"],
+            filters=[
+                {"field": "postal_area", "operator": "=", "value": "00100"},
+                {"field": "dwelling_price__building_type", "operator": "=", "value": "blocks"},
+            ],
+        )
+        assert "note" in result
+
+    def test_room_type_values_are_listed_without_a_query(self, tools):
+        values = tools["list_dimension_values"](metrics=["avg_price_per_m2"], dimension="room_type")
+        assert values == ["one_room", "two_room", "three_room_plus", "all"]
