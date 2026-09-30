@@ -48,21 +48,17 @@ export default function AskPage() {
   }
 
   return (
-    <div className="max-w-3xl space-y-6">
-      <section className="space-y-2">
-        <h1 className="text-3xl font-semibold">Ask about the housing market</h1>
-        <p className="text-ink-secondary">
-          An assistant answers with the governed metrics of this site and the scenario calculator. It
-          reports only numbers the tools return and tells you which data it used.
+    <div className="mx-auto max-w-3xl space-y-6 px-4 pt-10 pb-16 sm:px-6">
+      <header>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">Ask about the housing market</h1>
+        <p className="mt-1 text-sm text-ink-2">
+          An assistant answers with the governed metrics of this site and the scenario calculator. It reports only numbers
+          the tools return and tells you which data it used.
         </p>
-        <p className="rounded-md border border-border bg-surface p-3 text-sm text-ink-secondary">
-          Your question is sent to OpenAI to be answered. Do not include personal information. The
-          number of questions per session and per day is limited.
-        </p>
-      </section>
+      </header>
 
       <form
-        className="space-y-3"
+        className="overflow-hidden rounded-xl border border-line bg-paper focus-within:border-line-strong"
         onSubmit={(event) => {
           event.preventDefault();
           if (question.trim().length >= 3) submit(question.trim());
@@ -71,52 +67,66 @@ export default function AskPage() {
         <textarea
           value={question}
           onChange={(event) => setQuestion(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey && question.trim().length >= 3) {
+              event.preventDefault();
+              submit(question.trim());
+            }
+          }}
           maxLength={500}
           rows={3}
+          aria-label="Your question"
           placeholder="For example: what is the average rent per m² for one-room flats in Oulu?"
-          className="w-full rounded-md border border-border bg-surface p-3 text-sm"
+          className="block w-full resize-none bg-transparent px-5 pt-4 pb-2 text-[15px] outline-none placeholder:text-ink-3"
         />
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="submit"
-            disabled={loading}
-            className="rounded-md bg-accent px-5 py-2 text-sm font-medium text-white disabled:opacity-60"
-          >
+        <div className="flex flex-wrap items-center gap-3 px-4 pb-4">
+          <p className="mr-auto pl-1 text-xs text-ink-3">
+            Sent to OpenAI to be answered. Leave out personal information.
+            {answer ? ` ${answer.remaining_questions} questions left in this session.` : ""}
+          </p>
+          <button type="submit" disabled={loading || question.trim().length < 3} className="h-9 rounded-lg bg-ink px-4 text-sm font-medium text-paper transition-opacity hover:opacity-90 disabled:opacity-40">
             {loading ? "Thinking…" : "Ask"}
           </button>
-          {answer && (
-            <span className="text-xs text-ink-muted">{answer.remaining_questions} questions left in this session</span>
-          )}
         </div>
       </form>
 
-      <div className="space-y-1">
-        <p className="text-sm text-ink-secondary">Examples</p>
-        <ul className="space-y-1">
+      {!answer && !loading && (
+        <div className="grid gap-2 sm:grid-cols-2">
           {EXAMPLES.map((example) => (
-            <li key={example}>
-              <button type="button" className="text-left text-sm underline" onClick={() => setQuestion(example)}>
-                {example}
-              </button>
-            </li>
+            <button
+              key={example}
+              type="button"
+              className="rounded-xl border border-line bg-paper px-4 py-3 text-left text-sm text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
+              onClick={() => setQuestion(example)}
+            >
+              {example}
+            </button>
           ))}
-        </ul>
-      </div>
+        </div>
+      )}
 
-      {error && <p className="text-sm text-critical">{error}</p>}
+      {loading && (
+        <div className="relative h-24 overflow-hidden rounded-xl border border-line bg-paper">
+          <div className="busy absolute inset-x-0 top-0 h-0.5 overflow-hidden" />
+        </div>
+      )}
 
-      {answer && (
-        <article className="space-y-3 rounded-lg border border-border bg-surface p-4">
-          <p className="text-xs uppercase tracking-wide text-ink-muted">{STATUS_LABELS[answer.status]}</p>
-          <p className="whitespace-pre-line">{answer.answer}</p>
-          {answer.sources && (
-            <p className="text-sm text-ink-secondary">
-              <span className="font-medium text-ink">Based on: </span>
-              {answer.sources}
-            </p>
-          )}
-          {answer.tools_used.length > 0 && (
-            <p className="text-xs text-ink-muted">Tools used: {answer.tools_used.join(", ")}</p>
+      {error && <p className="rounded-xl border border-line bg-paper p-4 text-sm text-bad">{error}</p>}
+
+      {answer && !loading && (
+        <article className="space-y-4 rounded-xl border border-line bg-paper p-5">
+          <p className="text-[13px] font-medium text-ink-3">{STATUS_LABELS[answer.status]}</p>
+          <p className="text-[15px] leading-relaxed whitespace-pre-line">{answer.answer}</p>
+          {(answer.sources || answer.tools_used.length > 0) && (
+            <div className="space-y-1 border-t border-line pt-3 text-xs text-ink-3">
+              {answer.sources && (
+                <p>
+                  <span className="font-medium text-ink-2">Based on </span>
+                  {answer.sources}
+                </p>
+              )}
+              {answer.tools_used.length > 0 && <p>Tools: {answer.tools_used.join(", ")}</p>}
+            </div>
           )}
         </article>
       )}

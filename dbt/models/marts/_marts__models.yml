@@ -745,6 +745,18 @@ models:
         description: Compound annual growth of non-subsidised rents over the last 10 years, chained across both series.
       - name: rent_growth_area_code
         description: Area whose rent index the growth rates come from.
+      - name: price_per_m2_lower_quartile
+        description: Lower quartile of the price per m² in the price sub-area or municipality (large cities only).
+      - name: price_per_m2_median
+        description: Median price per m² in the price sub-area or municipality (large cities only).
+      - name: price_per_m2_upper_quartile
+        description: Upper quartile of the price per m² in the price sub-area or municipality (large cities only).
+      - name: rent_lower_quartile
+        description: Lower quartile of the total monthly rent in the rent sub-area or municipality (large cities only).
+      - name: rent_median
+        description: Median total monthly rent in the rent sub-area or municipality (large cities only).
+      - name: rent_upper_quartile
+        description: Upper quartile of the total monthly rent in the rent sub-area or municipality (large cities only).
     metrics:
       - name: current_price_per_m2
         label: Current price per m² (€)
@@ -781,3 +793,31 @@ models:
         type: simple
         agg: sum
         expr: rent_per_m2 * 12
+
+  - name: fct_price_distribution
+    description: >
+      Quartiles of the price per m² of old dwellings by price area, building type, room type and
+      quarter: half of the sales fall between the lower and the upper quartile.
+    columns:
+      - name: price_distribution_key
+        data_tests: [unique, not_null]
+      - name: price_per_m2_median
+        data_tests:
+          - value_between:
+              arguments:
+                min_value: 100
+                max_value: 30000
+
+  - name: fct_rent_distribution
+    description: >
+      Quartiles of total monthly rents of non-subsidised rental dwellings in the large cities by rent
+      area, room type and quarter: half of the agreements fall between the lower and upper quartile.
+    columns:
+      - name: rent_distribution_key
+        data_tests: [unique, not_null]
+      - name: rent_median
+        data_tests:
+          - value_between:
+              arguments:
+                min_value: 100
+                max_value: 10000

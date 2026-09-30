@@ -1,60 +1,35 @@
 import type { Metadata } from "next";
+import { Schibsted_Grotesk } from "next/font/google";
 import Link from "next/link";
+import { Footer } from "@/components/Footer";
+import { Nav } from "@/components/Nav";
 import "./globals.css";
+
+const schibsted = Schibsted_Grotesk({ subsets: ["latin"], variable: "--font-schibsted", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Asumisvalinta",
-  description:
-    "Rent, right of occupancy or buy a flat in Finland? Compare the options with official data.",
+  description: "Compare renting, right of occupancy and buying a flat in Finland with your own numbers.",
 };
-
-const links = [
-  { href: "/", label: "Compare" },
-  { href: "/market", label: "Market" },
-  { href: "/ask", label: "Ask" },
-  { href: "/methodology", label: "Methodology" },
-];
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen antialiased">
-        <header className="border-b border-border bg-surface">
-          <nav className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-4">
-            <Link href="/" className="mr-auto text-lg font-semibold">
-              Asumisvalinta
+    <html lang="en" className={schibsted.variable}>
+      <body className="min-h-dvh antialiased">
+        <header className="sticky top-0 z-40 border-b border-line bg-paper">
+          <div className="flex h-14 items-center gap-6 px-4 sm:gap-8 sm:px-6">
+            <Link href="/" className="flex items-center gap-2 text-[17px] font-semibold tracking-tight">
+              <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M3 17V8.5L10 3l7 5.5V17" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinejoin="round" />
+                <path d="M7.5 17v-5h5v5" fill="var(--series-buy)" />
+              </svg>
+              <span className="max-sm:sr-only">Asumisvalinta</span>
             </Link>
-            {links.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-sm text-ink-secondary hover:text-ink"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-        </header>
-        <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
-        <footer className="border-t border-border">
-          <div className="mx-auto max-w-6xl space-y-1 px-4 py-6 text-xs text-ink-muted">
-            <p>
-              Estimates for comparing options under stated assumptions. This is not financial
-              advice.
-            </p>
-            <p>
-              Source: Statistics Finland (licence CC BY 4.0), ECB statistics, Finnish Tax
-              Administration, Finlex, Financial Supervisory Authority and Asuntosäätiö listings.{" "}
-              <Link href="/methodology" className="underline">
-                Methodology and sources
-              </Link>
-              {" · "}
-              <a href="/data-docs/index.html" className="underline">
-                Data model documentation
-              </a>
-            </p>
+            <Nav />
           </div>
-        </footer>
+        </header>
+        {children}
+        <Footer />
       </body>
     </html>
   );

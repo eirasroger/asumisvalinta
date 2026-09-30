@@ -204,6 +204,39 @@ TABLES: tuple[PxTable, ...] = (
         },
         contents={"asyta-arvo": "value_cents_per_m2_month"},
     ),
+    PxTable(
+        name="price_distribution_area_quarterly",
+        database="StatFin",
+        subject="ashi",
+        table_file="15iv.px",
+        time_dimension="timeperiod_q",
+        content_dimension="contentscode",
+        dimensions={"timeperiod_q": "period", **_AREA_PRICE_DIMS},
+        contents={
+            "ashivq_neliohinta_alakvartiili": "price_per_m2_lower_quartile",
+            "ashivq_neliohinta_mediaani": "price_per_m2_median",
+            "ashivq_neliohinta_ylakvartiili": "price_per_m2_upper_quartile",
+        },
+    ),
+    PxTable(
+        name="rent_distribution_area_quarterly",
+        database="StatFin",
+        subject="asvu",
+        table_file="15fc.px",
+        time_dimension="timeperiod_q",
+        content_dimension="contentscode",
+        dimensions={
+            "timeperiod_q": "period",
+            "huoneluku_5_20260101": "room_type",
+            "alue_44_20260101": "rent_area",
+        },
+        contents={
+            "asvu_jakauma_lkm": "observation_count",
+            "asvu_q1": "rent_lower_quartile",
+            "asvu_mediaani": "rent_median",
+            "asvu_q3": "rent_upper_quartile",
+        },
+    ),
 )
 
 

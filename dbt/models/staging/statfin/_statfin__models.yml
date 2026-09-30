@@ -86,3 +86,17 @@ models:
       - unique_combination:
           arguments:
             columns: [period_start_date, finance_area_code, building_type, account_item_code]
+
+  - name: stg_statfin__price_distribution
+    description: Quartiles of the price per m² of old dwellings by price area, room type and quarter.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [period_start_date, area_code, building_type, room_type]
+
+  - name: stg_statfin__rent_distribution
+    description: Quartiles of total monthly rents of non-subsidised dwellings by rent area, room type and quarter.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [period_start_date, area_code, room_type]

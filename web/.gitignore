@@ -46,3 +46,5 @@ CLAUDE.md
 
 # dbt docs downloaded at build time
 /public/data-docs
+/public/geo
+/public/maplibre

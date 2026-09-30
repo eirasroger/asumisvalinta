@@ -49,6 +49,8 @@ TABLES: dict[str, str] = {
     ),
     "raw_statfin.rents_area_quarterly_2015": f"{_area_filter('rent_area')} and period >= '2014Q1'",
     "raw_statfin.rents_area_quarterly": _area_filter("rent_area"),
+    "raw_statfin.price_distribution_area_quarterly": _area_filter("price_area"),
+    "raw_statfin.rent_distribution_area_quarterly": _area_filter("rent_area"),
     "raw_statfin.building_cost_index_monthly": "period >= '2015M01'",
     "raw_statfin.housing_company_finances_yearly": "account_item = 'k3001'",
     "raw_statfin.housing_company_finances_yearly_2009": (

@@ -22,12 +22,43 @@ from asumisvalinta.scenario.models import (
 from asumisvalinta.scenario.policy import PolicyRow, resolve_policy
 
 GROWTH_YEARS = 10
+SIMILAR_AGE_YEARS = 10
+MIN_SAMPLE = 3
+
+
+@dataclass(frozen=True)
+class AsoSample:
+    """Sampled right-of-occupancy buildings used as the benchmark for fees and charges."""
+
+    scope: str
+    buildings: int
+    fee_per_m2: tuple[float, float, float]
+    charge_per_m2: tuple[float, float, float]
 
 
 @dataclass(frozen=True)
 class Defaults:
     scenario: ScenarioInput
     sources: dict[str, str]
+    aso_sample: AsoSample
+
+
+def _quartiles(values: list[float]) -> tuple[float, float, float]:
+    """Lower quartile, median and upper quartile."""
+    if len(values) == 1:
+        return (values[0], values[0], values[0])
+    lower, median, upper = statistics.quantiles(values, n=4, method="inclusive")
+    return (lower, median, upper)
+
+
+def _aso_sample(
+    offers: list[tuple[str, float, float, int]], building_year: int | None
+) -> tuple[list[tuple[str, float, float, int]], str]:
+    if building_year is not None:
+        similar = [o for o in offers if abs(o[3] - building_year) <= SIMILAR_AGE_YEARS]
+        if len(similar) >= MIN_SAMPLE:
+            return similar, f"built within {SIMILAR_AGE_YEARS} years of {building_year}"
+    return offers, "all building ages"
 
 
 class DefaultsError(LookupError):
@@ -47,6 +78,7 @@ def load_defaults(
     first_home: bool = False,
     buyer_age: int | None = None,
     warehouse: Path | None = None,
+    building_year: int | None = None,
 ) -> Defaults:
     purchase_date = purchase_date or dt.date.today()
     with connect_read_only(warehouse) as connection:
@@ -124,20 +156,20 @@ def load_defaults(
             """
         )
 
+        offer_columns = (
+            "offers.municipality, offers.right_of_occupancy_fee_avg_eur_per_m2, "
+            "offers.monthly_charge_eur_per_m2, offers.building_year"
+        )
         offers = connection.execute(
-            """
-            select municipality, right_of_occupancy_fee_avg_eur_per_m2, monthly_charge_eur_per_m2
-            from seeds.aso_offers as offers
-            inner join marts.dim_postal_area as postal on offers.postal_code = postal.postal_code
-            where postal.municipality_code = ?
-            """,
+            f"select {offer_columns} from seeds.aso_offers as offers "
+            "inner join marts.dim_postal_area as postal on offers.postal_code = postal.postal_code "
+            "where postal.municipality_code = ?",
             [municipality_code],
         ).fetchall()
-        aso_scope = "municipality"
-        if not offers:
+        aso_scope = offers[0][0] if offers else ""
+        if len(offers) < MIN_SAMPLE:
             offers = connection.execute(
-                "select municipality, right_of_occupancy_fee_avg_eur_per_m2, "
-                "monthly_charge_eur_per_m2 from seeds.aso_offers"
+                f"select {offer_columns} from seeds.aso_offers as offers"
             ).fetchall()
             aso_scope = "all sampled cities"
 
@@ -154,8 +186,15 @@ def load_defaults(
     policy = resolve_policy(policy_rows, purchase_date, first_home, buyer_age)
     maintenance_growth = _cagr(charge_start, charge_end, GROWTH_YEARS)
     index_growth = _cagr(index_start, index_end, GROWTH_YEARS)
-    fee_per_m2 = statistics.median(offer[1] for offer in offers)
-    aso_charge = statistics.median(offer[2] for offer in offers)
+    sample, age_scope = _aso_sample(offers, building_year)
+    aso_sample = AsoSample(
+        scope=f"{aso_scope}, {age_scope}",
+        buildings=len(sample),
+        fee_per_m2=_quartiles([offer[1] for offer in sample]),
+        charge_per_m2=_quartiles([offer[2] for offer in sample]),
+    )
+    fee_per_m2 = aso_sample.fee_per_m2[1]
+    aso_charge = aso_sample.charge_per_m2[1]
 
     scenario = ScenarioInput(
         size_m2=size_m2,
@@ -196,11 +235,13 @@ def load_defaults(
         "maintenance_charge": f"Housing company finances, area {charge_area}, {charge_end_year}",
         "maintenance_charge_growth": f"Housing company finances, {GROWTH_YEARS}-year growth",
         "mortgage_rate": f"ECB, variable rate on new housing loans in Finland, {rate_month:%Y-%m}",
-        "aso_fee_and_charge": f"Median of sampled Asuntosäätiö buildings ({aso_scope})",
+        "aso_fee_and_charge": (
+            f"Median of {aso_sample.buildings} sampled Asuntosäätiö buildings ({aso_sample.scope})"
+        ),
         "aso_charge_growth": "Assumed equal to maintenance charge growth",
         "building_cost_index_growth": f"Building cost index, {GROWTH_YEARS}-year growth "
         f"to {index_month:%Y-%m}",
         "policy": f"Tax and lending rules valid on {purchase_date:%Y-%m-%d}",
         "assumptions": "Calculator assumptions (editable)",
     }
-    return Defaults(scenario=scenario, sources=sources)
+    return Defaults(scenario=scenario, sources=sources, aso_sample=aso_sample)

@@ -7,23 +7,32 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "prebuild": "node scripts/fetch-dbt-docs.mjs"
+    "predev": "node scripts/copy-map-worker.mjs",
+    "prebuild": "node scripts/copy-map-worker.mjs && node scripts/fetch-release-assets.mjs",
+    "build:map": "node scripts/build-postal-map.mjs"
   },
   "dependencies": {
+    "@number-flow/react": "^0.6.2",
+    "echarts": "^6.1.0",
+    "maplibre-gl": "^6.11.2",
     "next": "16.3.7",
+    "radix-ui": "^1.6.7",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-markdown": "^10.1.0",
-    "recharts": "^3.10.1",
-    "remark-gfm": "^4.0.1"
+    "remark-gfm": "^4.0.1",
+    "topojson-client": "^3.1.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/topojson-client": "^3.1.5",
+    "@types/topojson-specification": "^1.0.5",
     "eslint": "^9",
     "eslint-config-next": "16.3.7",
+    "mapshaper": "^0.7.70",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

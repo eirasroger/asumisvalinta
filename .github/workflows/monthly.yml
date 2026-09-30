@@ -65,6 +65,18 @@ jobs:
           cp dbt/target/manifest.json dist/dbt-docs-manifest.json
           cp dbt/target/catalog.json dist/dbt-docs-catalog.json
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build postal code area map
+        working-directory: web
+        run: |
+          npm ci
+          npm run build:map -- ../dist/postal-areas.topo.json
+
       - name: Publish release
         run: |
           tag="data-$(date -u +%Y-%m-%d)"
@@ -75,9 +87,9 @@ jobs:
             dist/raw-parquet.zip \
             dist/dbt-docs-index.html \
             dist/dbt-docs-manifest.json \
-            dist/dbt-docs-catalog.json \
+            dist/dbt-docs-catalog.json             dist/postal-areas.topo.json \
             --title "Data $(date -u +%Y-%m-%d)" \
-            --notes "Warehouse built by the monthly refresh. Sources: Statistics Finland (CC BY 4.0), ECB statistics." \
+            --notes "Warehouse built by the monthly refresh. Sources: Statistics Finland (CC BY 4.0, including Paavo postal code areas), ECB statistics." \
             --latest
 
       - name: Redeploy the website

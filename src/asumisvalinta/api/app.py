@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 from asumisvalinta.agent import LLMSettings, OpenAIChatModel, semantic_agent
 from asumisvalinta.api.limits import LimitReached, QuestionLimits
 from asumisvalinta.config import connect_read_only, duckdb_path, load_dotenv
-from asumisvalinta.scenario import simulate
+from asumisvalinta.scenario import ScenarioInput, ScenarioResult, simulate
 from asumisvalinta.scenario.defaults import load_defaults
 from asumisvalinta.scenario.overrides import ScenarioOverrides, apply_overrides
 from asumisvalinta.semantic import Filter, MetricQuery, SemanticLayer
@@ -247,3 +247,160 @@ def ask(request: AskRequest) -> dict[str, Any]:
         "tools_used": [call.tool for call in run.tool_calls if call.tool != "submit_answer"],
         "remaining_questions": limits.remaining(request.session_id),
     }
+
+
+def _range(q1: float | None, median: float | None, q3: float | None, **context: Any) -> Any:
+    if median is None:
+        return None
+    return {"lower_quartile": q1, "median": median, "upper_quartile": q3, **context}
+
+
+@app.get("/api/planner/start")
+def planner_start(
+    postal_code: Annotated[str, Query(pattern=POSTAL_CODE)],
+    room_type: RoomType,
+    size_m2: Annotated[float, Query(gt=0, le=500)],
+    horizon_years: Annotated[int, Query(ge=1, le=30)] = 5,
+    building_year: Annotated[int | None, Query(ge=1800, le=2035)] = None,
+) -> dict[str, Any]:
+    """Default inputs for a flat and the market benchmarks for each of them."""
+    try:
+        defaults = load_defaults(
+            postal_code,
+            room_type,
+            size_m2,
+            horizon_years,
+            warehouse=warehouse(),
+            building_year=building_year,
+        )
+    except LookupError as error:
+        raise HTTPException(404, str(error)) from error
+    level = _rows(
+        "select levels.*, postal.postal_area_name, postal.municipality_name "
+        "from marts.mart_market_levels as levels "
+        "inner join marts.dim_postal_area as postal on levels.postal_code = postal.postal_code "
+        "where levels.postal_code = ? and levels.room_type = ?",
+        [postal_code, room_type],
+    )[0]
+    aso = defaults.aso_sample
+    return {
+        "scenario": defaults.scenario.model_dump(),
+        "sources": defaults.sources,
+        "market": {
+            "postal_code": postal_code,
+            "postal_area_name": level["postal_area_name"],
+            "municipality_name": level["municipality_name"],
+            "price": {
+                "per_m2": level["price_per_m2"],
+                "level": level["price_geography_level"],
+                "period": level["price_period_label"],
+                "preliminary": level["price_is_preliminary"],
+                "range_per_m2": _range(
+                    level["price_per_m2_lower_quartile"],
+                    level["price_per_m2_median"],
+                    level["price_per_m2_upper_quartile"],
+                    area=level["price_range_area_code"],
+                    period=level["price_range_period_label"],
+                ),
+            },
+            "rent": {
+                "per_m2": level["rent_per_m2"],
+                "level": level["rent_geography_level"],
+                "period": level["rent_period_label"],
+                "basis": level["rent_basis"],
+                "range_monthly": _range(
+                    level["rent_lower_quartile"],
+                    level["rent_median"],
+                    level["rent_upper_quartile"],
+                    area=level["rent_range_area_code"],
+                    period=level["rent_range_period_label"],
+                ),
+            },
+            "maintenance_charge_per_m2": level["maintenance_charge_per_m2"],
+            "aso": {
+                "scope": aso.scope,
+                "buildings": aso.buildings,
+                "fee_per_m2": _range(*aso.fee_per_m2),
+                "charge_per_m2": _range(*aso.charge_per_m2),
+            },
+        },
+    }
+
+
+WHAT_IFS: dict[str, str] = {
+    "rates_up": "Interest rates 1 point higher",
+    "prices_flat": "Flat prices do not grow",
+    "rents_faster": "Rents grow 2 points faster",
+    "returns_lower": "Investment returns 2 points lower",
+}
+
+
+def _variant(scenario: ScenarioInput, key: str) -> ScenarioInput:
+    data = scenario.model_dump()
+    if key == "rates_up":
+        data["buy"]["mortgage"]["rate_path"]["start_rate"] += 0.01
+        custom = data["buy"]["mortgage"]["rate_path"].get("custom_rates") or ()
+        data["buy"]["mortgage"]["rate_path"]["custom_rates"] = [rate + 0.01 for rate in custom]
+        if data["buy"]["mortgage"].get("fixed_rate") is not None:
+            data["buy"]["mortgage"]["fixed_rate"] += 0.01
+    elif key == "prices_flat":
+        data["buy"]["price_growth"] = 0.0
+    elif key == "rents_faster":
+        data["rent"]["rent_growth"] += 0.02
+    elif key == "returns_lower":
+        data["investment"]["investment_return"] -= 0.02
+        data["investment"]["parked_cash_return"] = min(
+            data["investment"]["parked_cash_return"], data["investment"]["investment_return"]
+        )
+    return ScenarioInput.model_validate(data)
+
+
+@app.post("/api/planner/run")
+def planner_run(scenario: ScenarioInput) -> dict[str, Any]:
+    """Run the scenario as given, plus what-if variants of it."""
+    try:
+        result = simulate(scenario)
+        what_ifs = []
+        for key, label in WHAT_IFS.items():
+            variant = simulate(_variant(scenario, key))
+            what_ifs.append(
+                {
+                    "key": key,
+                    "label": label,
+                    "end_wealth": {o.option: o.end_wealth for o in variant.options},
+                    "break_even_years_buy_vs_rent": variant.break_even_years_buy_vs_rent,
+                }
+            )
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+    return {
+        "result": result.model_dump(),
+        "monthly_costs": _monthly_costs(result),
+        "what_ifs": what_ifs,
+    }
+
+
+def _monthly_costs(result: ScenarioResult) -> list[dict[str, Any]]:
+    """Average monthly housing cost of each option in each year of the horizon."""
+    paid = {option.option: option.upfront_payment for option in result.options}
+    rows = []
+    for point in result.years[: result.horizon_years]:
+        costs = {option: (total - paid[option]) / 12 for option, total in point.total_paid.items()}
+        rows.append({"year": point.year, **costs})
+        paid = dict(point.total_paid)
+    return rows
+
+
+@app.get("/api/map/values")
+def map_values(room_type: RoomType = "two_room") -> list[dict[str, Any]]:
+    """Price, rent and price-to-rent ratio of every postal code, for the map."""
+    return _rows(
+        "select levels.postal_code, postal.postal_area_name, postal.municipality_code, "
+        "postal.municipality_name, levels.price_per_m2, levels.price_geography_level, "
+        "levels.rent_per_m2, levels.rent_geography_level, "
+        "levels.price_per_m2 / (levels.rent_per_m2 * 12) as price_to_rent_ratio "
+        "from marts.mart_market_levels as levels "
+        "inner join marts.dim_postal_area as postal on levels.postal_code = postal.postal_code "
+        "where levels.room_type = ?",
+        [room_type],
+    )

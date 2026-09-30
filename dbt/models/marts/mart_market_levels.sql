@@ -166,7 +166,18 @@ select
 
     rent_growth.cagr_5y as rent_cagr_5y,
     rent_growth.cagr_10y as rent_cagr_10y,
-    rent_growth.area_code as rent_growth_area_code
+    rent_growth.area_code as rent_growth_area_code,
+
+    ranges.price_range_area_code,
+    ranges.price_range_period_label,
+    ranges.price_per_m2_lower_quartile,
+    ranges.price_per_m2_median,
+    ranges.price_per_m2_upper_quartile,
+    ranges.rent_range_area_code,
+    ranges.rent_range_period_label,
+    ranges.rent_lower_quartile,
+    ranges.rent_median,
+    ranges.rent_upper_quartile
 from hierarchy
 cross join room_types
 cross join as_of
@@ -184,3 +195,7 @@ left join rent_growth
     on
         hierarchy.postal_code = rent_growth.postal_code
         and room_types.room_type = rent_growth.room_type
+left join {{ ref('int_market_distributions') }} as ranges
+    on
+        hierarchy.postal_code = ranges.postal_code
+        and room_types.room_type = ranges.room_type

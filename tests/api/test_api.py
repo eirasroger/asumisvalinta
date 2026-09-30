@@ -102,3 +102,67 @@ def test_question_limits():
     with pytest.raises(LimitReached):
         limits.take("c")
     assert limits.remaining("b") == 0
+
+
+def test_planner_start_returns_inputs_and_benchmarks(client):
+    body = client.get(
+        "/api/planner/start",
+        params={
+            "postal_code": "00100",
+            "room_type": "two_room",
+            "size_m2": 55,
+            "building_year": 1995,
+        },
+    ).json()
+    market = body["market"]
+    assert body["scenario"]["size_m2"] == 55
+    assert market["price"]["per_m2"] == 7167
+    assert market["rent"]["range_monthly"]["area"] == "091_1"
+    assert (
+        market["rent"]["range_monthly"]["lower_quartile"]
+        <= market["rent"]["range_monthly"]["median"]
+    )
+    assert "1995" in market["aso"]["scope"]
+
+
+def test_planner_start_without_ranges_outside_large_cities(client):
+    body = client.get(
+        "/api/planner/start",
+        params={"postal_code": "99990", "room_type": "two_room", "size_m2": 55},
+    ).json()
+    assert body["market"]["rent"]["range_monthly"] is None
+
+
+def test_planner_run_returns_result_and_what_ifs(client):
+    start = client.get(
+        "/api/planner/start",
+        params={"postal_code": "00100", "room_type": "two_room", "size_m2": 55},
+    ).json()
+    body = client.post("/api/planner/run", json=start["scenario"]).json()
+    assert {o["option"] for o in body["result"]["options"]} == {"buy", "rent", "aso"}
+    keys = {w["key"] for w in body["what_ifs"]}
+    assert keys == {"rates_up", "prices_flat", "rents_faster", "returns_lower"}
+    base = {o["option"]: o["end_wealth"] for o in body["result"]["options"]}
+    rates_up = next(w for w in body["what_ifs"] if w["key"] == "rates_up")
+    assert rates_up["end_wealth"]["buy"] < base["buy"]
+    costs = body["monthly_costs"]
+    assert [row["year"] for row in costs] == list(range(1, start["scenario"]["horizon_years"] + 1))
+    rent = start["scenario"]["rent"]["rent_per_m2_month"] * start["scenario"]["size_m2"]
+    assert costs[0]["rent"] == pytest.approx(rent)
+
+
+def test_planner_run_rejects_invalid_inputs(client):
+    start = client.get(
+        "/api/planner/start",
+        params={"postal_code": "00100", "room_type": "two_room", "size_m2": 55},
+    ).json()
+    scenario = start["scenario"] | {"size_m2": -5}
+    assert client.post("/api/planner/run", json=scenario).status_code == 422
+
+
+def test_map_values_cover_every_postal_code(client):
+    rows = client.get("/api/map/values", params={"room_type": "two_room"}).json()
+    assert len(rows) == 3018
+    row = next(r for r in rows if r["postal_code"] == "00100")
+    assert row["price_to_rent_ratio"] == pytest.approx(7167 / (25.14 * 12))
+    assert row["municipality_name"] == "Helsinki"
