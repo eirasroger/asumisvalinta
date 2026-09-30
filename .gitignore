@@ -216,3 +216,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local working docs
+docs/
+CLAUDE.md
+
+# Local data
+data/
+.dlt/secrets.toml

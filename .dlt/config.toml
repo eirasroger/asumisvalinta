@@ -1,0 +1,2 @@
+[load]
+truncate_staging_dataset = true
