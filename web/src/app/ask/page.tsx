@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { type AskResponse, api } from "@/lib/api";
 
@@ -77,7 +78,10 @@ export default function AskPage() {
         />
         <div className="flex flex-wrap items-center gap-3 px-4 pb-4">
           <p className="mr-auto pl-1 text-xs text-ink-3">
-            Leave out personal information.
+            Leave out personal information.{" "}
+            <Link href="/privacy" className="underline decoration-line-strong underline-offset-2 hover:text-ink">
+              Privacy
+            </Link>
             {answer ? ` ${answer.remaining_questions} questions left in this session.` : ""}
           </p>
           <button type="submit" disabled={loading || question.trim().length < 3} className="h-9 rounded-lg bg-ink px-4 text-sm font-medium text-paper transition-opacity hover:opacity-90 disabled:opacity-40">

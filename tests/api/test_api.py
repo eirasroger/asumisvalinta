@@ -149,7 +149,6 @@ def test_planner_run_returns_result_and_what_ifs(client):
     assert [row["year"] for row in costs] == list(range(1, start["scenario"]["horizon_years"] + 1))
     rent = start["scenario"]["rent"]["rent_per_m2_month"] * start["scenario"]["size_m2"]
     assert costs[0]["rent"] == pytest.approx(rent)
-    assert 0 < costs[0]["buy_repayment"] < costs[0]["buy"]
 
 
 def test_planner_run_rejects_invalid_inputs(client):

@@ -153,13 +153,9 @@ class OptionResult(_Model):
 
 
 class YearPoint(_Model):
-    """End of one year. `loan_repaid` is the buyer's loan principal repaid so far, which is
-    part of `total_paid` but builds equity."""
-
     year: int
     wealth: dict[Option, float]
     total_paid: dict[Option, float]
-    loan_repaid: float = 0.0
 
 
 class ScenarioResult(_Model):

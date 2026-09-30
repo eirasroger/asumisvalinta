@@ -16,6 +16,9 @@ export function Footer({ dataDocs }: { dataDocs: boolean }) {
           <Link href="/methodology" className="hover:text-ink">
             Methodology
           </Link>
+          <Link href="/privacy" className="hover:text-ink">
+            Privacy
+          </Link>
           {dataDocs && (
             <a href="/data-docs/index.html" className="hover:text-ink">
               Data model

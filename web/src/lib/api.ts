@@ -1,3 +1,5 @@
+import { trackingAllowed } from "@/lib/analytics";
+
 export type RoomType = "one_room" | "two_room" | "three_room_plus";
 export type Option = "buy" | "rent" | "aso";
 
@@ -180,7 +182,7 @@ export interface WhatIf {
 
 export interface PlannerRun {
   result: ScenarioResult;
-  monthly_costs: ({ year: number; buy_repayment: number } & Partial<Record<Option, number>>)[];
+  monthly_costs: ({ year: number } & Partial<Record<Option, number>>)[];
   what_ifs: WhatIf[];
 }
 
@@ -269,6 +271,6 @@ export const api = {
   ask: (question: string, sessionId: string) =>
     request<AskResponse>("/api/ask", {
       method: "POST",
-      body: JSON.stringify({ question, session_id: sessionId }),
+      body: JSON.stringify({ question, session_id: sessionId, record: trackingAllowed() }),
     }),
 };

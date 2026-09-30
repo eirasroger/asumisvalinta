@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AssumptionInputs } from "@/components/planner/AssumptionInputs";
 import { Outcome } from "@/components/planner/Outcome";
 import { YourNumbers } from "@/components/planner/YourNumbers";
 import { PostalCodeSearch } from "@/components/PostalCodeSearch";
+import { track } from "@/lib/analytics";
 import { Hint, NumberField, Popover, Segmented, Slider } from "@/components/ui";
 import { ApiError, api, type PlannerRun, type PlannerStart, ROOM_NOTE, ROOM_TYPES } from "@/lib/api";
 import {
@@ -37,6 +38,7 @@ export function Planner() {
   const [run, setRun] = useState<PlannerRun | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
+  const lastTracked = useRef("");
   const [refresh, setRefresh] = useState(0);
 
   const update = (patch: Partial<Flat>) => setFlat((current) => ({ ...current, ...patch }));
@@ -97,6 +99,39 @@ export function Planner() {
     };
   }, [scenario, refresh]);
 
+  useEffect(() => {
+    if (!run) return;
+    const wealth = Object.fromEntries(run.result.options.map((item) => [item.option, Math.round(item.end_wealth)]));
+    const best = [...run.result.options].sort((a, b) => b.end_wealth - a.end_wealth)[0].option;
+    const ownNumbers = Object.fromEntries(
+      Object.entries(offer).filter((entry): entry is [string, number] => entry[1] !== null),
+    );
+    const changed = Object.fromEntries(
+      Object.entries(assumptions).filter(
+        (entry): entry is [string, number | string | boolean] => entry[1] !== undefined,
+      ),
+    );
+    const event = {
+      type: "scenario" as const,
+      postal_code: flat.postal_code,
+      room_type: flat.room_type,
+      size_m2: flat.size_m2,
+      building_year: flat.building_year,
+      horizon_years: flat.horizon_years,
+      own_numbers: ownNumbers,
+      assumptions: changed,
+      best_option: best,
+      end_wealth: wealth,
+    };
+    const key = JSON.stringify(event);
+    if (key === lastTracked.current) return;
+    const timer = setTimeout(() => {
+      lastTracked.current = key;
+      track(event);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [run, flat, offer, assumptions]);
+
   const area = start?.market;
 
   return (
@@ -117,7 +152,13 @@ export function Planner() {
               </button>
             }
           >
-            <PostalCodeSearch autoFocus onChange={(next) => update({ postal_code: next.postal_code })} />
+            <PostalCodeSearch
+              autoFocus
+              onChange={(next) => {
+                update({ postal_code: next.postal_code });
+                track({ type: "area", postal_code: next.postal_code, room_type: flat.room_type, source: "compare" });
+              }}
+            />
             <Link
               href={`/?postal=${flat.postal_code}&rooms=${flat.room_type}`}
               className="mt-3 block text-center text-[13px] text-ink-2 hover:text-ink hover:underline"

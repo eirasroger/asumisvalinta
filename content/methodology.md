@@ -57,8 +57,6 @@ Costs that grow do so once a year, at the start of each year:
 
 The monthly budget is the highest of these costs in that month. Each option saves (budget minus its own cost) at the end of the month.
 
-Part of the buyer's payment repays the loan and becomes equity in the flat. The app shows that repayment separately from the money spent on interest, charges and repairs.
-
 ### Renovation charges follow the age of the building
 
 Housing companies charge owners for renovations such as pipes, facades and roofs. Statistics Finland publishes these capital charges per m² by construction period. A building that reaches age a in year y is charged what buildings of age a pay in the latest statistics year: a building from 1985 bought in 2026 pays the level of buildings from the early 1980s now, and the level of today's 1960s buildings twenty years later, when its pipes are due. Buildings from 2010 onwards mostly repay their construction loan through these charges, which the housing company loan share covers, so younger buildings pay the level of buildings from the 2000s. Without a construction year, the calculator uses the average of the periods before 2010.

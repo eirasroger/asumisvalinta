@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { EChart, INK_3, LINE } from "@/components/charts/EChart";
 import type { HoverInfo } from "@/components/map/AreaMap";
 import { PostalCodeSearch } from "@/components/PostalCodeSearch";
+import { track } from "@/lib/analytics";
 import { Segmented } from "@/components/ui";
 import { api, type Market, ROOM_TYPES, type RoomType, type SeriesPoint } from "@/lib/api";
 import { formatEuro, formatEuroCents, formatNumber } from "@/lib/format";
@@ -51,7 +52,8 @@ export function Explore() {
     [rows, scope, metric],
   );
 
-  function select(code: string | null) {
+  function select(code: string | null, source?: "map" | "search") {
+    if (code && source) track({ type: "area", postal_code: code, room_type: roomType, source, metric });
     setSelected(code);
     router.replace(code ? `/?postal=${code}&rooms=${roomType}` : "/", { scroll: false });
   }
@@ -64,14 +66,14 @@ export function Explore() {
         cuts={cuts}
         scope={scope}
         selected={selected}
-        onSelect={select}
+        onSelect={(code) => select(code, "map")}
         onHover={setHover}
         padding={{ right: selected ? PANEL + 16 : 0, bottom: 0 }}
       />
 
       <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex flex-col gap-2 sm:inset-x-4 sm:top-4 sm:w-[360px]">
         <div className="pointer-events-auto space-y-2.5 rounded-xl bg-paper p-2.5 shadow-float">
-          <PostalCodeSearch onChange={(area) => select(area.postal_code)} />
+          <PostalCodeSearch onChange={(area) => select(area.postal_code, "search")} />
           <Segmented
             label="Colour areas by"
             size="sm"

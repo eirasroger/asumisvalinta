@@ -1,0 +1,143 @@
+import os
+
+import psycopg
+import pytest
+from fastapi.testclient import TestClient
+
+from asumisvalinta.api import analytics
+from asumisvalinta.api.app import app
+
+
+@pytest.mark.parametrize(
+    ("question", "expected"),
+    [
+        ("Mail me at matti.meikalainen@example.fi", "Mail me at [email]"),
+        ("Call +358 40 123 4567 tomorrow", "Call [phone] tomorrow"),
+        ("My code is 131052-308T", "My code is [id]"),
+        ("Pay to FI21 1234 5600 0007 85", "Pay to [account]"),
+        (
+            "Rent for 00100 in 2025 for a 1 200 000 € flat?",
+            "Rent for 00100 in 2025 for a 1 200 000 € flat?",
+        ),
+    ],
+)
+def test_redact(question, expected):
+    assert analytics.redact(question) == expected
+
+
+def test_record_does_nothing_without_a_database(monkeypatch):
+    monkeypatch.delenv("ASUMISVALINTA_ANALYTICS_DATABASE_URL", raising=False)
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    analytics.record("area", {"postal_code": "00100"})
+
+
+@pytest.fixture
+def recorded(monkeypatch):
+    events = []
+    monkeypatch.setattr(analytics, "record", lambda kind, payload: events.append((kind, payload)))
+    return events
+
+
+def test_area_event_is_recorded(recorded):
+    client = TestClient(app)
+    body = {
+        "type": "area",
+        "postal_code": "00100",
+        "room_type": "two_room",
+        "source": "map",
+        "metric": "price",
+    }
+    assert client.post("/api/events", json=body).status_code == 204
+    assert recorded == [
+        (
+            "area",
+            {"postal_code": "00100", "room_type": "two_room", "source": "map", "metric": "price"},
+        )
+    ]
+
+
+def test_scenario_event_is_recorded(recorded):
+    client = TestClient(app)
+    body = {
+        "type": "scenario",
+        "postal_code": "00100",
+        "room_type": "two_room",
+        "size_m2": 55,
+        "building_year": 1990,
+        "horizon_years": 5,
+        "own_numbers": {"rent": 1450},
+        "assumptions": {"surplus_strategy": "invest"},
+        "best_option": "aso",
+        "end_wealth": {"buy": 107_000, "rent": 100_000, "aso": 113_000},
+    }
+    assert client.post("/api/events", json=body).status_code == 204
+    assert recorded[0][0] == "scenario"
+    assert recorded[0][1]["own_numbers"] == {"rent": 1450}
+
+
+def test_events_with_unknown_fields_are_rejected(recorded):
+    client = TestClient(app)
+    body = {
+        "type": "area",
+        "postal_code": "00100",
+        "room_type": "two_room",
+        "source": "map",
+        "ip": "1.2.3.4",
+    }
+    assert client.post("/api/events", json=body).status_code == 422
+    assert recorded == []
+
+
+POSTGRES = os.environ.get("ASUMISVALINTA_ANALYTICS_TEST_DATABASE_URL")
+
+
+@pytest.mark.skipif(not POSTGRES, reason="needs a Postgres test database")
+def test_record_writes_to_postgres_and_expires_old_events(monkeypatch):
+    monkeypatch.setenv("ASUMISVALINTA_ANALYTICS_DATABASE_URL", POSTGRES)
+    analytics.record("area", {"postal_code": "00100"})
+    with psycopg.connect(POSTGRES, autocommit=True) as connection:
+        kind, payload = connection.execute(
+            "select event_type, payload from analytics_events order by id desc limit 1"
+        ).fetchone()
+        assert (kind, payload) == ("area", {"postal_code": "00100"})
+        connection.execute(
+            "insert into analytics_events (created_at, event_type, payload) "
+            "values (now() - interval '400 days', 'area', '{}'::jsonb)"
+        )
+    analytics.record("area", {"postal_code": "00130"})
+    with psycopg.connect(POSTGRES) as connection:
+        oldest = connection.execute("select min(created_at) from analytics_events").fetchone()[0]
+        recent = connection.execute("select now() - interval '366 days'").fetchone()[0]
+    assert oldest > recent
+
+
+class _FakeRun:
+    status = "answered"
+    error = None
+    answer = "About 25 € per m²."
+    value = 25.0
+    unit = "EUR/m2"
+    sources = "Statistics Finland"
+    tool_calls = ()
+
+
+class _FakeAgent:
+    def run(self, question):
+        return _FakeRun()
+
+
+def test_questions_are_recorded_redacted_unless_the_browser_opts_out(monkeypatch, recorded):
+    from asumisvalinta.api import app as app_module
+
+    monkeypatch.setattr(app_module, "_agent", lambda: _FakeAgent())
+    client = TestClient(app)
+    question = {"question": "Rent in 00100? Reply to a@b.fi", "session_id": "session-123"}
+    assert client.post("/api/ask", json=question).status_code == 200
+    assert recorded == [
+        (
+            "question",
+            {"question": "Rent in 00100? Reply to [email]", "status": "answered", "tools": []},
+        )
+    ]
+    assert client.post("/api/ask", json={**question, "record": False}).status_code == 200
+    assert len(recorded) == 1

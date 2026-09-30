@@ -7,11 +7,12 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import BackgroundTasks, Body, FastAPI, HTTPException, Query, Response
 from fastapi import Path as PathParam
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from asumisvalinta.agent import LLMSettings, OpenAIChatModel, semantic_agent
+from asumisvalinta.api import analytics
 from asumisvalinta.api.limits import LimitReached, QuestionLimits
 from asumisvalinta.config import connect_read_only, duckdb_path, load_dotenv
 from asumisvalinta.scenario import ScenarioInput, ScenarioResult, simulate
@@ -220,6 +221,7 @@ def scenario(request: ScenarioRequest) -> dict[str, Any]:
 class AskRequest(BaseModel):
     question: str = Field(min_length=3, max_length=500)
     session_id: str = Field(min_length=8, max_length=64)
+    record: bool = True
 
 
 @lru_cache(maxsize=1)
@@ -228,7 +230,7 @@ def _agent():
 
 
 @app.post("/api/ask")
-def ask(request: AskRequest) -> dict[str, Any]:
+def ask(request: AskRequest, background: BackgroundTasks) -> dict[str, Any]:
     try:
         agent = _agent()
     except RuntimeError as error:
@@ -238,15 +240,63 @@ def ask(request: AskRequest) -> dict[str, Any]:
     except LimitReached as error:
         raise HTTPException(429, str(error)) from error
     run = agent.run(request.question)
+    status = run.status if not run.error else "error"
+    tools = [call.tool for call in run.tool_calls if call.tool != "submit_answer"]
+    if request.record:
+        background.add_task(
+            analytics.record,
+            "question",
+            {"question": analytics.redact(request.question), "status": status, "tools": tools},
+        )
     return {
-        "status": run.status if not run.error else "error",
+        "status": status,
         "answer": run.answer or run.error,
         "value": run.value,
         "unit": run.unit,
         "sources": run.sources,
-        "tools_used": [call.tool for call in run.tool_calls if call.tool != "submit_answer"],
+        "tools_used": tools,
         "remaining_questions": limits.remaining(request.session_id),
     }
+
+
+class AreaEvent(BaseModel):
+    """An area someone chose, on the map, in search or on the comparison page."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["area"]
+    postal_code: str = Field(pattern=POSTAL_CODE)
+    room_type: RoomType
+    source: Literal["map", "search", "compare"]
+    metric: Literal["price", "rent", "ratio"] | None = None
+
+
+class ScenarioEvent(BaseModel):
+    """A comparison someone looked at: the flat, the numbers they changed and the result."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["scenario"]
+    postal_code: str = Field(pattern=POSTAL_CODE)
+    room_type: RoomType
+    size_m2: float = Field(gt=0, le=500)
+    building_year: int | None = Field(default=None, ge=1800, le=2035)
+    horizon_years: int = Field(ge=1, le=30)
+    own_numbers: dict[str, float] = Field(max_length=10)
+    assumptions: dict[str, float | str | bool] = Field(max_length=25)
+    best_option: Literal["buy", "rent", "aso"]
+    end_wealth: dict[str, float] = Field(max_length=3)
+
+
+@app.post("/api/events", status_code=204)
+def events(
+    event: Annotated[AreaEvent | ScenarioEvent, Body(discriminator="type")],
+    background: BackgroundTasks,
+) -> Response:
+    """Record an anonymous usage event."""
+    payload = event.model_dump(exclude={"type"})
+    background.add_task(analytics.record, event.type, payload)
+    return Response(status_code=204)
 
 
 def _range(q1: float | None, median: float | None, q3: float | None, **context: Any) -> Any:
@@ -390,20 +440,13 @@ def planner_run(scenario: ScenarioInput) -> dict[str, Any]:
 
 
 def _monthly_costs(result: ScenarioResult) -> list[dict[str, Any]]:
-    """Average monthly housing cost of each option in each year of the horizon.
-
-    `buy_repayment` is the part of the buyer's cost that repays loan principal.
-    """
+    """Average monthly housing cost of each option in each year of the horizon."""
     paid = {option.option: option.upfront_payment for option in result.options}
-    repaid = 0.0
     rows = []
     for point in result.years[: result.horizon_years]:
         costs = {option: (total - paid[option]) / 12 for option, total in point.total_paid.items()}
-        rows.append(
-            {"year": point.year, **costs, "buy_repayment": (point.loan_repaid - repaid) / 12}
-        )
+        rows.append({"year": point.year, **costs})
         paid = dict(point.total_paid)
-        repaid = point.loan_repaid
     return rows
 
 
