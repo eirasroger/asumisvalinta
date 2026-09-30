@@ -7,11 +7,10 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from fastapi import BackgroundTasks, Body, FastAPI, HTTPException, Query, Response
+from fastapi import BackgroundTasks, Body, FastAPI, HTTPException, Query, Request, Response
 from fastapi import Path as PathParam
 from pydantic import BaseModel, ConfigDict, Field
 
-from asumisvalinta.agent import LLMSettings, OpenAIChatModel, semantic_agent
 from asumisvalinta.api import analytics
 from asumisvalinta.api.limits import LimitReached, QuestionLimits
 from asumisvalinta.config import connect_read_only, duckdb_path, load_dotenv
@@ -33,6 +32,18 @@ app = FastAPI(
     docs_url="/api/docs",
     openapi_url="/api/openapi.json",
 )
+# The data changes once a month with a new release, so reads are cached on the CDN.
+CACHED_READ = "public, max-age=300, s-maxage=86400, stale-while-revalidate=604800"
+
+
+@app.middleware("http")
+async def cache_reads(request: Request, call_next: Any) -> Response:
+    response = await call_next(request)
+    if request.method == "GET" and response.status_code == 200:
+        response.headers.setdefault("Cache-Control", CACHED_READ)
+    return response
+
+
 limits = QuestionLimits(
     per_session=int(os.environ.get("ASUMISVALINTA_ASK_SESSION_LIMIT", "10")),
     per_day=int(os.environ.get("ASUMISVALINTA_ASK_DAILY_LIMIT", "200")),
@@ -226,6 +237,8 @@ class AskRequest(BaseModel):
 
 @lru_cache(maxsize=1)
 def _agent():
+    from asumisvalinta.agent import LLMSettings, OpenAIChatModel, semantic_agent
+
     return semantic_agent(OpenAIChatModel(LLMSettings.from_env()), warehouse())
 
 

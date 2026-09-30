@@ -5,6 +5,7 @@ import { Schibsted_Grotesk } from "next/font/google";
 import Link from "next/link";
 import { Footer } from "@/components/Footer";
 import { Nav } from "@/components/Nav";
+import { PageAnalytics } from "@/components/PageAnalytics";
 import "./globals.css";
 
 const schibsted = Schibsted_Grotesk({ subsets: ["latin"], variable: "--font-schibsted", display: "swap" });
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
         </header>
         {children}
+        <PageAnalytics />
         <Footer dataDocs={existsSync(path.join(process.cwd(), "public", "data-docs", "index.html"))} />
       </body>
     </html>

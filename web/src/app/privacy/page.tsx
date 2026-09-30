@@ -27,6 +27,7 @@ export default function PrivacyPage() {
         <ul className="list-disc space-y-1.5 pl-5">
           <li>Usage data: inputs to the calculator and the map, and the results shown. Collected without identifiers.</li>
           <li>Questions submitted to the assistant and the status of the answer.</li>
+          <li>Page views, counted by Vercel Web Analytics without identifiers.</li>
         </ul>
       </Section>
 

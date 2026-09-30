@@ -4,21 +4,20 @@ Metrics whose label ends with "(component)" exist only to build ratio and derive
 metrics; they are hidden from `list_metrics` and cannot be queried directly.
 """
 
-import os
 import re
 from dataclasses import dataclass, field
 from functools import cached_property
 from pathlib import Path
-from typing import Any
-
-from dbt_metricflow.cli.cli_configuration import CLIConfiguration
-from metricflow.engine.metricflow_engine import MetricFlowEngine, MetricFlowQueryRequest
+from typing import TYPE_CHECKING, Any
 
 from asumisvalinta.config import REPO_ROOT, duckdb_path
 
+if TYPE_CHECKING:
+    from metricflow.engine.metricflow_engine import MetricFlowEngine
+
 DBT_PROJECT_DIR = REPO_ROOT / "dbt"
+SEMANTIC_MANIFEST = Path("target") / "semantic_manifest.json"
 COMPONENT_LABEL_SUFFIX = "(component)"
-READ_ONLY_TARGET = "duckdb_readonly"
 
 
 @dataclass(frozen=True)
@@ -137,16 +136,26 @@ class SemanticLayer:
         self._warehouse = warehouse or duckdb_path()
 
     @cached_property
-    def _engine(self) -> MetricFlowEngine:
-        os.environ["ASUMISVALINTA_DUCKDB_PATH"] = str(Path(self._warehouse).resolve())
-        os.environ["DBT_TARGET"] = READ_ONLY_TARGET
-        configuration = CLIConfiguration()
-        configuration.setup(
-            dbt_profiles_path=self._project_dir,
-            dbt_project_path=self._project_dir,
-            configure_file_logging=False,
+    def _engine(self) -> "MetricFlowEngine":
+        # MetricFlow loads slowly, so it is imported only when a query needs it.
+        from metricflow.engine.metricflow_engine import MetricFlowEngine
+        from metricflow_semantics.model.dbt_manifest_parser import (
+            parse_manifest_from_dbt_generated_manifest,
         )
-        return configuration.mf
+        from metricflow_semantics.model.semantic_manifest_lookup import SemanticManifestLookup
+
+        from asumisvalinta.semantic.duckdb_client import DuckDbSqlClient
+
+        manifest_path = self._project_dir / SEMANTIC_MANIFEST
+        if not manifest_path.exists():
+            raise FileNotFoundError(f"{manifest_path} is missing; run dbt parse first")
+        manifest = parse_manifest_from_dbt_generated_manifest(
+            manifest_json_string=manifest_path.read_text(encoding="utf-8")
+        )
+        return MetricFlowEngine(
+            semantic_manifest_lookup=SemanticManifestLookup(manifest),
+            sql_client=DuckDbSqlClient(Path(self._warehouse)),
+        )
 
     @cached_property
     def _metrics(self) -> dict[str, MetricInfo]:
@@ -220,6 +229,8 @@ class SemanticLayer:
 
     def query(self, query: MetricQuery) -> MetricResult:
         self._check_metrics(query.metrics)
+        from metricflow.engine.metricflow_engine import MetricFlowQueryRequest
+
         request = MetricFlowQueryRequest.create(
             metric_names=list(query.metrics),
             group_by_names=list(query.group_by) or None,

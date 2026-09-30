@@ -141,3 +141,10 @@ def test_questions_are_recorded_redacted_unless_the_browser_opts_out(monkeypatch
     ]
     assert client.post("/api/ask", json={**question, "record": False}).status_code == 200
     assert len(recorded) == 1
+
+
+def test_reads_are_cached_and_writes_are_not(recorded):
+    client = TestClient(app)
+    assert "s-maxage" in client.get("/api/health").headers["cache-control"]
+    body = {"type": "area", "postal_code": "00100", "room_type": "two_room", "source": "map"}
+    assert "cache-control" not in client.post("/api/events", json=body).headers

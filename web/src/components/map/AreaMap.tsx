@@ -191,8 +191,8 @@ export function AreaMap({ rows, metric, cuts, scope, selected, onSelect, onHover
   }, []);
 
   const collection = useMemo<FeatureCollection | null>(() => {
-    if (!all || !rows) return null;
-    const byCode = new Map(rows.map((row) => [row.postal_code, row]));
+    if (!all) return null;
+    const byCode = new Map((rows ?? []).map((row) => [row.postal_code, row]));
     return {
       type: "FeatureCollection",
       features: all.map((shape) => {
