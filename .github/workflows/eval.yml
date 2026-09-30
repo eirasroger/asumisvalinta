@@ -1,0 +1,64 @@
+name: Agent evaluation
+
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: Release tag whose warehouse to evaluate against (empty = latest)
+        required: false
+        default: ""
+      agents:
+        description: Agents to evaluate (space separated)
+        required: false
+        default: "semantic baseline_sql"
+      limit:
+        description: Number of questions (empty = all)
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    env:
+      DBT_PROJECT_DIR: dbt
+      DBT_PROFILES_DIR: dbt
+      ASUMISVALINTA_DUCKDB_PATH: data/asumisvalinta.duckdb
+      ASUMISVALINTA_LLM_API_KEY: ${{ secrets.ASUMISVALINTA_LLM_API_KEY }}
+      ASUMISVALINTA_LLM_MODEL: ${{ vars.ASUMISVALINTA_LLM_MODEL }}
+      ASUMISVALINTA_LLM_BASE_URL: ${{ vars.ASUMISVALINTA_LLM_BASE_URL }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Download warehouse
+        run: |
+          mkdir -p data
+          gh release download ${{ inputs.release }} --pattern asumisvalinta.duckdb --dir data
+
+      - name: Parse dbt project
+        run: uv run dbt parse
+
+      - name: Check reference answers
+        run: uv run asumisvalinta-eval --check
+
+      - name: Evaluate agents
+        run: |
+          args=""
+          for agent in ${{ inputs.agents }}; do args="$args --agent $agent"; done
+          if [ -n "${{ inputs.limit }}" ]; then args="$args --limit ${{ inputs.limit }}"; fi
+          uv run asumisvalinta-eval $args
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: evaluation-results
+          path: evals/results/

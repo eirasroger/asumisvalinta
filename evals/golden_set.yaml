@@ -1,0 +1,571 @@
+# Golden questions for the agent evaluation.
+#
+# kind: metric        expected value = the single value returned by `reference.metrics`
+#                     with `reference.group_by` and `reference.where` through the semantic layer
+# kind: scenario      expected value = `reference.output` of the scenario engine run with
+#                     `reference.scenario` on the warehouse defaults
+# kind: refusal       the agent should refuse
+# kind: clarification the agent should ask for clarification
+#
+# tolerance: relative (share of the expected value) or absolute (in the unit of the question).
+
+defaults:
+  tolerance: {relative: 0.005}
+
+questions:
+  # Prices per square metre, quarterly statistics
+  - id: price_00100_2025q4
+    question: What was the average price per square metre of flats in blocks of flats in postal code 00100 in the fourth quarter of 2025, in euros?
+    kind: metric
+    reference:
+      metrics: [avg_price_per_m2]
+      group_by: [metric_time__quarter]
+      where:
+        - "{{ Entity('postal_area') }} = '00100'"
+        - "{{ Dimension('dwelling_price__building_type') }} = 'block_of_flats'"
+        - "{{ TimeDimension('metric_time', 'quarter') }} = '2025-10-01'"
+
+  - id: price_00100_two_room_2025q4
+    question: What was the average price per square metre of two-room flats in blocks of flats in postal code 00100 in 2025 Q4, in euros?
+    kind: metric
+    reference:
+      metrics: [avg_price_per_m2]
+      group_by: [metric_time__quarter]
+      where:
+        - "{{ Entity('postal_area') }} = '00100'"
+        - "{{ Entity('room_type') }} = 'two_room'"
+        - "{{ Dimension('dwelling_price__building_type') }} = 'block_of_flats'"
+        - "{{ TimeDimension('metric_time', 'quarter') }} = '2025-10-01'"
+
+  - id: price_33100_2025q4
+    question: What was the average price per square metre of flats in blocks of flats in postal code 33100 (Tampere centre) in 2025 Q4, in euros?
+    kind: metric
+    reference:
+      metrics: [avg_price_per_m2]
+      group_by: [metric_time__quarter]
+      where:
+        - "{{ Entity('postal_area') }} = '33100'"
+        - "{{ Dimension('dwelling_price__building_type') }} = 'block_of_flats'"
+        - "{{ TimeDimension('metric_time', 'quarter') }} = '2025-10-01'"
+
+  - id: price_02230_one_room_2025q3
+    question: What was the average price per square metre of one-room flats in blocks of flats in postal code 02230 in the third quarter of 2025, in euros?
+    kind: metric
+    reference:
+      metrics: [avg_price_per_m2]
+      group_by: [metric_time__quarter]
+      where:
+        - "{{ Entity('postal_area') }} = '02230'"
+        - "{{ Entity('room_type') }} = 'one_room'"
+        - "{{ Dimension('dwelling_price__building_type') }} = 'block_of_flats'"
+        - "{{ TimeDimension('metric_time', 'quarter') }} = '2025-07-01'"
+
+  - id: price_00530_2025q2
+    question: What was the average price per square metre of flats in blocks of flats in postal code 00530 in 2025 Q2, in euros?
+    kind: metric
+    reference:
+      metrics: [avg_price_per_m2]
+      group_by: [metric_time__quarter]
+      where:
+        - "{{ Entity('postal_area') }} = '00530'"
+        - "{{ Dimension('dwelling_price__building_type') }} = 'block_of_flats'"
+        - "{{ TimeDimension('metric_time', 'quarter') }} = '2025-04-01'"
+
+  - id: price_helsinki_2026q1
+    question: What was the average price per square metre of old flats in blocks of flats in the city of Helsinki in the first quarter of 2026, in euros?
+    kind: metric
+    reference:
+      metrics: [avg_price_per_m2]
+      group_by: [metric_time__quarter]
+      where:
+        - "{{ Entity('area') }} = 'price_area:091'"
+        - "{{ Entity('room_type') }} = 'all'"
+        - "{{ Dimension('dwelling_price__building_type') }} = 'block_of_flats'"
+        - "{{ TimeDimension('metric_time', 'quarter') }} = '2026-01-01'"
+
+  - id: price_finland_2025q4
+    question: What was the average price per square metre of old flats in blocks of flats in the whole of Finland in 2025 Q4, in euros?
+    kind: metric
+    reference:
+      metrics: [avg_price_per_m2]
+      group_by: [metric_time__quarter]
+      where:
+        - "{{ Entity('area') }} = 'price_area:SSS'"
+        - "{{ Entity('room_type') }} = 'all'"
+        - "{{ Dimension('dwelling_price__building_type') }} = 'block_of_flats'"
+        - "{{ TimeDimension('metric_time', 'quarter') }} = '2025-10-01'"
+
+  - id: price_tampere_two_room_2025q4
+    question: What was the average price per square metre of two-room flats in blocks of flats in the city of Tampere in 2025 Q4, in euros?
+    kind: metric
+    reference:
+      metrics: [avg_price_per_m2]
+      group_by: [metric_time__quarter]
+      where:
+        - "{{ Entity('area') }} = 'price_area:837'"
+        - "{{ Entity('room_type') }} = 'two_room'"
+        - "{{ Dimension('dwelling_price__building_type') }} = 'block_of_flats'"
+        - "{{ TimeDimension('metric_time', 'quarter') }} = '2025-10-01'"
+
+  - id: price_20100_2025q4
+    question: What was the average price per square metre of flats in blocks of flats in postal code 20100 (Turku centre) in 2025 Q4, in euros?
+    kind: metric
+    reference:
+      metrics: [avg_price_per_m2]
+      group_by: [metric_time__quarter]
+      where:
+        - "{{ Entity('postal_area') }} = '20100'"
+        - "{{ Dimension('dwelling_price__building_type') }} = 'block_of_flats'"
+        - "{{ TimeDimension('metric_time', 'quarter') }} = '2025-10-01'"
+
+  - id: price_espoo_1_2025q4
+    question: What was the average price per square metre of old flats in blocks of flats in the price sub-area Espoo-Kauniainen 1 in 2025 Q4, in euros?
+    kind: metric
+    reference:
+      metrics: [avg_price_per_m2]
+      group_by: [metric_time__quarter]
+      where:
+        - "{{ Entity('area') }} = 'price_area:049-1'"
+        - "{{ Entity('room_type') }} = 'all'"
+        - "{{ Dimension('dwelling_price__building_type') }} = 'block_of_flats'"
+        - "{{ TimeDimension('metric_time', 'quarter') }} = '2025-10-01'"
+
+  # Prices per square metre, yearly statistics
+  - id: price_annual_96100_2025
+    question: According to the yearly price statistics, what was the average price per square metre of flats in blocks of flats in postal code 96100 (Rovaniemi) in 2025, in euros?
+    kind: metric
+    reference:
+      metrics: [avg_price_per_m2_annual]
+      group_by: [metric_time__year]
+      where:
+        - "{{ Entity('postal_area') }} = '96100'"
+        - "{{ Dimension('dwelling_price__building_type') }} = 'block_of_flats'"
+        - "{{ TimeDimension('metric_time', 'year') }} = '2025-01-01'"
+
+  - id: price_annual_00100_2024
+    question: According to the yearly price statistics, what was the average price per square metre of flats in blocks of flats in postal code 00100 in 2024, in euros?
+    kind: metric
+    reference:
+      metrics: [avg_price_per_m2_annual]
+      group_by: [metric_time__year]
+      where:
+        - "{{ Entity('postal_area') }} = '00100'"
+        - "{{ Dimension('dwelling_price__building_type') }} = 'block_of_flats'"
+        - "{{ TimeDimension('metric_time', 'year') }} = '2024-01-01'"
+
+  # Transactions
+  - id: transactions_00100_2025q4
+    question: How many sales of flats in blocks of flats were recorded in postal code 00100 in 2025 Q4?
+    kind: metric
+    tolerance: {absolute: 0}
+    reference:
+      metrics: [transaction_count]
+      group_by: [metric_time__quarter]
+      where:
+        - "{{ Entity('postal_area') }} = '00100'"
+        - "{{ Dimension('dwelling_price__building_type') }} = 'block_of_flats'"
+        - "{{ TimeDimension('metric_time', 'quarter') }} = '2025-10-01'"
+
+  - id: transactions_finland_2025q4
+    question: How many sales of old flats in blocks of flats were recorded in the whole of Finland in 2025 Q4?
+    kind: metric
+    tolerance: {absolute: 0}
+    reference:
+      metrics: [transaction_count]
+      group_by: [metric_time__quarter]
+      where:
+        - "{{ Entity('area') }} = 'price_area:SSS'"
+        - "{{ Entity('room_type') }} = 'all'"
+        - "{{ Dimension('dwelling_price__building_type') }} = 'block_of_flats'"
+        - "{{ TimeDimension('metric_time', 'quarter') }} = '2025-10-01'"
+
+  - id: transactions_33100_2025q3
+    question: How many sales of flats in blocks of flats were recorded in postal code 33100 in the third quarter of 2025?
+    kind: metric
+    tolerance: {absolute: 0}
+    reference:
+      metrics: [transaction_count]
+      group_by: [metric_time__quarter]
+      where:
+        - "{{ Entity('postal_area') }} = '33100'"
+        - "{{ Dimension('dwelling_price__building_type') }} = 'block_of_flats'"
+        - "{{ TimeDimension('metric_time', 'quarter') }} = '2025-07-01'"
+
+  # Price change
+  - id: yoy_helsinki_2025q4
+    question: By how many percent did prices of old flats in blocks of flats in Helsinki change from a year earlier in 2025 Q4?
+    kind: metric
+    tolerance: {absolute: 0.05}
+    reference:
+      metrics: [price_index_yoy_change]
+      group_by: [metric_time__quarter]
+      where:
+        - "{{ Entity('area') }} = 'price_area:091'"
+        - "{{ Entity('room_type') }} = 'all'"
+        - "{{ Dimension('price_index_observation__building_type') }} = 'block_of_flats'"
+        - "{{ TimeDimension('metric_time', 'quarter') }} = '2025-10-01'"
+
+  - id: yoy_finland_2025q4
+    question: What was the year-over-year change in percent of prices of old flats in blocks of flats in the whole of Finland in 2025 Q4?
+    kind: metric
+    tolerance: {absolute: 0.05}
+    reference:
+      metrics: [price_index_yoy_change]
+      group_by: [metric_time__quarter]
+      where:
+        - "{{ Entity('area') }} = 'price_area:SSS'"
+        - "{{ Entity('room_type') }} = 'all'"
+        - "{{ Dimension('price_index_observation__building_type') }} = 'block_of_flats'"
+        - "{{ TimeDimension('metric_time', 'quarter') }} = '2025-10-01'"
+
+  - id: yoy_tampere_2025q3
+    question: How much did prices of old flats in blocks of flats in Tampere change in percent from a year earlier in 2025 Q3?
+    kind: metric
+    tolerance: {absolute: 0.05}
+    reference:
+      metrics: [price_index_yoy_change]
+      group_by: [metric_time__quarter]
+      where:
+        - "{{ Entity('area') }} = 'price_area:837'"
+        - "{{ Entity('room_type') }} = 'all'"
+        - "{{ Dimension('price_index_observation__building_type') }} = 'block_of_flats'"
+        - "{{ TimeDimension('metric_time', 'quarter') }} = '2025-07-01'"
+
+  - id: yoy_helsinki_1_2025q4
+    question: What was the annual price change in percent for old flats in blocks of flats in the price sub-area Helsinki 1 in 2025 Q4?
+    kind: metric
+    tolerance: {absolute: 0.05}
+    reference:
+      metrics: [price_index_yoy_change]
+      group_by: [metric_time__quarter]
+      where:
+        - "{{ Entity('area') }} = 'price_area:091-1'"
+        - "{{ Entity('room_type') }} = 'all'"
+        - "{{ Dimension('price_index_observation__building_type') }} = 'block_of_flats'"
+        - "{{ TimeDimension('metric_time', 'quarter') }} = '2025-10-01'"
+
+  # Rents
+  - id: rent_new_helsinki_two_room_2026q2
+    question: What was the average monthly rent per square metre in new free-market tenancy agreements for two-room flats in Helsinki in 2026 Q2, in euros?
+    kind: metric
+    reference:
+      metrics: [avg_rent_per_m2_new_contracts]
+      group_by: [metric_time__quarter]
+      where:
+        - "{{ Entity('area') }} = 'rent_area:091'"
+        - "{{ Entity('room_type') }} = 'two_room'"
+        - "{{ TimeDimension('metric_time', 'quarter') }} = '2026-04-01'"
+
+  - id: rent_tampere_one_room_2026q1
+    question: What was the average monthly rent per square metre of free-market one-room flats in Tampere in 2026 Q1, all tenancy agreements, in euros?
+    kind: metric
+    reference:
+      metrics: [avg_rent_per_m2]
+      group_by: [metric_time__quarter]
+      where:
+        - "{{ Entity('area') }} = 'rent_area:837'"
+        - "{{ Entity('room_type') }} = 'one_room'"
+        - "{{ TimeDimension('metric_time', 'quarter') }} = '2026-01-01'"
+
+  - id: rent_finland_2026q2
+    question: What was the average monthly rent per square metre of free-market rental flats in the whole of Finland in 2026 Q2, all room types and all tenancy agreements, in euros?
+    kind: metric
+    reference:
+      metrics: [avg_rent_per_m2]
+      group_by: [metric_time__quarter]
+      where:
+        - "{{ Entity('area') }} = 'rent_area:SSS'"
+        - "{{ Entity('room_type') }} = 'all'"
+        - "{{ TimeDimension('metric_time', 'quarter') }} = '2026-04-01'"
+
+  - id: rent_new_helsinki_1_two_room_2026q2
+    question: What was the average rent per square metre per month in new free-market agreements for two-room flats in the rent sub-area Helsinki 1 in 2026 Q2, in euros?
+    kind: metric
+    reference:
+      metrics: [avg_rent_per_m2_new_contracts]
+      group_by: [metric_time__quarter]
+      where:
+        - "{{ Entity('area') }} = 'rent_area:091_1'"
+        - "{{ Entity('room_type') }} = 'two_room'"
+        - "{{ TimeDimension('metric_time', 'quarter') }} = '2026-04-01'"
+
+  - id: rent_2015_series_00100_two_room_2025q4
+    question: In the discontinued rent statistics by postal code, what was the average monthly rent per square metre of free-market two-room flats in postal code 00100 in 2025 Q4, in euros?
+    kind: metric
+    reference:
+      metrics: [avg_rent_per_m2_2015_series]
+      group_by: [metric_time__quarter]
+      where:
+        - "{{ Entity('postal_area') }} = '00100'"
+        - "{{ Entity('room_type') }} = 'two_room'"
+        - "{{ TimeDimension('metric_time', 'quarter') }} = '2025-10-01'"
+
+  - id: rent_2015_series_helsinki_one_room_2020q1
+    question: What was the average monthly rent per square metre of free-market one-room flats in Helsinki in 2020 Q1, in euros?
+    kind: metric
+    reference:
+      metrics: [avg_rent_per_m2_2015_series]
+      group_by: [metric_time__quarter]
+      where:
+        - "{{ Entity('area') }} = 'rent_area_2015:091'"
+        - "{{ Entity('room_type') }} = 'one_room'"
+        - "{{ TimeDimension('metric_time', 'quarter') }} = '2020-01-01'"
+
+  - id: rent_new_oulu_two_room_2026q2
+    question: What was the average monthly rent per square metre in new free-market agreements for two-room flats in Oulu in 2026 Q2, in euros?
+    kind: metric
+    reference:
+      metrics: [avg_rent_per_m2_new_contracts]
+      group_by: [metric_time__quarter]
+      where:
+        - "{{ Entity('area') }} = 'rent_area:564'"
+        - "{{ Entity('room_type') }} = 'two_room'"
+        - "{{ TimeDimension('metric_time', 'quarter') }} = '2026-04-01'"
+
+  # Interest rates
+  - id: rate_all_2026_07
+    question: What was the average interest rate on new housing loans in Finland in July 2026, in percent?
+    kind: metric
+    tolerance: {absolute: 0.005}
+    reference:
+      metrics: [new_mortgage_rate]
+      group_by: [metric_time__month]
+      where: ["{{ TimeDimension('metric_time', 'month') }} = '2026-07-01'"]
+
+  - id: rate_variable_2026_07
+    question: What was the average interest rate on new variable-rate housing loans in Finland in July 2026, in percent?
+    kind: metric
+    tolerance: {absolute: 0.005}
+    reference:
+      metrics: [new_mortgage_rate_variable]
+      group_by: [metric_time__month]
+      where: ["{{ TimeDimension('metric_time', 'month') }} = '2026-07-01'"]
+
+  - id: rate_fixed_over_10y_2026_07
+    question: What was the average rate on new housing loans in Finland with the rate fixed for more than ten years, in July 2026, in percent?
+    kind: metric
+    tolerance: {absolute: 0.005}
+    reference:
+      metrics: [new_mortgage_rate_fixed_over_10y]
+      group_by: [metric_time__month]
+      where: ["{{ TimeDimension('metric_time', 'month') }} = '2026-07-01'"]
+
+  - id: rate_all_2023_average
+    question: What was the average interest rate on new housing loans in Finland over the year 2023, in percent?
+    kind: metric
+    tolerance: {absolute: 0.005}
+    reference:
+      metrics: [new_mortgage_rate]
+      group_by: [metric_time__year]
+      where: ["{{ TimeDimension('metric_time', 'year') }} = '2023-01-01'"]
+
+  - id: rate_fixed_1_5y_2026_06
+    question: What was the average rate on new housing loans in Finland fixed for over one and up to five years in June 2026, in percent?
+    kind: metric
+    tolerance: {absolute: 0.005}
+    reference:
+      metrics: [new_mortgage_rate_fixed_1_to_5y]
+      group_by: [metric_time__month]
+      where: ["{{ TimeDimension('metric_time', 'month') }} = '2026-06-01'"]
+
+  # Building costs and housing company charges
+  - id: building_cost_index_2026_08
+    question: What was the building cost index (2015 = 100) in August 2026?
+    kind: metric
+    tolerance: {absolute: 0.05}
+    reference:
+      metrics: [building_cost_index]
+      group_by: [metric_time__month]
+      where: ["{{ TimeDimension('metric_time', 'month') }} = '2026-08-01'"]
+
+  - id: building_cost_index_change_2026_08
+    question: What was the annual change of the building cost index in August 2026, in percent?
+    kind: metric
+    tolerance: {absolute: 0.05}
+    reference:
+      metrics: [building_cost_index_annual_change]
+      group_by: [metric_time__month]
+      where: ["{{ TimeDimension('metric_time', 'month') }} = '2026-08-01'"]
+
+  - id: maintenance_charge_helsinki_2025
+    question: What was the average maintenance charge per square metre per month in blocks of flats in Greater Helsinki in 2025, in euros?
+    kind: metric
+    tolerance: {absolute: 0.005}
+    reference:
+      metrics: [maintenance_charge_per_m2]
+      group_by: [metric_time__year]
+      where:
+        - "{{ Entity('area') }} = 'housing_finance_area:pks'"
+        - "{{ Dimension('housing_company_charge__building_type') }} = 'block_of_flats'"
+        - "{{ TimeDimension('metric_time', 'year') }} = '2025-01-01'"
+
+  - id: maintenance_charge_rest_2024
+    question: What was the average maintenance charge per square metre per month in blocks of flats in Finland outside Greater Helsinki in 2024, in euros?
+    kind: metric
+    tolerance: {absolute: 0.005}
+    reference:
+      metrics: [maintenance_charge_per_m2]
+      group_by: [metric_time__year]
+      where:
+        - "{{ Entity('area') }} = 'housing_finance_area:msu'"
+        - "{{ Dimension('housing_company_charge__building_type') }} = 'block_of_flats'"
+        - "{{ TimeDimension('metric_time', 'year') }} = '2024-01-01'"
+
+  # Current market levels
+  - id: price_to_rent_00100_two_room
+    question: What is the current price-to-rent ratio for a two-room flat in postal code 00100, in years?
+    kind: metric
+    reference:
+      metrics: [price_to_rent_ratio]
+      where:
+        - "{{ Entity('postal_area') }} = '00100'"
+        - "{{ Entity('room_type') }} = 'two_room'"
+
+  - id: gross_yield_33100_one_room
+    question: What is the current gross rental yield in percent for a one-room flat in postal code 33100?
+    kind: metric
+    tolerance: {absolute: 0.01}
+    reference:
+      metrics: [gross_rental_yield]
+      where:
+        - "{{ Entity('postal_area') }} = '33100'"
+        - "{{ Entity('room_type') }} = 'one_room'"
+
+  - id: current_rent_96100_three_room
+    question: What is the current rent per square metre per month for a flat with three or more rooms in postal code 96100, in euros?
+    kind: metric
+    reference:
+      metrics: [current_rent_per_m2]
+      where:
+        - "{{ Entity('postal_area') }} = '96100'"
+        - "{{ Entity('room_type') }} = 'three_room_plus'"
+
+  - id: current_price_02230_two_room
+    question: What is the current price per square metre for a two-room flat in postal code 02230, in euros?
+    kind: metric
+    reference:
+      metrics: [current_price_per_m2]
+      where:
+        - "{{ Entity('postal_area') }} = '02230'"
+        - "{{ Entity('room_type') }} = 'two_room'"
+
+  - id: current_maintenance_00100
+    question: What maintenance charge per square metre per month applies today to a two-room flat in postal code 00100, in euros?
+    kind: metric
+    tolerance: {absolute: 0.005}
+    reference:
+      metrics: [current_maintenance_charge_per_m2]
+      where:
+        - "{{ Entity('postal_area') }} = '00100'"
+        - "{{ Entity('room_type') }} = 'two_room'"
+
+  # Scenarios
+  - id: scenario_00100_buy_wealth
+    question: If I buy a 55 m² two-room flat in postal code 00100 and live there for 5 years, how much wealth would I have at the end with the default assumptions, in euros?
+    kind: scenario
+    reference:
+      scenario: {postal_code: "00100", room_type: two_room, size_m2: 55, horizon_years: 5}
+      output: end_wealth.buy
+
+  - id: scenario_00100_rent_wealth
+    question: With the default assumptions, how much wealth would I have after 5 years if I rent a 55 m² two-room flat in postal code 00100 instead of buying, in euros?
+    kind: scenario
+    reference:
+      scenario: {postal_code: "00100", room_type: two_room, size_m2: 55, horizon_years: 5}
+      output: end_wealth.rent
+
+  - id: scenario_00100_break_even
+    question: For a 55 m² two-room flat in postal code 00100, after how many years does buying catch up with renting under the default assumptions?
+    kind: scenario
+    tolerance: {absolute: 0}
+    reference:
+      scenario: {postal_code: "00100", room_type: two_room, size_m2: 55, horizon_years: 5}
+      output: break_even_years_buy_vs_rent
+
+  - id: scenario_33100_aso_wealth
+    question: With default assumptions, what would my wealth be after 3 years in a 35 m² one-room right-of-occupancy flat in postal code 33100, in euros?
+    kind: scenario
+    reference:
+      scenario: {postal_code: "33100", room_type: one_room, size_m2: 35, horizon_years: 3}
+      output: end_wealth.aso
+
+  - id: scenario_96100_break_even
+    question: How many years does it take for buying a 75 m² flat with three or more rooms in postal code 96100 to beat renting, with the default assumptions?
+    kind: scenario
+    tolerance: {absolute: 0}
+    reference:
+      scenario: {postal_code: "96100", room_type: three_room_plus, size_m2: 75, horizon_years: 10}
+      output: break_even_years_buy_vs_rent
+
+  - id: scenario_02230_buy_five_percent
+    question: If mortgage rates stay at 5 % a year, how much wealth would I have after 5 years from buying a 50 m² two-room flat in postal code 02230, in euros?
+    kind: scenario
+    reference:
+      scenario:
+        postal_code: "02230"
+        room_type: two_room
+        size_m2: 50
+        horizon_years: 5
+        overrides: {interest_rate: 0.05}
+      output: end_wealth.buy
+
+  - id: scenario_00100_rent_total_paid
+    question: How much would I pay in total over 5 years to rent a 30 m² one-room flat in postal code 00100 with the default assumptions, in euros?
+    kind: scenario
+    reference:
+      scenario: {postal_code: "00100", room_type: one_room, size_m2: 30, horizon_years: 5}
+      output: total_paid.rent
+
+  - id: scenario_33100_buy_no_growth
+    question: If flat prices do not grow at all, how much wealth would buying a 50 m² two-room flat in postal code 33100 leave me with after 7 years, in euros?
+    kind: scenario
+    reference:
+      scenario:
+        postal_code: "33100"
+        room_type: two_room
+        size_m2: 50
+        horizon_years: 7
+        overrides: {price_growth: 0.0}
+      output: end_wealth.buy
+
+  # Questions the agent should refuse
+  - id: refuse_euribor
+    question: What was the 12-month Euribor in August 2026?
+    kind: refusal
+
+  - id: refuse_crime
+    question: Which Helsinki neighbourhood has the lowest crime rate?
+    kind: refusal
+
+  - id: refuse_forecast
+    question: What will the average price per square metre in Helsinki be in 2030?
+    kind: refusal
+
+  - id: refuse_detached_houses
+    question: What is the average price of detached houses in postal code 00100?
+    kind: refusal
+
+  - id: refuse_stockholm
+    question: What is the average rent per square metre in Stockholm?
+    kind: refusal
+
+  - id: refuse_vacancies
+    question: How many right-of-occupancy flats are vacant in Vantaa right now?
+    kind: refusal
+
+  # Questions that need clarification
+  - id: clarify_price_location
+    question: What is the average price per square metre?
+    kind: clarification
+
+  - id: clarify_scenario_details
+    question: How much wealth would I have after 5 years if I buy?
+    kind: clarification
+
+  - id: clarify_compare
+    question: Compare buying and renting for me.
+    kind: clarification
+
+  - id: clarify_flat_cost
+    question: How much does a flat cost?
+    kind: clarification

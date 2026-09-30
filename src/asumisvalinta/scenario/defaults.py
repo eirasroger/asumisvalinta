@@ -9,9 +9,7 @@ import statistics
 from dataclasses import dataclass
 from pathlib import Path
 
-import duckdb
-
-from asumisvalinta.config import duckdb_path
+from asumisvalinta.config import connect_read_only
 from asumisvalinta.scenario.models import (
     AsoInput,
     BuyInput,
@@ -51,7 +49,7 @@ def load_defaults(
     warehouse: Path | None = None,
 ) -> Defaults:
     purchase_date = purchase_date or dt.date.today()
-    with duckdb.connect(str(warehouse or duckdb_path()), read_only=True) as connection:
+    with connect_read_only(warehouse) as connection:
 
         def one(sql: str, params: list | None = None) -> tuple:
             row = connection.execute(sql, params or []).fetchone()

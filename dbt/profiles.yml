@@ -6,6 +6,13 @@ asumisvalinta:
       path: "{{ env_var('ASUMISVALINTA_DUCKDB_PATH', 'data/asumisvalinta.duckdb') }}"
       threads: 4
 
+    duckdb_readonly:
+      type: duckdb
+      path: "{{ env_var('ASUMISVALINTA_DUCKDB_PATH', 'data/asumisvalinta.duckdb') }}"
+      config_options:
+        access_mode: READ_ONLY
+      threads: 1
+
     snowflake:
       type: snowflake
       account: "{{ env_var('SNOWFLAKE_ACCOUNT', '') }}"

@@ -17,6 +17,7 @@ from asumisvalinta.config import REPO_ROOT, duckdb_path
 
 DBT_PROJECT_DIR = REPO_ROOT / "dbt"
 COMPONENT_LABEL_SUFFIX = "(component)"
+READ_ONLY_TARGET = "duckdb_readonly"
 
 
 @dataclass(frozen=True)
@@ -57,6 +58,7 @@ class SemanticLayer:
     @cached_property
     def _engine(self) -> MetricFlowEngine:
         os.environ["ASUMISVALINTA_DUCKDB_PATH"] = str(Path(self._warehouse).resolve())
+        os.environ["DBT_TARGET"] = READ_ONLY_TARGET
         configuration = CLIConfiguration()
         configuration.setup(
             dbt_profiles_path=self._project_dir,

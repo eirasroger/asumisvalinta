@@ -224,3 +224,6 @@ CLAUDE.md
 # Local data
 data/
 .dlt/secrets.toml
+
+# Evaluation outputs
+evals/results/

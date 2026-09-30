@@ -3,20 +3,21 @@
 import os
 from pathlib import Path
 
-import duckdb
 import pytest
 
-from asumisvalinta.config import REPO_ROOT
+from asumisvalinta.config import REPO_ROOT, connect_read_only
 
 WAREHOUSE = Path(
-    os.environ.get("ASUMISVALINTA_TEST_WAREHOUSE", REPO_ROOT / "data" / "fixture.duckdb")
+    os.environ.get(
+        "ASUMISVALINTA_TEST_WAREHOUSE", REPO_ROOT / "data" / "fixture" / "asumisvalinta.duckdb"
+    )
 )
 
 
 def _built(path: Path) -> bool:
     if not path.exists():
         return False
-    with duckdb.connect(str(path), read_only=True) as connection:
+    with connect_read_only(path) as connection:
         return bool(
             connection.execute(
                 "select count(*) from information_schema.tables "

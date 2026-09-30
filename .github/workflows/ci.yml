@@ -18,7 +18,7 @@ jobs:
     env:
       DBT_PROJECT_DIR: dbt
       DBT_PROFILES_DIR: dbt
-      ASUMISVALINTA_DUCKDB_PATH: data/fixture.duckdb
+      ASUMISVALINTA_DUCKDB_PATH: data/fixture/asumisvalinta.duckdb
     steps:
       - uses: actions/checkout@v7
 

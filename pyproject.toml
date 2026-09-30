@@ -29,9 +29,13 @@ transform = [
 snowflake = [
     "dbt-snowflake>=1.12,<1.13",
 ]
+agent = [
+    "openai>=3.22,<4",
+    "pyyaml>=6,<7",
+]
 
 [tool.uv]
-default-groups = ["ingest", "transform", "dev"]
+default-groups = ["ingest", "transform", "agent", "dev"]
 
 [build-system]
 requires = ["uv_build>=0.12,<0.13"]
@@ -39,6 +43,7 @@ build-backend = "uv_build"
 
 [project.scripts]
 asumisvalinta-ingest = "asumisvalinta.ingestion.pipeline:main"
+asumisvalinta-eval = "asumisvalinta.evaluation.run:main"
 
 [tool.ruff]
 line-length = 100
