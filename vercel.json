@@ -8,10 +8,10 @@
     "api": {
       "root": "./",
       "framework": "fastapi",
-      "entrypoint": "asumisvalinta.api.app:app",
+      "entrypoint": "main:app",
       "buildCommand": "python scripts/vercel_build.py",
       "functions": {
-        "src/asumisvalinta/api/app.py": {
+        "main.py": {
           "maxDuration": 120,
           "excludeFiles": "{web/**,tests/**,fixtures/**,evals/**,docs/**,.github/**,data/**,dist/**}"
         }
@@ -19,7 +19,17 @@
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": { "service": "api" } },
-    { "source": "/(.*)", "destination": { "service": "web" } }
+    {
+      "source": "/api/(.*)",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "web"
+      }
+    }
   ]
 }
