@@ -4,37 +4,14 @@ The fixture must be loaded and built first (see .github/workflows/ci.yml).
 """
 
 import datetime as dt
-import os
-from pathlib import Path
 
-import duckdb
 import pytest
 
-from asumisvalinta.config import REPO_ROOT
 from asumisvalinta.semantic import MetricQuery, SemanticLayer
 from asumisvalinta.semantic.client import UnknownMetricError
+from tests.warehouse import WAREHOUSE, requires_warehouse
 
-WAREHOUSE = Path(
-    os.environ.get("ASUMISVALINTA_TEST_WAREHOUSE", REPO_ROOT / "data" / "fixture.duckdb")
-)
-
-
-def _built(path: Path) -> bool:
-    if not path.exists():
-        return False
-    with duckdb.connect(str(path), read_only=True) as connection:
-        return bool(
-            connection.execute(
-                "select count(*) from information_schema.tables "
-                "where table_schema = 'marts' and table_name = 'mart_market_levels'"
-            ).fetchone()[0]
-        )
-
-
-pytestmark = [
-    pytest.mark.warehouse,
-    pytest.mark.skipif(not _built(WAREHOUSE), reason="fixture warehouse is not built"),
-]
+pytestmark = requires_warehouse
 
 POSTAL_00100 = "{{ Entity('postal_area') }} = '00100'"
 BLOCKS_OF_FLATS = "{{ Dimension('dwelling_price__building_type') }} = 'block_of_flats'"
