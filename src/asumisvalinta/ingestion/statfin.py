@@ -207,11 +207,27 @@ TABLES: tuple[PxTable, ...] = (
 )
 
 
+def column_hints(table: PxTable) -> dict[str, dict[str, Any]]:
+    """Explicit column types, so every column exists with a stable type."""
+    hints: dict[str, dict[str, Any]] = {}
+    for column in table.dimensions.values():
+        hints[column] = {"data_type": "text", "nullable": False}
+        hints[f"{column}_label"] = {"data_type": "text"}
+    for column in table.contents.values():
+        hints[column] = {"data_type": "double"}
+        hints[f"{column}_status"] = {"data_type": "text"}
+    hints["is_preliminary"] = {"data_type": "bool"}
+    hints["source_table"] = {"data_type": "text", "nullable": False}
+    hints["table_updated"] = {"data_type": "timestamp"}
+    return hints
+
+
 def _table_resource(table: PxTable, force: bool) -> Any:
     @dlt.resource(
         name=table.name,
         write_disposition={"disposition": "merge", "strategy": "delete-insert"},
         merge_key="source_table",
+        columns=column_hints(table),
     )
     def rows() -> Iterator[dict[str, Any]]:
         state = dlt.current.resource_state()

@@ -1,0 +1,54 @@
+sources:
+  - name: statfin
+    description: >
+      Statistics Finland StatFin tables loaded with dlt from the PxWeb API.
+      Source: Statistics Finland, licence CC BY 4.0.
+    schema: raw_statfin
+    config:
+      loaded_at_field: table_updated
+      freshness:
+        warn_after: {count: 120, period: day}
+        error_after: {count: 200, period: day}
+    tables:
+      - name: prices_postal_quarterly
+        description: Prices per m² of old dwellings in housing companies by postal code area, quarterly (table ashi/13mt).
+      - name: prices_postal_yearly
+        description: Prices per m² of old dwellings in housing companies by postal code area, yearly (table ashi/13mu).
+        config:
+          freshness:
+            warn_after: {count: 400, period: day}
+            error_after: {count: 550, period: day}
+      - name: prices_municipality_yearly
+        description: Prices per m² of old dwellings in housing companies by municipality, yearly (table ashi/13mx).
+        config:
+          freshness:
+            warn_after: {count: 400, period: day}
+            error_after: {count: 550, period: day}
+      - name: price_index_area_quarterly
+        description: Price index (2025=100), average price per m² and transactions by area, quarterly (table ashi/15is).
+      - name: price_index_area_chained
+        description: Chained price indices of old dwellings by area, quarterly from 1988 (table ashi/15it).
+      - name: rents_postal_quarterly_2015
+        description: >
+          Average rents per m² of non-subsidised rental dwellings by postal code area, 2015Q1 to 2025Q4
+          (discontinued table asvu/13eb).
+        config:
+          freshness: null
+      - name: rents_area_quarterly_2015
+        description: Rent index (2015=100) and average rents per m² by area, 2015Q1 to 2025Q4 (discontinued table asvu/11x4).
+        config:
+          freshness: null
+      - name: rents_area_quarterly
+        description: Rent index (2025=100) and average rents per m² by rent area, quarterly from 2025Q1 (table asvu/15fa).
+      - name: building_cost_index_monthly
+        description: Building cost indices, total index, monthly, for several base years (table rki/13g8).
+      - name: housing_company_finances_yearly
+        description: Profit and loss account items of housing companies by region, cents per m² per month (table asyta/15gj).
+        config:
+          freshness:
+            warn_after: {count: 400, period: day}
+            error_after: {count: 550, period: day}
+      - name: housing_company_finances_yearly_2009
+        description: Profit and loss account items of housing companies by region, 2009 to 2024 (discontinued table asyta/13jx).
+        config:
+          freshness: null

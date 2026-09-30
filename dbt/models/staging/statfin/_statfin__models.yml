@@ -1,0 +1,88 @@
+models:
+  - name: stg_statfin__prices_postal
+    description: Postal code prices of old flats, quarterly and yearly, with harmonised building and room types.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [period_grain, period_start_date, postal_code, building_type, room_type]
+    columns:
+      - name: period_grain
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [quarter, year]
+      - name: room_type
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_room_type')
+                field: room_type
+
+  - name: stg_statfin__prices_municipality
+    description: Municipality prices of old dwellings, yearly, all room types together.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [period_start_date, municipality_code, building_type]
+
+  - name: stg_statfin__price_index_area
+    description: Price index (2025=100), average price per m² and transactions by price area, quarterly.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [period_start_date, area_code, building_type, room_type]
+    columns:
+      - name: area_level
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [country, metro_aggregate, region, municipality, sub_area]
+
+  - name: stg_statfin__price_index_area_chained
+    description: Chained price indices of old dwellings by price area, quarterly from 1988.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [period_start_date, area_code, building_type, room_type]
+
+  - name: stg_statfin__rents_postal
+    description: Non-subsidised rents per m² by postal code, 2015 to 2025 (2015-base series, discontinued).
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [period_start_date, postal_code, room_type]
+
+  - name: stg_statfin__rents_area
+    description: Rents per m² and rent index by rent area from the 2015-base and 2025-base series.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [rent_series, period_start_date, area_code, room_type, funding_type]
+    columns:
+      - name: funding_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [all, non_subsidised, subsidised]
+      - name: rent_series
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [2015_base, 2025_base]
+
+  - name: stg_statfin__building_cost_index
+    description: Building cost index (total index), monthly, on every published base year.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [month_start_date, base_year]
+
+  - name: stg_statfin__housing_company_finances
+    description: >
+      Profit and loss items of housing companies by area, in euros and cents per m² per month.
+      Years covered by the current table replace the same years in the discontinued table.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [period_start_date, finance_area_code, building_type, account_item_code]

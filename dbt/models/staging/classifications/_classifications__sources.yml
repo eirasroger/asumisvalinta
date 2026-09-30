@@ -1,0 +1,13 @@
+sources:
+  - name: classifications
+    description: >
+      Statistics Finland classification service: municipalities, regions, price and rent areas.
+      Source: Statistics Finland, licence CC BY 4.0.
+    schema: raw_statfin_classifications
+    tables:
+      - name: classification_items
+        description: Items of the loaded classifications with Finnish and English names.
+      - name: area_postal_codes
+        description: Postal codes that each price area and rent area includes.
+      - name: correspondence_maps
+        description: Municipality to region correspondences for 2015 and 2026.

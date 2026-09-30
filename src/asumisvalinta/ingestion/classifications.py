@@ -4,6 +4,7 @@ Loads classification items (with the postal codes each price and rent area
 includes) and municipality to region correspondences. Reloaded in full.
 """
 
+import re
 from collections.abc import Iterator
 from typing import Any
 from urllib.parse import quote
@@ -21,6 +22,10 @@ CLASSIFICATIONS: tuple[str, ...] = (
     "alue_43_20260625",
     "alue_44_20260101",
 )
+
+AREA_CLASSIFICATIONS: tuple[str, ...] = ("alue_43_20260625", "alue_44_20260101")
+
+POSTAL_CODE = re.compile(r"\b\d{5}\b")
 
 CORRESPONDENCES: tuple[str, ...] = (
     "kunta_1_20150101#maakunta_1_20150101",
@@ -69,6 +74,20 @@ def classification_items() -> Iterator[dict[str, Any]]:
             }
 
 
+@dlt.resource(name="area_postal_codes", write_disposition="replace")
+def area_postal_codes() -> Iterator[dict[str, Any]]:
+    """One row per (area, postal code) for the areas that list their postal codes."""
+    for classification in AREA_CLASSIFICATIONS:
+        path = f"classifications/{classification}/classificationItems"
+        for item in _get(path, "fi"):
+            for postal_code in POSTAL_CODE.findall(_includes(item) or ""):
+                yield {
+                    "classification": classification,
+                    "area_code": item["code"],
+                    "postal_code": postal_code,
+                }
+
+
 @dlt.resource(name="correspondence_maps", write_disposition="replace")
 def correspondence_maps() -> Iterator[dict[str, Any]]:
     for table in CORRESPONDENCES:
@@ -82,4 +101,4 @@ def correspondence_maps() -> Iterator[dict[str, Any]]:
 
 @dlt.source(name="statfin_classifications")
 def classifications_source() -> Any:
-    return [classification_items, correspondence_maps]
+    return [classification_items, area_postal_codes, correspondence_maps]

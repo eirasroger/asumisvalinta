@@ -1,0 +1,44 @@
+seeds:
+  - name: policy_parameters
+    description: >
+      Tax rules, lending limits and right-of-occupancy rules used by the scenario engine. Rules that
+      changed over time have one row per validity period; an empty valid_from or valid_to means open.
+    config:
+      column_types:
+        value: double
+        valid_from: date
+        valid_to: date
+        retrieved_on: date
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [parameter_code, valid_from]
+    columns:
+      - name: parameter_code
+        data_tests: [not_null]
+      - name: value
+        data_tests: [not_null]
+      - name: source_url
+        data_tests: [not_null]
+      - name: retrieved_on
+        data_tests: [not_null]
+
+  - name: assumptions
+    description: >
+      Default values for the calculator that have no official source. Every row is an assumption
+      that the user can change in the app.
+    config:
+      column_types:
+        value: double
+        is_assumption: boolean
+        retrieved_on: date
+    columns:
+      - name: parameter_code
+        data_tests: [unique, not_null]
+      - name: value
+        data_tests: [not_null]
+      - name: is_assumption
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [true]

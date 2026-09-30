@@ -1,0 +1,9 @@
+sources:
+  - name: paavo
+    description: >
+      Statistics Finland Paavo postal code areas (attributes only).
+      Source: Statistics Finland, licence CC BY 4.0.
+    schema: raw_paavo
+    tables:
+      - name: postal_areas
+        description: Postal code areas with name and municipality, one row per year and postal code.

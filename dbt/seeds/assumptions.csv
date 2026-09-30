@@ -1,0 +1,7 @@
+parameter_code,description,value,unit,is_assumption,rationale,source_url,retrieved_on
+selling_cost_rate,Cost of selling a flat (agent commission and fees) as a share of the selling price,0.04,ratio,true,Default for the calculator; editable in the app,,2026-09-30
+investment_return_rate,Expected nominal annual return on invested money,0.05,ratio,true,Default for the calculator; editable in the app,,2026-09-30
+parked_cash_return_rate,Expected nominal annual return on money kept in a bank account,0.01,ratio,true,Default for the calculator; editable in the app,,2026-09-30
+renovation_reserve_eur_per_m2_year,Expected yearly cost of major renovations per m² beyond the maintenance charge,0,EUR/m²/year,true,Zero by default; the app shows a warning that major renovations are excluded unless entered,,2026-09-30
+loan_term_years,Default mortgage term,25,years,true,Default for the calculator; editable in the app,,2026-09-30
+down_payment_share,Default down payment as a share of the debt-free price,0.10,ratio,true,Default for the calculator; editable in the app,,2026-09-30

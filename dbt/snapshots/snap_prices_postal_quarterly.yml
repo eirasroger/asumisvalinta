@@ -1,0 +1,14 @@
+snapshots:
+  - name: snap_prices_postal_quarterly
+    description: >
+      History of the quarterly postal code price table. Statistics Finland revises preliminary
+      figures in later releases; each revision creates a new row version.
+    relation: source('statfin', 'prices_postal_quarterly')
+    config:
+      unique_key: [period, postal_code, building_room_type]
+      strategy: check
+      check_cols:
+        - price_per_m2
+        - price_per_m2_status
+        - transaction_count
+        - is_preliminary

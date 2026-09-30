@@ -18,10 +18,19 @@ ingest = [
 dev = [
     "pytest>=9.1",
     "ruff>=0.16",
+    "sqlfluff>=4.3,<5",
+    "sqlfluff-templater-dbt>=4.3,<5",
+]
+transform = [
+    "dbt-core>=1.12,<1.13",
+    "dbt-duckdb>=1.11,<1.12",
+]
+snowflake = [
+    "dbt-snowflake>=1.12,<1.13",
 ]
 
 [tool.uv]
-default-groups = ["ingest", "dev"]
+default-groups = ["ingest", "transform", "dev"]
 
 [build-system]
 requires = ["uv_build>=0.12,<0.13"]

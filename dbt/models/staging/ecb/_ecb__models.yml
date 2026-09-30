@@ -1,0 +1,14 @@
+models:
+  - name: stg_ecb__mortgage_rates
+    description: Interest rates on new housing loans in Finland by rate fixation period, monthly.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [month_start_date, fixation_period]
+    columns:
+      - name: fixation_period
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [all, variable_up_to_1y, fixed_1_to_5y, fixed_5_to_10y, fixed_over_10y]

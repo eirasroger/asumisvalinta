@@ -1,0 +1,13 @@
+sources:
+  - name: ecb
+    description: >
+      ECB MFI interest rate statistics for Finland. Source: ECB statistics.
+    schema: raw_ecb
+    tables:
+      - name: mir_housing_loan_rates
+        description: Annualised agreed rates on new loans to households for house purchase in Finland, by rate fixation period.
+        config:
+          loaded_at_field: "cast(time_period || '-01' as timestamp)"
+          freshness:
+            warn_after: {count: 100, period: day}
+            error_after: {count: 160, period: day}
