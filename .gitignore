@@ -218,18 +218,18 @@ __marimo__/
 .streamlit/secrets.toml
 
 # Local working docs
-docs/
+/docs/
 CLAUDE.md
 
 # Local data
-data/
+/data/
 .dlt/secrets.toml
 
 # Evaluation outputs
 evals/results/
 
 # Warehouse copy downloaded by deployments
-serving/
+/serving/
 
 # Front-end source folder named lib
 !web/src/lib/
