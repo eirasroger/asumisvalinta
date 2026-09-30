@@ -113,6 +113,12 @@ rent_growth_candidates as (
     where growth.cagr_5y is not null
 ),
 
+as_of as (
+    select max(period_start_date) as as_of_date
+    from {{ ref('stg_statfin__rents_area') }}
+    where rent_series = '2025_base'
+),
+
 rent_growth as (
     select *
     from (
@@ -125,6 +131,8 @@ rent_growth as (
 )
 
 select
+    {{ dbt.concat(['hierarchy.postal_code', "':'", 'room_types.room_type']) }} as market_level_key,
+    as_of.as_of_date,
     hierarchy.postal_code,
     room_types.room_type,
     hierarchy.municipality_code,
@@ -161,6 +169,7 @@ select
     rent_growth.area_code as rent_growth_area_code
 from hierarchy
 cross join room_types
+cross join as_of
 left join prices
     on hierarchy.postal_code = prices.postal_code and room_types.room_type = prices.room_type
 left join rents

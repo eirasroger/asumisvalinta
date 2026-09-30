@@ -1,4 +1,5 @@
 select
+    {{ natural_key(['month_start_date']) }} as interest_rate_key,
     month_start_date,
     max(case when fixation_period = 'all' then rate_pct end) as new_mortgage_rate_pct,
     max(case when fixation_period = 'variable_up_to_1y' then rate_pct end)

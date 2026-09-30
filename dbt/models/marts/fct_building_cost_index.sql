@@ -1,4 +1,5 @@
 select
+    {{ natural_key(['month_start_date', 'base_year']) }} as building_cost_index_key,
     month_start_date,
     base_year,
     index_value,

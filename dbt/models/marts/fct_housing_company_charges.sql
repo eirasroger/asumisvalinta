@@ -1,4 +1,7 @@
 select
+    {{ natural_key(['finance_area_code', 'period_start_date', 'building_type', 'account_item_code']) }}
+        as housing_company_charge_key,
+    {{ dbt.concat(["'housing_finance_area:'", 'finance_area_code']) }} as area_key,
     'housing_finance_area' as area_scheme,
     finance_area_code as area_code,
     period_grain,

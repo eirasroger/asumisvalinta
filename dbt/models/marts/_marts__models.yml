@@ -1,38 +1,67 @@
 models:
+  - name: metricflow_time_spine
+    description: One row per day from 1988 to 2035, used by the semantic layer to align metrics over time.
+    time_spine:
+      standard_granularity_column: date_day
+    columns:
+      - name: date_day
+        granularity: day
+        data_tests: [unique, not_null]
+
   - name: dim_postal_area
     description: >
       Every Finnish postal code area with its municipality, region, and the price and rent
       sub-areas Statistics Finland uses for its statistics. One row per postal code.
+    semantic_model:
+      enabled: true
+      name: postal_area
     columns:
       - name: postal_code
         description: Five-digit postal code.
         data_tests: [unique, not_null]
+        entity:
+          type: primary
+          name: postal_area
       - name: postal_area_name
         description: Name of the postal code area in Finnish.
+        dimension:
+          type: categorical
       - name: postal_area_name_sv
         description: Name of the postal code area in Swedish.
       - name: municipality_code
         description: Three-digit municipality code.
         data_tests: [not_null]
+        dimension:
+          type: categorical
       - name: municipality_name
         description: Municipality name.
         data_tests: [not_null]
+        dimension:
+          type: categorical
       - name: region_code
         description: Two-digit region (maakunta) code.
         data_tests: [not_null]
       - name: region_name
         description: Region (maakunta) name.
+        dimension:
+          type: categorical
       - name: price_sub_area_code
         description: Price statistics sub-area (for example 091-1, Helsinki 1). Empty outside the large cities.
       - name: price_sub_area_name
         description: Name of the price statistics sub-area.
+        dimension:
+          type: categorical
       - name: rent_sub_area_code
         description: Rent statistics sub-area (for example 091_1, Helsinki 1). Empty outside the large cities.
       - name: rent_sub_area_name
         description: Name of the rent statistics sub-area.
+        dimension:
+          type: categorical
       - name: is_helsinki_metro
         description: True for Helsinki, Espoo, Kauniainen and Vantaa (pääkaupunkiseutu).
         data_tests: [not_null]
+        dimension:
+          type: categorical
       - name: area_m2
         description: Land area of the postal code area in square metres.
 
@@ -40,23 +69,36 @@ models:
     description: >
       Areas used by the area-level facts: price areas, rent areas, municipalities and housing
       company finance areas. An area is identified by its scheme and code.
-    data_tests:
-      - unique_combination:
-          arguments:
-            columns: [area_scheme, area_code]
+    semantic_model:
+      enabled: true
+      name: area
     columns:
+      - name: area_key
+        description: Area scheme and code joined with a colon, for example price_area:091-1.
+        data_tests: [unique, not_null]
+        entity:
+          type: primary
+          name: area
       - name: area_scheme
         description: Classification the code belongs to.
         data_tests:
           - accepted_values:
               arguments:
                 values: [price_area, rent_area, rent_area_2015, municipality_2015, housing_finance_area]
+        dimension:
+          type: categorical
       - name: area_code
         description: Area code within its scheme.
+        dimension:
+          type: categorical
       - name: area_name
         description: Area name as published by Statistics Finland.
+        dimension:
+          type: categorical
       - name: area_level
         description: Geographic level of the area.
+        dimension:
+          type: categorical
 
   - name: dim_date
     description: Calendar months from 1988 to 2035 with quarter and year attributes.
@@ -73,14 +115,24 @@ models:
 
   - name: dim_room_type
     description: Room types harmonised across the price and rent statistics.
+    semantic_model:
+      enabled: true
+      name: room_type
     columns:
       - name: room_type
         description: one_room, two_room, three_room_plus or all.
         data_tests: [unique, not_null]
+        entity:
+          type: primary
+          name: room_type
       - name: room_type_name
         description: Room type in English.
+        dimension:
+          type: categorical
       - name: room_type_name_fi
         description: Room type in Finnish.
+        dimension:
+          type: categorical
 
   - name: fct_dwelling_prices
     description: >
@@ -88,29 +140,51 @@ models:
       building type and room type. Prices are debt-free prices, which include the flat's share
       of the housing company loan. Suppressed cells have no price and is_suppressed = true.
       Figures marked preliminary are revised in later releases.
-    data_tests:
-      - unique_combination:
-          arguments:
-            columns: [area_scheme, area_code, period_grain, period_start_date, building_type, room_type]
+    semantic_model:
+      enabled: true
+      name: dwelling_prices
+    agg_time_dimension: period_start_date
     columns:
-      - name: area_scheme
-        description: postal_code, price_area or municipality_2015.
-      - name: area_code
-        description: Postal code or area code within the scheme.
+      - name: dwelling_price_key
+        description: Unique key of the row.
+        data_tests: [unique, not_null]
+        entity:
+          type: primary
+          name: dwelling_price
+      - name: area_key
+        description: Area scheme and code, links to dim_area.
+        entity:
+          type: foreign
+          name: area
+      - name: postal_code
+        description: Postal code for postal code rows, empty for area rows.
         data_tests:
           - relationships:
               arguments:
                 to: ref('dim_postal_area')
                 field: postal_code
               config:
-                where: "area_scheme = 'postal_code'"
                 severity: warn
+        entity:
+          type: foreign
+          name: postal_area
+      - name: area_scheme
+        description: postal_code, price_area or municipality_2015.
+      - name: area_code
+        description: Postal code or area code within the scheme.
       - name: geography_level
         description: postal_code, sub_area, municipality, region, metro_aggregate or country.
+        dimension:
+          type: categorical
       - name: period_grain
         description: quarter or year.
+        dimension:
+          type: categorical
       - name: period_start_date
         description: First day of the period.
+        granularity: quarter
+        dimension:
+          type: time
         data_tests:
           - not_null
           - relationships:
@@ -125,6 +199,8 @@ models:
           - accepted_values:
               arguments:
                 values: [block_of_flats, terraced_house, all]
+        dimension:
+          type: categorical
       - name: room_type
         description: Harmonised room type.
         data_tests:
@@ -132,6 +208,9 @@ models:
               arguments:
                 to: ref('dim_room_type')
                 field: room_type
+        entity:
+          type: foreign
+          name: room_type
       - name: price_per_m2
         description: Average debt-free price per square metre in euros (arithmetic mean of transactions).
         data_tests:
@@ -147,41 +226,168 @@ models:
         description: Change in the price index from the same quarter a year earlier, in percent (area rows only).
       - name: is_suppressed
         description: True when Statistics Finland suppressed the price for confidentiality.
+        dimension:
+          type: categorical
       - name: is_preliminary
         description: True when the period is preliminary and may be revised.
+        dimension:
+          type: categorical
+    metrics:
+      - name: price_weighted_sum
+        label: Price weighted sum (component)
+        description: >
+          Component of the average price per m²: quarterly price per m² multiplied by the number of
+          transactions. Use avg_price_per_m2 for analysis.
+        type: simple
+        agg: sum
+        expr: "case when period_grain = 'quarter' and price_per_m2 is not null then price_per_m2 * transaction_count end"
+      - name: priced_transactions
+        label: Priced transactions (component)
+        description: >
+          Component of the average price per m²: quarterly transactions in cells with a published price.
+          Use transaction_count for the number of sales.
+        type: simple
+        agg: sum
+        expr: "case when period_grain = 'quarter' and price_per_m2 is not null then transaction_count end"
+      - name: price_weighted_sum_annual
+        label: Annual price weighted sum (component)
+        description: >
+          Component of the annual average price per m²: yearly price per m² multiplied by the number of
+          transactions. Use avg_price_per_m2_annual for analysis.
+        type: simple
+        agg: sum
+        expr: "case when period_grain = 'year' and price_per_m2 is not null then price_per_m2 * transaction_count end"
+      - name: priced_transactions_annual
+        label: Annual priced transactions (component)
+        description: Component of the annual average price per m²; yearly transactions in cells with a published price.
+        type: simple
+        agg: sum
+        expr: "case when period_grain = 'year' and price_per_m2 is not null then transaction_count end"
+      - name: transaction_count
+        label: Transactions
+        description: >
+          Number of sales of old dwellings in housing companies reported to the Tax Administration,
+          from the quarterly statistics. Recent quarters grow as late reports arrive.
+        type: simple
+        agg: sum
+        expr: "case when period_grain = 'quarter' then transaction_count end"
 
   - name: fct_price_index
     description: Chained price indices of old flats by price area and room type, quarterly from 1988, on several base years.
-    data_tests:
-      - unique_combination:
-          arguments:
-            columns: [area_code, period_start_date, building_type, room_type]
+    semantic_model:
+      enabled: true
+      name: price_index
+    agg_time_dimension: period_start_date
     columns:
+      - name: price_index_key
+        description: Unique key of the row.
+        data_tests: [unique, not_null]
+        entity:
+          type: primary
+          name: price_index_observation
+      - name: area_key
+        description: Price area, links to dim_area.
+        entity:
+          type: foreign
+          name: area
+      - name: room_type
+        description: Harmonised room type.
+        entity:
+          type: foreign
+          name: room_type
+      - name: period_start_date
+        description: First day of the quarter.
+        granularity: quarter
+        dimension:
+          type: time
+      - name: building_type
+        description: block_of_flats, terraced_house or all.
+        dimension:
+          type: categorical
+      - name: geography_level
+        description: sub_area, municipality, region, metro_aggregate or country.
+        dimension:
+          type: categorical
+      - name: is_preliminary
+        description: True when the quarter is preliminary and may be revised.
+        dimension:
+          type: categorical
       - name: price_index_1983
-        description: Price index, 1983 = 100. The longest continuous nominal series.
+        description: Price index, 1983 = 100.
+      - name: price_index_2000
+        description: Price index, 2000 = 100. The series with the widest coverage of areas.
+    metrics:
+      - name: price_index
+        label: Price index (2000 = 100)
+        description: >
+          Price index of old dwellings in housing companies, 2000 = 100. It measures price change for
+          comparable dwellings and is the right basis for comparing prices over time. Select one area,
+          building type and room type when querying it.
+        type: simple
+        agg: average
+        expr: price_index_2000
 
   - name: fct_rents
     description: >
       Average rents per square metre per month, by geography, quarter, room type, funding type and
       rent series. The 2015-base series (including postal code rents) ends in 2025Q4; the 2025-base
       series starts in 2025Q1 and is published by rent area. Compare rent levels only within one series.
-    data_tests:
-      - unique_combination:
-          arguments:
-            columns: [area_scheme, area_code, period_start_date, room_type, funding_type, rent_series]
+    semantic_model:
+      enabled: true
+      name: rents
+    agg_time_dimension: period_start_date
     columns:
+      - name: rent_key
+        description: Unique key of the row.
+        data_tests: [unique, not_null]
+        entity:
+          type: primary
+          name: rent_observation
+      - name: area_key
+        description: Area scheme and code, links to dim_area.
+        entity:
+          type: foreign
+          name: area
+      - name: postal_code
+        description: Postal code for postal code rows, empty for area rows.
+        entity:
+          type: foreign
+          name: postal_area
       - name: area_scheme
         description: postal_code, rent_area or rent_area_2015.
       - name: area_code
         description: Postal code or rent area code.
+      - name: geography_level
+        description: postal_code, sub_area, municipality, region, metro_aggregate or country.
+        dimension:
+          type: categorical
+      - name: period_start_date
+        description: First day of the quarter.
+        granularity: quarter
+        dimension:
+          type: time
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: month_start_date
+      - name: room_type
+        description: Harmonised room type.
+        entity:
+          type: foreign
+          name: room_type
       - name: rent_series
         description: 2015_base or 2025_base.
         data_tests:
           - accepted_values:
               arguments:
                 values: [2015_base, 2025_base]
+        dimension:
+          type: categorical
       - name: funding_type
         description: non_subsidised (free market), subsidised (state-subsidised, ARA) or all.
+        dimension:
+          type: categorical
       - name: rent_per_m2
         description: Average rent per m² per month in euros, all tenancy agreements.
         data_tests:
@@ -200,20 +406,78 @@ models:
         description: Number of rental agreements behind the average.
       - name: rent_index
         description: Rent index on the base year of the series.
-      - name: period_start_date
-        data_tests:
-          - relationships:
-              arguments:
-                to: ref('dim_date')
-                field: month_start_date
+    metrics:
+      - name: rent_weighted_sum
+        label: Rent weighted sum (component)
+        description: Component of avg_rent_per_m2; non-subsidised rent per m² times agreements, 2025-base series.
+        type: simple
+        agg: sum
+        expr: >
+          case when rent_series = '2025_base' and funding_type = 'non_subsidised' and rent_per_m2 is not null
+          then rent_per_m2 * observation_count end
+      - name: rent_observations
+        label: Rental agreements (component)
+        description: Component of avg_rent_per_m2; non-subsidised agreements behind the published rents, 2025-base series.
+        type: simple
+        agg: sum
+        expr: >
+          case when rent_series = '2025_base' and funding_type = 'non_subsidised' and rent_per_m2 is not null
+          then observation_count end
+      - name: rent_new_contracts_weighted_sum
+        label: New-contract rent weighted sum (component)
+        description: Component of avg_rent_per_m2_new_contracts, 2025-base series.
+        type: simple
+        agg: sum
+        expr: >
+          case when rent_series = '2025_base' and funding_type = 'non_subsidised'
+          and rent_per_m2_new_contracts is not null
+          then rent_per_m2_new_contracts * observation_count_new_contracts end
+      - name: rent_new_contracts_observations
+        label: New rental agreements (component)
+        description: Component of avg_rent_per_m2_new_contracts, 2025-base series.
+        type: simple
+        agg: sum
+        expr: >
+          case when rent_series = '2025_base' and funding_type = 'non_subsidised'
+          and rent_per_m2_new_contracts is not null
+          then observation_count_new_contracts end
+      - name: rent_2015_series_weighted_sum
+        label: Rent weighted sum, 2015-base series (component)
+        description: Component of avg_rent_per_m2_2015_series.
+        type: simple
+        agg: sum
+        expr: >
+          case when rent_series = '2015_base' and funding_type = 'non_subsidised' and rent_per_m2 is not null
+          then rent_per_m2 * observation_count end
+      - name: rent_2015_series_observations
+        label: Rental agreements, 2015-base series (component)
+        description: Component of avg_rent_per_m2_2015_series.
+        type: simple
+        agg: sum
+        expr: >
+          case when rent_series = '2015_base' and funding_type = 'non_subsidised' and rent_per_m2 is not null
+          then observation_count end
 
   - name: fct_interest_rates
     description: >
       Average interest rates on new housing loans to households in Finland, by rate fixation period,
       monthly. Annualised agreed rates. Source: ECB statistics.
+    semantic_model:
+      enabled: true
+      name: interest_rates
+    agg_time_dimension: month_start_date
     columns:
+      - name: interest_rate_key
+        description: Unique key of the row.
+        data_tests: [unique, not_null]
+        entity:
+          type: primary
+          name: interest_rate_month
       - name: month_start_date
         description: First day of the month.
+        granularity: month
+        dimension:
+          type: time
         data_tests:
           - unique
           - not_null
@@ -237,29 +501,130 @@ models:
         description: Average rate on new housing loans fixed for over five and up to ten years.
       - name: new_mortgage_rate_fixed_over_10y_pct
         description: Average rate on new housing loans fixed for over ten years.
+    metrics:
+      - name: new_mortgage_rate
+        label: Average rate on new housing loans (%)
+        description: >
+          Average interest rate on new housing loans to households in Finland, all rate fixation
+          periods, percent per year. Monthly figures; longer periods show the average of the months.
+        type: simple
+        agg: average
+        expr: new_mortgage_rate_pct
+      - name: new_mortgage_rate_variable
+        label: Average variable rate on new housing loans (%)
+        description: >
+          Average interest rate on new housing loans with a variable rate or a rate fixed for up to one
+          year, percent per year. Most Finnish mortgages are of this type; the calculator uses it as the
+          reference rate for variable-rate loans.
+        type: simple
+        agg: average
+        expr: new_mortgage_rate_variable_pct
+      - name: new_mortgage_rate_fixed_1_to_5y
+        label: Average rate fixed 1 to 5 years (%)
+        description: Average interest rate on new housing loans with the rate fixed for over one and up to five years.
+        type: simple
+        agg: average
+        expr: new_mortgage_rate_fixed_1_to_5y_pct
+      - name: new_mortgage_rate_fixed_5_to_10y
+        label: Average rate fixed 5 to 10 years (%)
+        description: Average interest rate on new housing loans with the rate fixed for over five and up to ten years.
+        type: simple
+        agg: average
+        expr: new_mortgage_rate_fixed_5_to_10y_pct
+      - name: new_mortgage_rate_fixed_over_10y
+        label: Average rate fixed over 10 years (%)
+        description: Average interest rate on new housing loans with the rate fixed for over ten years.
+        type: simple
+        agg: average
+        expr: new_mortgage_rate_fixed_over_10y_pct
 
   - name: fct_building_cost_index
     description: >
       Building cost index (total index), monthly, on every published base year. Right-of-occupancy
       fee refunds are indexed with this index.
-    data_tests:
-      - unique_combination:
-          arguments:
-            columns: [month_start_date, base_year]
+    semantic_model:
+      enabled: true
+      name: building_cost_index
+    agg_time_dimension: month_start_date
     columns:
+      - name: building_cost_index_key
+        description: Unique key of the row.
+        data_tests: [unique, not_null]
+        entity:
+          type: primary
+          name: building_cost_index_observation
+      - name: month_start_date
+        description: First day of the month.
+        granularity: month
+        dimension:
+          type: time
+      - name: base_year
+        description: Base year of the index (index = 100 in that year).
+        dimension:
+          type: categorical
       - name: index_value
         description: Index point figure on the base year.
         data_tests: [not_null]
+    metrics:
+      - name: building_cost_index
+        label: Building cost index (2015 = 100)
+        description: >
+          Building cost index, total index, 2015 = 100. Right-of-occupancy fees are refunded indexed
+          with the change in this index.
+        type: simple
+        agg: average
+        expr: "case when base_year = 2015 then index_value end"
+      - name: building_cost_index_annual_change
+        label: Building cost index annual change (%)
+        description: Change in the building cost index from the same month a year earlier, in percent.
+        type: simple
+        agg: average
+        expr: "case when base_year = 2015 then annual_change_pct end"
 
   - name: fct_housing_company_charges
     description: >
       Income and cost items of housing companies in euros per m² per month, yearly, by housing
       finance area. Item k3001 (residential unit charges) is the average maintenance charge
       (hoitovastike) paid by shareholders.
-    data_tests:
-      - unique_combination:
-          arguments:
-            columns: [area_code, period_start_date, building_type, account_item_code]
+    semantic_model:
+      enabled: true
+      name: housing_company_charges
+    agg_time_dimension: period_start_date
+    columns:
+      - name: housing_company_charge_key
+        description: Unique key of the row.
+        data_tests: [unique, not_null]
+        entity:
+          type: primary
+          name: housing_company_charge
+      - name: area_key
+        description: Housing finance area, links to dim_area.
+        entity:
+          type: foreign
+          name: area
+      - name: period_start_date
+        description: First day of the year.
+        granularity: year
+        dimension:
+          type: time
+      - name: building_type
+        description: block_of_flats, terraced_house or all.
+        dimension:
+          type: categorical
+      - name: account_item_code
+        description: Profit and loss account item code.
+        dimension:
+          type: categorical
+    metrics:
+      - name: maintenance_charge_per_m2
+        label: Average maintenance charge (€/m²/month)
+        description: >
+          Average maintenance charge (hoitovastike) that housing companies collect from shareholders,
+          in euros per m² per month. Published yearly for large areas only: Greater Helsinki, the rest
+          of Finland and four major regions.
+        type: simple
+        agg: average
+        expr: "case when account_item_code = 'k3001' then value_eur_per_m2_month end"
 
   - name: mart_market_levels
     description: >
@@ -268,11 +633,22 @@ models:
       the geography level and period it comes from. When a postal code has no published figure,
       the value falls back to the price or rent sub-area, then the municipality, then the region,
       then the whole country.
-    data_tests:
-      - unique_combination:
-          arguments:
-            columns: [postal_code, room_type]
+    semantic_model:
+      enabled: true
+      name: market_levels
+    agg_time_dimension: as_of_date
     columns:
+      - name: market_level_key
+        description: Postal code and room type joined with a colon.
+        data_tests: [unique, not_null]
+        entity:
+          type: primary
+          name: market_level
+      - name: as_of_date
+        description: First day of the latest quarter with published rents.
+        granularity: quarter
+        dimension:
+          type: time
       - name: postal_code
         data_tests:
           - not_null
@@ -280,8 +656,14 @@ models:
               arguments:
                 to: ref('dim_postal_area')
                 field: postal_code
+        entity:
+          type: foreign
+          name: postal_area
       - name: room_type
         data_tests: [not_null]
+        entity:
+          type: foreign
+          name: room_type
       - name: price_per_m2
         description: Latest average debt-free price per m² in euros at the finest level with published data.
         data_tests: [not_null]
@@ -292,16 +674,24 @@ models:
           - accepted_values:
               arguments:
                 values: [postal_code, price_sub_area, municipality, municipality_all_rooms, region, country]
+        dimension:
+          type: categorical
       - name: price_geography_code
         description: Code of the area the price comes from.
+        dimension:
+          type: categorical
       - name: price_period_grain
         description: quarter or year.
       - name: price_period_label
         description: Period of the price, for example 2026Q1.
+        dimension:
+          type: categorical
       - name: price_transaction_count
         description: Number of transactions reported for that area and period.
       - name: price_is_preliminary
         description: True when the price is preliminary.
+        dimension:
+          type: categorical
       - name: rent_per_m2
         description: >
           Latest average non-subsidised rent per m² per month in euros. New-contract rents are used
@@ -313,6 +703,8 @@ models:
           - accepted_values:
               arguments:
                 values: [new_contracts, all_contracts]
+        dimension:
+          type: categorical
       - name: rent_geography_level
         description: Level the rent comes from.
         data_tests:
@@ -320,10 +712,16 @@ models:
           - accepted_values:
               arguments:
                 values: [rent_sub_area, municipality, region, country]
+        dimension:
+          type: categorical
       - name: rent_geography_code
         description: Code of the area the rent comes from.
+        dimension:
+          type: categorical
       - name: rent_period_label
         description: Quarter of the rent.
+        dimension:
+          type: categorical
       - name: rent_observation_count
         description: Number of rental agreements behind the rent.
       - name: maintenance_charge_per_m2
@@ -347,3 +745,39 @@ models:
         description: Compound annual growth of non-subsidised rents over the last 10 years, chained across both series.
       - name: rent_growth_area_code
         description: Area whose rent index the growth rates come from.
+    metrics:
+      - name: current_price_per_m2
+        label: Current price per m² (€)
+        description: >
+          Latest average debt-free price per m² of flats in blocks of flats for a postal code and room
+          type, taken from the finest area with published data. Check price_geography_level to see
+          which area the figure describes.
+        type: simple
+        agg: average
+        expr: price_per_m2
+      - name: current_rent_per_m2
+        label: Current rent per m² (€/month)
+        description: >
+          Latest average free-market rent per m² per month for a postal code and room type, taken from
+          the finest area with published data. Check rent_geography_level to see which area it describes.
+        type: simple
+        agg: average
+        expr: rent_per_m2
+      - name: current_maintenance_charge_per_m2
+        label: Current maintenance charge (€/m²/month)
+        description: Latest average maintenance charge per m² per month that applies to the postal code.
+        type: simple
+        agg: average
+        expr: maintenance_charge_per_m2
+      - name: current_price_sum
+        label: Current price sum (component)
+        description: Component of price_to_rent_ratio and gross_rental_yield.
+        type: simple
+        agg: sum
+        expr: price_per_m2
+      - name: current_annual_rent_sum
+        label: Current annual rent sum (component)
+        description: Component of price_to_rent_ratio and gross_rental_yield; rent per m² times 12.
+        type: simple
+        agg: sum
+        expr: rent_per_m2 * 12

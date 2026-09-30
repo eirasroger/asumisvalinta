@@ -1,4 +1,6 @@
 select
+    {{ natural_key(['area_code', 'period_start_date', 'building_type', 'room_type']) }} as price_index_key,
+    {{ dbt.concat(["'price_area:'", 'area_code']) }} as area_key,
     'price_area' as area_scheme,
     area_code,
     area_level as geography_level,

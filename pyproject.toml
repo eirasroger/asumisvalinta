@@ -24,6 +24,7 @@ dev = [
 transform = [
     "dbt-core>=1.12,<1.13",
     "dbt-duckdb>=1.11,<1.12",
+    "dbt-metricflow[dbt-duckdb]>=0.15,<0.16",
 ]
 snowflake = [
     "dbt-snowflake>=1.12,<1.13",
@@ -48,5 +49,8 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["live: calls the real public APIs (deselect with -m 'not live')"]
+markers = [
+    "live: calls the real public APIs (deselect with -m 'not live')",
+    "warehouse: needs the fixture warehouse built with dbt",
+]
 addopts = "-m 'not live'"

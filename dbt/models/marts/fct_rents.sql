@@ -48,8 +48,25 @@ areas as (
         is_suppressed,
         source_table
     from {{ ref('stg_statfin__rents_area') }}
+),
+
+unioned as (
+    select * from postal
+    union all
+    select * from areas
 )
 
-select * from postal
-union all
-select * from areas
+select
+    {{ natural_key([
+        'area_scheme',
+        'area_code',
+        'period_start_date',
+        'room_type',
+        'funding_type',
+        'rent_series'
+    ]) }}
+        as rent_key,
+    {{ dbt.concat(['area_scheme', "':'", 'area_code']) }} as area_key,
+    case when area_scheme = 'postal_code' then area_code end as postal_code,
+    *
+from unioned

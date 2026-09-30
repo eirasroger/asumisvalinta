@@ -44,12 +44,19 @@ finance_areas as (
             else 'major_region'
         end as area_level
     from {{ ref('stg_statfin__housing_company_finances') }}
+),
+
+unioned as (
+    select * from price_areas
+    union all
+    select * from rent_areas
+    union all
+    select * from municipalities
+    union all
+    select * from finance_areas
 )
 
-select * from price_areas
-union all
-select * from rent_areas
-union all
-select * from municipalities
-union all
-select * from finance_areas
+select
+    {{ dbt.concat(['area_scheme', "':'", 'area_code']) }} as area_key,
+    *
+from unioned

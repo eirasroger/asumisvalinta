@@ -1,0 +1,87 @@
+metrics:
+  - name: avg_price_per_m2
+    label: Average price per m² (€)
+    description: >
+      Average debt-free price per square metre of old dwellings in housing companies, from the
+      quarterly statistics. For a single area and quarter this is the published average; when several
+      areas or quarters are combined, each is weighted by its number of transactions. Prices describe
+      price levels; use price_index_yoy_change for price change.
+    type: ratio
+    numerator: price_weighted_sum
+    denominator: priced_transactions
+
+  - name: avg_price_per_m2_annual
+    label: Average price per m², yearly statistics (€)
+    description: >
+      Average debt-free price per square metre from the yearly statistics, which publish prices for
+      more postal codes than the quarterly statistics. Combined areas are weighted by transactions.
+    type: ratio
+    numerator: price_weighted_sum_annual
+    denominator: priced_transactions_annual
+
+  - name: price_index_yoy_change
+    label: Price change from a year earlier (%)
+    description: >
+      Change in the price index of old dwellings from the same quarter a year earlier, in percent.
+      This is the recommended measure of price development because the index compares similar
+      dwellings. Computed from the chained 2000 = 100 index, so it can differ by a few tenths of a
+      percentage point from the change Statistics Finland publishes on its 2025 = 100 index. Select
+      one area, building type and room type when querying it, and quarters with published data.
+    type: derived
+    expr: (price_index - price_index_year_earlier) * 100 / price_index_year_earlier
+    input_metrics:
+      - name: price_index
+      - name: price_index
+        alias: price_index_year_earlier
+        offset_window: 1 year
+
+  - name: avg_rent_per_m2
+    label: Average rent per m² (€/month)
+    description: >
+      Average monthly rent per square metre of free-market (non-subsidised) rental dwellings, all
+      tenancy agreements, from the rent statistics published from 2025 onwards by rent area.
+      Combined areas are weighted by the number of agreements.
+    type: ratio
+    numerator: rent_weighted_sum
+    denominator: rent_observations
+
+  - name: avg_rent_per_m2_new_contracts
+    label: Average rent per m², new agreements (€/month)
+    description: >
+      Average monthly rent per square metre in new free-market tenancy agreements, from 2025 onwards.
+      This is the rent a person moving in now can expect to pay.
+    type: ratio
+    numerator: rent_new_contracts_weighted_sum
+    denominator: rent_new_contracts_observations
+
+  - name: avg_rent_per_m2_2015_series
+    label: Average rent per m², 2015-base series (€/month)
+    description: >
+      Average monthly rent per square metre of free-market rental dwellings from the discontinued
+      2015-base statistics, 2015 to 2025, including postal code areas. Do not compare its levels
+      directly with avg_rent_per_m2; the two series differ in method.
+    type: ratio
+    numerator: rent_2015_series_weighted_sum
+    denominator: rent_2015_series_observations
+
+  - name: price_to_rent_ratio
+    label: Price-to-rent ratio (years)
+    description: >
+      Current price per m² divided by a year of current rent per m². It tells how many years of rent
+      the price of a flat corresponds to. Higher values favour renting.
+    type: ratio
+    numerator: current_price_sum
+    denominator: current_annual_rent_sum
+
+  - name: gross_rental_yield
+    label: Gross rental yield (%)
+    description: >
+      A year of current rent per m² as a percentage of the current price per m², before maintenance
+      charges, taxes and vacancies. Higher values favour buying.
+    type: derived
+    expr: annual_rent * 100 / price
+    input_metrics:
+      - name: current_annual_rent_sum
+        alias: annual_rent
+      - name: current_price_sum
+        alias: price

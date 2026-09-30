@@ -62,10 +62,27 @@ municipalities as (
         is_preliminary,
         source_table
     from {{ ref('stg_statfin__prices_municipality') }}
+),
+
+unioned as (
+    select * from postal
+    union all
+    select * from areas
+    union all
+    select * from municipalities
 )
 
-select * from postal
-union all
-select * from areas
-union all
-select * from municipalities
+select
+    {{ natural_key([
+        'area_scheme',
+        'area_code',
+        'period_grain',
+        'period_start_date',
+        'building_type',
+        'room_type'
+    ]) }}
+        as dwelling_price_key,
+    {{ dbt.concat(['area_scheme', "':'", 'area_code']) }} as area_key,
+    case when area_scheme = 'postal_code' then area_code end as postal_code,
+    *
+from unioned

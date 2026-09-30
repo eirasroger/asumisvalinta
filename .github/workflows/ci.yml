@@ -34,9 +34,6 @@ jobs:
           uv run ruff check .
           uv run ruff format --check .
 
-      - name: Test Python
-        run: uv run pytest
-
       - name: Load fixture warehouse
         run: uv run python scripts/load_fixture.py
 
@@ -45,3 +42,9 @@ jobs:
 
       - name: Build and test dbt models
         run: uv run dbt build --vars '{min_postal_codes_per_quarter: 1}'
+
+      - name: Validate semantic layer
+        run: uv run python scripts/validate_semantic_layer.py
+
+      - name: Test Python and governed metrics
+        run: uv run pytest
