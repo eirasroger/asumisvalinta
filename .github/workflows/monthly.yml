@@ -58,7 +58,12 @@ jobs:
         run: uv run asumisvalinta-eval --check
 
       - name: Build release files
-        run: uv run python scripts/build_release.py --output dist
+        run: |
+          uv run python scripts/build_release.py --output dist
+          uv run dbt docs generate
+          cp dbt/target/index.html dist/dbt-docs-index.html
+          cp dbt/target/manifest.json dist/dbt-docs-manifest.json
+          cp dbt/target/catalog.json dist/dbt-docs-catalog.json
 
       - name: Publish release
         run: |
@@ -68,6 +73,9 @@ jobs:
             dist/asumisvalinta.duckdb \
             dist/asumisvalinta-serving.duckdb \
             dist/raw-parquet.zip \
+            dist/dbt-docs-index.html \
+            dist/dbt-docs-manifest.json \
+            dist/dbt-docs-catalog.json \
             --title "Data $(date -u +%Y-%m-%d)" \
             --notes "Warehouse built by the monthly refresh. Sources: Statistics Finland (CC BY 4.0), ECB statistics." \
             --latest
@@ -78,25 +86,3 @@ jobs:
         if: ${{ env.DEPLOY_HOOK != '' }}
         run: curl -fsS -X POST "$DEPLOY_HOOK" > /dev/null
 
-      - name: Generate dbt docs
-        run: |
-          uv run dbt docs generate
-          mkdir -p site
-          cp dbt/target/index.html dbt/target/manifest.json dbt/target/catalog.json site/
-
-      - uses: actions/upload-pages-artifact@v5
-        with:
-          path: site
-
-  docs:
-    needs: refresh
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v5

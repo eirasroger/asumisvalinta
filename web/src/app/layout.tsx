@@ -48,6 +48,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/methodology" className="underline">
                 Methodology and sources
               </Link>
+              {" · "}
+              <a href="/data-docs/index.html" className="underline">
+                Data model documentation
+              </a>
             </p>
           </div>
         </footer>

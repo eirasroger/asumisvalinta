@@ -43,3 +43,6 @@ next-env.d.ts
 # Coding-agent notes
 AGENTS.md
 CLAUDE.md
+
+# dbt docs downloaded at build time
+/public/data-docs
