@@ -56,8 +56,8 @@ TABLES: dict[str, str] = {
     ),
     "raw_statfin_classifications.classification_items": "true",
     "raw_statfin_classifications.correspondence_maps": "true",
-    "raw_statfin_classifications.area_postal_codes": f"postal_code in {_in(POSTAL_CODES)}",
-    "raw_paavo.postal_areas": f"postal_code in {_in(POSTAL_CODES)}",
+    "raw_statfin_classifications.area_postal_codes": "true",
+    "raw_paavo.postal_areas": "true",
     "raw_ecb.mir_housing_loan_rates": "time_period >= '2020-01'",
 }
 

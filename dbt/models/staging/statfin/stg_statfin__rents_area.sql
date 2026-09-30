@@ -1,4 +1,4 @@
-okawith rents_2025_base as (
+with rents_2025_base as (
     select
         {{ period_start_date('period', 'quarter') }} as period_start_date,
         period,
