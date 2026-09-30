@@ -17,14 +17,20 @@ def policy() -> PolicyInput:
     """Rules in force on 2026-09-30 (seed policy_parameters)."""
     return PolicyInput(
         transfer_tax_rate=0.015,
-        capital_income_tax_rate_lower=0.30,
-        capital_income_tax_rate_upper=0.34,
-        capital_income_tax_threshold=30_000,
+        capital_income_tax_rate=0.30,
+        interest_tax_at_source_rate=0.30,
         home_sale_exemption_min_years=2,
         presumptive_acquisition_cost_rate_short=0.20,
         presumptive_acquisition_cost_rate_long=0.40,
         presumptive_acquisition_cost_threshold_years=10,
+        presumptive_acquisition_cost_rate_securities_short=0.20,
+        presumptive_acquisition_cost_rate_securities_long=0.40,
         max_loan_to_collateral=0.95,
+        asp_interest_subsidy_threshold_rate=0.038,
+        asp_interest_subsidy_share=0.70,
+        asp_interest_subsidy_max_years=10,
+        asp_min_savings_share=0.10,
+        asp_loan_max=230_000,
     )
 
 
@@ -46,7 +52,6 @@ def simple_scenario(policy: PolicyInput) -> ScenarioInput:
             price_growth=0.0,
             maintenance_charge_per_m2_month=5,
             maintenance_charge_growth=0.0,
-            renovation_reserve_per_m2_year=0,
             selling_cost_rate=0.04,
             mortgage=MortgageInput(
                 down_payment_share=0.10,

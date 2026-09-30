@@ -322,6 +322,8 @@ def planner_start(
                 "buildings": aso.buildings,
                 "fee_per_m2": _range(*aso.fee_per_m2),
                 "charge_per_m2": _range(*aso.charge_per_m2),
+                "charge_to_rent": aso.charge_to_rent,
+                "fee_to_price": aso.fee_to_price,
             },
         },
     }
@@ -331,7 +333,8 @@ WHAT_IFS: dict[str, str] = {
     "rates_up": "Interest rates 1 point higher",
     "prices_flat": "Flat prices do not grow",
     "rents_faster": "Rents grow 2 points faster",
-    "returns_lower": "Investment returns 2 points lower",
+    "charges_faster": "Charges rise 2 points faster",
+    "savings_lower": "Savings earn 2 points less",
 }
 
 
@@ -347,11 +350,13 @@ def _variant(scenario: ScenarioInput, key: str) -> ScenarioInput:
         data["buy"]["price_growth"] = 0.0
     elif key == "rents_faster":
         data["rent"]["rent_growth"] += 0.02
-    elif key == "returns_lower":
+    elif key == "charges_faster":
+        data["buy"]["maintenance_charge_growth"] += 0.02
+        if data["aso"]:
+            data["aso"]["charge_growth"] += 0.02
+    elif key == "savings_lower":
         data["investment"]["investment_return"] -= 0.02
-        data["investment"]["parked_cash_return"] = min(
-            data["investment"]["parked_cash_return"], data["investment"]["investment_return"]
-        )
+        data["investment"]["parked_cash_return"] -= 0.02
     return ScenarioInput.model_validate(data)
 
 

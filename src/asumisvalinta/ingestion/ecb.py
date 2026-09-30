@@ -1,4 +1,4 @@
-"""dlt source for ECB MIR interest rates on new housing loans in Finland.
+"""dlt source for ECB MIR interest rates in Finland: new housing loans and household deposits.
 
 Loads incrementally: each run requests only observations updated since the last run.
 """
@@ -14,18 +14,19 @@ from dlt.sources.helpers import requests
 
 DATA_URL = "https://data-api.ecb.europa.eu/service/data/MIR"
 
-# Fixation periods: A all, F up to 1 year, I 1 to 5 years, O 5 to 10 years, P over 10 years.
-SERIES_KEY = "M.FI.B.A2C.A+F+I+O+P.R.A.2250.EUR.N"
+# A2C housing loans, L22 deposits with agreed maturity. Periods: A all, F up to 1 year,
+# I 1 to 5 years, O 5 to 10 years, P over 10 years.
+SERIES_KEY = "M.FI.B.A2C+L22.A+F+I+O+P.R.A.2250.EUR.N"
 
 _client = requests.Client(raise_for_status=False)
 
 
 @dlt.resource(
-    name="mir_housing_loan_rates",
+    name="mir_interest_rates",
     write_disposition="merge",
     primary_key=["series_key", "time_period"],
 )
-def mir_housing_loan_rates() -> Iterator[dict[str, Any]]:
+def mir_interest_rates() -> Iterator[dict[str, Any]]:
     state = dlt.current.resource_state()
     started = datetime.now(UTC).replace(microsecond=0).isoformat()
     params = {"format": "csvdata"}
@@ -41,6 +42,7 @@ def mir_housing_loan_rates() -> Iterator[dict[str, Any]]:
     for record in csv.DictReader(io.StringIO(response.text)):
         yield {
             "series_key": record["KEY"],
+            "balance_sheet_item": record["BS_ITEM"],
             "time_period": record["TIME_PERIOD"],
             "fixation_period": record["MATURITY_NOT_IRATE"],
             "rate_pct": float(record["OBS_VALUE"]) if record["OBS_VALUE"] else None,
@@ -53,4 +55,4 @@ def mir_housing_loan_rates() -> Iterator[dict[str, Any]]:
 
 @dlt.source(name="ecb")
 def ecb_source() -> Any:
-    return mir_housing_loan_rates
+    return mir_interest_rates

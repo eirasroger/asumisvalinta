@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
 import type { Metadata } from "next";
 import { Schibsted_Grotesk } from "next/font/google";
 import Link from "next/link";
@@ -29,7 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
         </header>
         {children}
-        <Footer />
+        <Footer dataDocs={existsSync(path.join(process.cwd(), "public", "data-docs", "index.html"))} />
       </body>
     </html>
   );

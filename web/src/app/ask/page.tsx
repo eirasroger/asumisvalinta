@@ -81,7 +81,7 @@ export default function AskPage() {
         />
         <div className="flex flex-wrap items-center gap-3 px-4 pb-4">
           <p className="mr-auto pl-1 text-xs text-ink-3">
-            Sent to OpenAI to be answered. Leave out personal information.
+            Leave out personal information.
             {answer ? ` ${answer.remaining_questions} questions left in this session.` : ""}
           </p>
           <button type="submit" disabled={loading || question.trim().length < 3} className="h-9 rounded-lg bg-ink px-4 text-sm font-medium text-paper transition-opacity hover:opacity-90 disabled:opacity-40">

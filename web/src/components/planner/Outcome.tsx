@@ -72,7 +72,7 @@ export function Outcome({ run, loading }: { run: PlannerRun; loading: boolean })
                 [
                   ["wealth", "Wealth"],
                   ["cost", "Monthly cost"],
-                  ["stress", "Stress test"],
+                  ["stress", "What if"],
                 ] as const
               ).map(([value, label]) => (
                 <Tabs.Trigger
@@ -96,7 +96,7 @@ export function Outcome({ run, loading }: { run: PlannerRun; loading: boolean })
             </Tabs.Content>
             <Tabs.Content value="cost">{table ? <YearTable run={run} kind="cost" /> : <CostChart run={run} />}</Tabs.Content>
             <Tabs.Content value="stress">
-              <StressChart run={run} />
+              <WhatIfTable run={run} />
             </Tabs.Content>
           </div>
         </Tabs.Root>
@@ -260,55 +260,74 @@ function CostChart({ run }: { run: PlannerRun }) {
   return <EChart option={option} height={260} label="Average monthly housing cost of each option by year" />;
 }
 
-function StressChart({ run }: { run: PlannerRun }) {
-  const option = useMemo(() => {
-    const { options } = ordered(run);
-    const base = Object.fromEntries(options.map((item) => [item.option, item.end_wealth])) as Record<Option, number>;
-    const labels = run.what_ifs.map((whatIf) => whatIf.label);
-    return {
-      animationDurationUpdate: 450,
-      grid: { left: 8, right: 56, top: 8, bottom: 24, containLabel: true },
-      xAxis: {
-        type: "value",
-        axisLabel: { ...AXIS_LABEL, formatter: formatCompactEuro },
-        splitLine: { lineStyle: { color: LINE, type: [3, 4] } },
-      },
-      yAxis: {
-        type: "category",
-        data: labels,
-        inverse: true,
-        axisLine: { lineStyle: { color: INK_3 } },
-        axisTick: { show: false },
-        axisLabel: { color: INK_2, fontSize: 13, width: 170, overflow: "break" },
-      },
-      tooltip: {
-        trigger: "axis",
-        axisPointer: { type: "shadow", shadowStyle: { color: "rgba(26,37,48,0.04)" } },
-        ...TOOLTIP_STYLE,
-        formatter: (items: { axisValue: string; seriesName: string; value: number; color: string }[]) =>
-          tooltipBox(
-            items[0].axisValue,
-            items.map((item) => ({
-              color: item.color,
-              label: item.seriesName,
-              value: `${item.value >= 0 ? "+" : "−"}${formatEuro(Math.abs(item.value))}`,
-            })),
-          ),
-      },
-      series: options.map((item) => ({
-        name: OPTION_LABELS[item.option],
-        type: "bar",
-        barWidth: 9,
-        barGap: "40%",
-        itemStyle: { color: COLORS[item.option], borderRadius: 3 },
-        data: run.what_ifs.map((whatIf) => (whatIf.end_wealth[item.option] ?? 0) - base[item.option]),
-      })),
-    };
-  }, [run]);
+function WhatIfTable({ run }: { run: PlannerRun }) {
+  const { options } = ordered(run);
+  const plan = Object.fromEntries(options.map((item) => [item.option, item.end_wealth])) as Record<Option, number>;
+  const bestOf = (wealth: Partial<Record<Option, number>>) =>
+    (Object.entries(wealth) as [Option, number][]).sort((a, b) => b[1] - a[1])[0][0];
+  const planBest = bestOf(plan);
+  const rows = [
+    { key: "plan", label: "Your plan", wealth: plan as Partial<Record<Option, number>> },
+    ...run.what_ifs.map((whatIf) => ({ key: whatIf.key, label: whatIf.label, wealth: whatIf.end_wealth })),
+  ];
+
   return (
-    <div>
-      <p className="px-2 pt-1 text-[13px] text-ink-3">Change in wealth at the end if one assumption turns out differently</p>
-      <EChart option={option} height={236} label="Change in end wealth under four alternative assumptions" />
+    <div className="overflow-x-auto px-1 pb-2">
+      <p className="px-1 pb-3 text-[13px] text-ink-3">
+        Wealth after {run.result.horizon_years} years if one assumption turns out differently
+      </p>
+      <table className="w-full text-[13px]">
+        <thead>
+          <tr className="text-left text-xs text-ink-3">
+            <th className="pb-2 pl-1 font-normal">If</th>
+            {options.map((item) => (
+              <th key={item.option} className="pb-2 text-right font-normal whitespace-nowrap">
+                <span className="inline-flex items-center gap-1.5">
+                  <Dot color={COLORS[item.option]} size={6} />
+                  {item.option === "aso" ? "ASO" : OPTION_LABELS[item.option]}
+                </span>
+              </th>
+            ))}
+            <th className="pr-1 pb-2 text-right font-normal">Best</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => {
+            const best = bestOf(row.wealth);
+            const changed = row.key !== "plan" && best !== planBest;
+            return (
+              <tr key={row.key} className={`border-t border-line ${row.key === "plan" ? "bg-well/60" : ""}`}>
+                <td className={`py-2.5 pl-1 ${row.key === "plan" ? "font-medium" : "text-ink-2"}`}>{row.label}</td>
+                {options.map((item) => {
+                  const value = row.wealth[item.option] ?? 0;
+                  const change = value - plan[item.option];
+                  return (
+                    <td key={item.option} className="py-2.5 text-right whitespace-nowrap">
+                      <span className={item.option === best ? "font-semibold" : ""}>{formatCompactEuro(value)}</span>
+                      {row.key !== "plan" && Math.abs(change) >= 50 && (
+                        <span className={`block text-[11px] ${change > 0 ? "text-good" : "text-bad"}`}>
+                          {change > 0 ? "+" : "−"}
+                          {formatCompactEuro(Math.abs(change))}
+                        </span>
+                      )}
+                    </td>
+                  );
+                })}
+                <td className="py-2.5 pr-1 text-right whitespace-nowrap">
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 ${
+                      changed ? "bg-ink font-medium text-paper" : ""
+                    }`}
+                  >
+                    <Dot color={COLORS[best]} size={6} />
+                    {best === "aso" ? "ASO" : OPTION_LABELS[best]}
+                  </span>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }

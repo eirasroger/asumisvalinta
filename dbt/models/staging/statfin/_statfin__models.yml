@@ -100,3 +100,24 @@ models:
       - unique_combination:
           arguments:
             columns: [period_start_date, area_code, room_type]
+
+  - name: stg_statfin__housing_company_finances_by_age
+    description: Profit and loss items of housing companies by year of construction, in euros per m² per month.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [period_start_date, building_type, construction_period_code, account_item_code]
+
+  - name: stg_statfin__owner_renovation_costs
+    description: Renovation costs that owner-occupiers contract out, per m² of floor area per year.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [period_start_date, building_type, structure_element_code]
+
+  - name: stg_statfin__consumer_price_index
+    description: Consumer price index (2015=100), yearly.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [period_start_date]

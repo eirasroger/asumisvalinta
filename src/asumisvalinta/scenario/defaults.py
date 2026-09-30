@@ -11,6 +11,7 @@ from pathlib import Path
 
 from asumisvalinta.config import connect_read_only
 from asumisvalinta.scenario.models import (
+    MAX_YEARS,
     AsoInput,
     BuyInput,
     InvestmentInput,
@@ -24,16 +25,39 @@ from asumisvalinta.scenario.policy import PolicyRow, resolve_policy
 GROWTH_YEARS = 10
 SIMILAR_AGE_YEARS = 10
 MIN_SAMPLE = 3
+# From 2010 on, capital charges mostly repay the construction loan, which the
+# housing company loan share already covers; such buildings get the 2000s level.
+LOAN_DRIVEN_FROM_YEAR = 2010
 
 
 @dataclass(frozen=True)
 class AsoSample:
-    """Sampled right-of-occupancy buildings used as the benchmark for fees and charges."""
+    """Sampled right-of-occupancy buildings, scaled to the market of the chosen area.
+
+    `fee_per_m2` and `charge_per_m2` are quartiles for this area: each sampled building's
+    fee relative to the price per m² and charge relative to the rent per m² where it
+    stands, applied to the price and rent of the chosen area.
+    """
 
     scope: str
     buildings: int
     fee_per_m2: tuple[float, float, float]
     charge_per_m2: tuple[float, float, float]
+    charge_to_rent: float
+    fee_to_price: float
+
+
+@dataclass(frozen=True)
+class AgeClass:
+    first_year: int | None
+    last_year: int | None
+    maintenance_charge: float
+    capital_charge: float
+
+    def contains(self, year: int) -> bool:
+        return (self.first_year is None or self.first_year <= year) and (
+            self.last_year is None or year <= self.last_year
+        )
 
 
 @dataclass(frozen=True)
@@ -41,6 +65,10 @@ class Defaults:
     scenario: ScenarioInput
     sources: dict[str, str]
     aso_sample: AsoSample
+
+
+class DefaultsError(LookupError):
+    pass
 
 
 def _quartiles(values: list[float]) -> tuple[float, float, float]:
@@ -51,22 +79,46 @@ def _quartiles(values: list[float]) -> tuple[float, float, float]:
     return (lower, median, upper)
 
 
-def _aso_sample(
-    offers: list[tuple[str, float, float, int]], building_year: int | None
-) -> tuple[list[tuple[str, float, float, int]], str]:
+def _cagr(start: float, end: float, years: int) -> float:
+    return (end / start) ** (1 / years) - 1
+
+
+def _similar_age(
+    offers: list[tuple[float, float, int]], building_year: int | None
+) -> tuple[list[tuple[float, float, int]], str]:
     if building_year is not None:
-        similar = [o for o in offers if abs(o[3] - building_year) <= SIMILAR_AGE_YEARS]
+        similar = [o for o in offers if abs(o[2] - building_year) <= SIMILAR_AGE_YEARS]
         if len(similar) >= MIN_SAMPLE:
             return similar, f"built within {SIMILAR_AGE_YEARS} years of {building_year}"
     return offers, "all building ages"
 
 
-class DefaultsError(LookupError):
-    pass
+def _class_for(classes: list[AgeClass], construction_year: int) -> AgeClass:
+    return next(item for item in classes if item.contains(construction_year))
 
 
-def _cagr(start: float, end: float, years: int) -> float:
-    return (end / start) ** (1 / years) - 1
+def capital_charge_schedule(
+    classes: list[AgeClass], statistics_year: int, start_year: int, building_year: int | None
+) -> tuple[float, ...]:
+    """Capital charge per m² per month in each year from `start_year`, by building age.
+
+    A building that reaches age A in some year pays what buildings of age A pay in the
+    statistics year.
+    """
+    renovation = [
+        item for item in classes if item.last_year and item.last_year < LOAN_DRIVEN_FROM_YEAR
+    ]
+    if building_year is None:
+        level = statistics.fmean(item.capital_charge for item in renovation)
+        return (level,)
+    newest = _class_for(classes, LOAN_DRIVEN_FROM_YEAR - 1)
+    schedule = []
+    for offset in range(MAX_YEARS):
+        age = max(start_year + offset - building_year, 0)
+        peer_year = statistics_year - age
+        peer = newest if peer_year >= LOAN_DRIVEN_FROM_YEAR else _class_for(classes, peer_year)
+        schedule.append(peer.capital_charge)
+    return tuple(schedule)
 
 
 def load_defaults(
@@ -100,13 +152,12 @@ def load_defaults(
             maintenance_charge,
             charge_area,
             price_growth,
-            rent_growth,
         ) = one(
             """
             select municipality_code, price_per_m2, price_geography_level, price_period_label,
                 rent_per_m2, rent_geography_level, rent_period_label,
                 maintenance_charge_per_m2, maintenance_charge_area_code,
-                coalesce(price_cagr_10y, price_cagr_5y), coalesce(rent_cagr_10y, rent_cagr_5y)
+                coalesce(price_cagr_10y, price_cagr_5y)
             from marts.mart_market_levels
             where postal_code = ? and room_type = ?
             """,
@@ -118,6 +169,15 @@ def load_defaults(
             select new_mortgage_rate_variable_pct / 100, month_start_date
             from marts.fct_interest_rates
             where new_mortgage_rate_variable_pct is not null
+            order by month_start_date desc
+            limit 1
+            """
+        )
+        deposit_rate, deposit_month = one(
+            """
+            select new_deposit_rate_up_to_1y_pct / 100, month_start_date
+            from marts.fct_interest_rates
+            where new_deposit_rate_up_to_1y_pct is not null
             order by month_start_date desc
             limit 1
             """
@@ -156,23 +216,76 @@ def load_defaults(
             """
         )
 
-        offer_columns = (
-            "offers.municipality, offers.right_of_occupancy_fee_avg_eur_per_m2, "
-            "offers.monthly_charge_eur_per_m2, offers.building_year"
+        cpi_end, cpi_start, cpi_year = one(
+            f"""
+            select latest.consumer_price_index_2015, earlier.consumer_price_index_2015,
+                latest.period_label
+            from marts.fct_consumer_price_index as latest
+            inner join marts.fct_consumer_price_index as earlier
+                on extract(year from earlier.period_start_date)
+                    = extract(year from latest.period_start_date) - {GROWTH_YEARS}
+            order by latest.period_start_date desc
+            limit 1
+            """
         )
-        offers = connection.execute(
-            f"select {offer_columns} from seeds.aso_offers as offers "
-            "inner join marts.dim_postal_area as postal on offers.postal_code = postal.postal_code "
-            "where postal.municipality_code = ?",
-            [municipality_code],
-        ).fetchall()
-        aso_scope = offers[0][0] if offers else ""
-        if len(offers) < MIN_SAMPLE:
-            offers = connection.execute(
-                f"select {offer_columns} from seeds.aso_offers as offers"
-            ).fetchall()
-            aso_scope = "all sampled cities"
 
+        age_rows = connection.execute(
+            """
+            select period_label, construction_period_code, first_construction_year,
+                last_construction_year,
+                max(case when account_item_code = 'k3001' then value_eur_per_m2_month end),
+                max(case when account_item_code = 'k3283' then value_eur_per_m2_month end)
+            from marts.fct_housing_company_charges_by_age
+            where building_type = 'block_of_flats'
+                and period_start_date = (
+                    select max(period_start_date) from marts.fct_housing_company_charges_by_age
+                )
+            group by all
+            order by construction_period_code
+            """
+        ).fetchall()
+        if not age_rows:
+            raise DefaultsError("No housing company charges by building age")
+        charges_year = int(age_rows[0][0])
+        all_ages = next(row for row in age_rows if row[1] == "0")
+        classes = [AgeClass(row[2], row[3], row[4], row[5]) for row in age_rows if row[1] != "0"]
+
+        repairs_per_m2_year, repairs_first, repairs_last = one(
+            """
+            select avg(renovation_costs_eur_per_m2_year), min(period_label), max(period_label)
+            from (
+                select renovation_costs_eur_per_m2_year, period_label
+                from marts.fct_owner_renovation_costs
+                where building_type = 'block_of_flats' and structure_element_code = 'SSS'
+                order by period_start_date desc
+                limit (select cast(value as integer) from seeds.assumptions
+                       where parameter_code = 'owner_renovation_cost_years')
+            )
+            """
+        )
+
+        offers = connection.execute(
+            """
+            select offers.right_of_occupancy_fee_avg_eur_per_m2 / levels.price_per_m2,
+                offers.monthly_charge_eur_per_m2 / levels.rent_per_m2,
+                offers.building_year
+            from seeds.aso_offers as offers
+            inner join marts.mart_market_levels as levels
+                on offers.postal_code = levels.postal_code and levels.room_type = ?
+            where levels.price_per_m2 > 0 and levels.rent_per_m2 > 0
+            """,
+            [room_type],
+        ).fetchall()
+        if not offers:
+            raise DefaultsError("No right-of-occupancy sample")
+
+        asp_major_city = (
+            connection.execute(
+                "select count(*) from seeds.asp_major_cities where municipality_code = ?",
+                [municipality_code],
+            ).fetchone()[0]
+            > 0
+        )
         assumptions = dict(
             connection.execute("select parameter_code, value from seeds.assumptions").fetchall()
         )
@@ -183,18 +296,33 @@ def load_defaults(
             ).fetchall()
         ]
 
-    policy = resolve_policy(policy_rows, purchase_date, first_home, buyer_age)
+    policy = resolve_policy(policy_rows, purchase_date, first_home, buyer_age, asp_major_city)
     maintenance_growth = _cagr(charge_start, charge_end, GROWTH_YEARS)
     index_growth = _cagr(index_start, index_end, GROWTH_YEARS)
-    sample, age_scope = _aso_sample(offers, building_year)
-    aso_sample = AsoSample(
-        scope=f"{aso_scope}, {age_scope}",
-        buildings=len(sample),
-        fee_per_m2=_quartiles([offer[1] for offer in sample]),
-        charge_per_m2=_quartiles([offer[2] for offer in sample]),
+    inflation = _cagr(cpi_start, cpi_end, GROWTH_YEARS)
+    rent_growth = max(assumptions["rent_growth_floor"], inflation)
+
+    age_note = "all building ages"
+    if building_year is not None:
+        own_class = _class_for(classes, building_year)
+        maintenance_charge *= own_class.maintenance_charge / all_ages[4]
+        age_note = f"buildings from {building_year}"
+    capital_charges = capital_charge_schedule(
+        classes, charges_year, purchase_date.year, building_year
     )
-    fee_per_m2 = aso_sample.fee_per_m2[1]
-    aso_charge = aso_sample.charge_per_m2[1]
+
+    sample, age_scope = _similar_age(offers, building_year)
+    fee_to_price = _quartiles([row[0] for row in sample])
+    charge_to_rent = _quartiles([row[1] for row in sample])
+    aso_sample = AsoSample(
+        scope=age_scope,
+        buildings=len(sample),
+        fee_per_m2=tuple(ratio * price_per_m2 for ratio in fee_to_price),
+        charge_per_m2=tuple(ratio * rent_per_m2 for ratio in charge_to_rent),
+        charge_to_rent=charge_to_rent[1],
+        fee_to_price=fee_to_price[1],
+    )
+    invest = assumptions["invest_surplus_by_default"] == 1
 
     scenario = ScenarioInput(
         size_m2=size_m2,
@@ -204,7 +332,8 @@ def load_defaults(
             price_growth=price_growth,
             maintenance_charge_per_m2_month=maintenance_charge,
             maintenance_charge_growth=maintenance_growth,
-            renovation_reserve_per_m2_year=assumptions["renovation_reserve_eur_per_m2_year"],
+            capital_charges_per_m2_month=capital_charges,
+            own_repairs_per_m2_year=repairs_per_m2_year,
             selling_cost_rate=assumptions["selling_cost_rate"],
             mortgage=MortgageInput(
                 down_payment_share=assumptions["down_payment_share"],
@@ -214,14 +343,15 @@ def load_defaults(
         ),
         rent=RentInput(rent_per_m2_month=rent_per_m2, rent_growth=rent_growth),
         aso=AsoInput(
-            fee_per_m2=fee_per_m2,
-            charge_per_m2_month=aso_charge,
+            fee_per_m2=aso_sample.fee_per_m2[1],
+            charge_per_m2_month=aso_sample.charge_per_m2[1],
             charge_growth=maintenance_growth,
             building_cost_index_growth=index_growth,
         ),
         investment=InvestmentInput(
+            surplus_strategy="invest" if invest else "park",
             investment_return=assumptions["investment_return_rate"],
-            parked_cash_return=assumptions["parked_cash_return_rate"],
+            parked_cash_return=deposit_rate,
         ),
         policy=policy,
     )
@@ -230,17 +360,35 @@ def load_defaults(
         "rent_per_m2_month": (
             f"Statistics Finland, non-subsidised, {rent_level} level, {rent_period}"
         ),
-        "price_growth": f"Price index, compound annual growth over {GROWTH_YEARS} years",
-        "rent_growth": f"Rent index, compound annual growth over {GROWTH_YEARS} years",
-        "maintenance_charge": f"Housing company finances, area {charge_area}, {charge_end_year}",
-        "maintenance_charge_growth": f"Housing company finances, {GROWTH_YEARS}-year growth",
-        "mortgage_rate": f"ECB, variable rate on new housing loans in Finland, {rate_month:%Y-%m}",
-        "aso_fee_and_charge": (
-            f"Median of {aso_sample.buildings} sampled Asuntosäätiö buildings ({aso_sample.scope})"
+        "price_growth": f"Price index, average growth over {GROWTH_YEARS} years",
+        "rent_growth": (
+            f"Inflation {inflation:.1%} a year over {GROWTH_YEARS} years to {cpi_year} "
+            f"(consumer price index), at least {assumptions['rent_growth_floor']:.0%}"
         ),
-        "aso_charge_growth": "Assumed equal to maintenance charge growth",
-        "building_cost_index_growth": f"Building cost index, {GROWTH_YEARS}-year growth "
-        f"to {index_month:%Y-%m}",
+        "maintenance_charge": (
+            f"Housing company finances, area {charge_area}, {charge_end_year}, {age_note}"
+        ),
+        "maintenance_charge_growth": f"Housing company finances, {GROWTH_YEARS}-year growth",
+        "capital_charges": (
+            f"Housing company capital charges by building age, {charges_year}, {age_note}"
+        ),
+        "own_repairs": (
+            f"Renovations owner-occupiers of flats pay themselves, "
+            f"average of {repairs_first} to {repairs_last}"
+        ),
+        "mortgage_rate": f"ECB, variable rate on new housing loans in Finland, {rate_month:%Y-%m}",
+        "savings_rate": (
+            f"ECB, new household deposits up to one year in Finland, {deposit_month:%Y-%m}"
+        ),
+        "aso_fee_and_charge": (
+            f"{aso_sample.buildings} Asuntosäätiö buildings ({age_scope}): charges "
+            f"{aso_sample.charge_to_rent:.0%} of the market rent and fees "
+            f"{aso_sample.fee_to_price:.0%} of the price per m² where each building stands"
+        ),
+        "aso_charge_growth": "Cost-based, equal to housing company charge growth",
+        "building_cost_index_growth": (
+            f"Building cost index, {GROWTH_YEARS}-year growth to {index_month:%Y-%m}"
+        ),
         "policy": f"Tax and lending rules valid on {purchase_date:%Y-%m-%d}",
         "assumptions": "Calculator assumptions (editable)",
     }

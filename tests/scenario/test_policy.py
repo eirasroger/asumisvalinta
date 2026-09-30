@@ -29,7 +29,14 @@ def test_current_rules(rows):
     policy = resolve_policy(rows, dt.date(2026, 9, 30))
     assert policy.transfer_tax_rate == 0.015
     assert policy.max_loan_to_collateral == 0.95
-    assert policy.capital_income_tax_threshold == 30_000
+    assert policy.capital_income_tax_rate == 0.30
+    assert policy.interest_tax_at_source_rate == 0.30
+    assert policy.asp_interest_subsidy_threshold_rate == 0.038
+    assert policy.asp_loan_max == 160_000
+
+
+def test_higher_asp_loan_cap_in_major_cities(rows):
+    assert resolve_policy(rows, dt.date(2026, 9, 30), asp_major_city=True).asp_loan_max == 230_000
 
 
 def test_transfer_tax_before_october_2023(rows):

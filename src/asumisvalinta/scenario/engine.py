@@ -2,7 +2,8 @@
 
 Every option starts with the same initial capital and spends the same amount each
 month: the option with the highest housing cost that month sets the budget, and
-the others put the difference into a portfolio. Wealth is measured as if
+the others save the difference. Savings earn deposit interest taxed at source, or
+an investment return taxed when the fund units are sold. Wealth is measured as if
 everything were turned into cash at the end of the horizon, after taxes.
 See content/methodology.md for the formulas.
 """
@@ -18,7 +19,12 @@ from asumisvalinta.scenario.models import (
     ScenarioResult,
     YearPoint,
 )
-from asumisvalinta.scenario.taxes import capital_income_tax, taxable_home_gain
+from asumisvalinta.scenario.taxes import (
+    after_tax_interest_rate,
+    capital_income_tax,
+    taxable_home_gain,
+    taxable_securities_gain,
+)
 
 MONTHS = MAX_YEARS * 12
 
@@ -32,10 +38,6 @@ class _Portfolio:
     def step(self, contribution: float) -> None:
         self.value = self.value * (1 + self.monthly_return) + contribution
         self.contributions += contribution
-
-    @property
-    def gain(self) -> float:
-        return max(self.value - self.contributions, 0.0)
 
 
 @dataclass
@@ -73,8 +75,11 @@ def simulate(scenario: ScenarioInput) -> ScenarioResult:
             f"The mortgage is {mortgage_principal / debt_free_price:.0%} of the debt-free price, "
             f"above the {policy.max_loan_to_collateral:.0%} loan cap."
         )
-    if buy.renovation_reserve_per_m2_year == 0:
-        warnings.append("Major renovations are not included; add a renovation reserve if needed.")
+    if buy.mortgage.asp_loan and buy.mortgage.down_payment_share < policy.asp_min_savings_share:
+        warnings.append(
+            f"An ASP loan needs savings of at least {policy.asp_min_savings_share:.0%} "
+            "of the price."
+        )
 
     mortgage = schedule(
         mortgage_principal,
@@ -94,7 +99,17 @@ def simulate(scenario: ScenarioInput) -> ScenarioResult:
     aso_fee = aso.fee_per_m2 * size if aso else 0.0
     buy_upfront = down_payment + transfer_tax
     initial_capital = max(buy_upfront, aso_fee)
-    monthly_return = _monthly(scenario.investment.annual_return)
+    invest = scenario.investment
+    monthly_return = _monthly(
+        invest.investment_return
+        if invest.surplus_strategy == "invest"
+        else after_tax_interest_rate(invest.parked_cash_return, policy)
+    )
+    asp_share = (
+        min(1.0, policy.asp_loan_max / mortgage_principal)
+        if buy.mortgage.asp_loan and mortgage_principal > 0
+        else 0.0
+    )
 
     tracks: dict[Option, _Track] = {
         "buy": _Track(buy_upfront, _Portfolio(initial_capital - buy_upfront, 0.0, monthly_return)),
@@ -110,11 +125,16 @@ def simulate(scenario: ScenarioInput) -> ScenarioResult:
         year = month // 12
         charge_growth = buy.maintenance_charge_growth
         maintenance = _grown(buy.maintenance_charge_per_m2_month, charge_growth, year)
-        renovation = _grown(buy.renovation_reserve_per_m2_year, charge_growth, year)
+        capital_charge = _grown(
+            _for_year(buy.capital_charges_per_m2_month, year), charge_growth, year
+        )
+        repairs = _grown(buy.own_repairs_per_m2_year, charge_growth, year)
+        subsidy = _asp_subsidy(scenario, mortgage, mortgage_principal, asp_share, month)
         outflows: dict[Option, float] = {
             "buy": mortgage.payment[month]
             + company_loan.payment[month]
-            + (maintenance + renovation / 12) * size,
+            + (maintenance + capital_charge + repairs / 12) * size
+            - subsidy,
             "rent": _grown(rent.rent_per_m2_month, rent.rent_growth, year) * size,
         }
         if aso:
@@ -159,6 +179,27 @@ def simulate(scenario: ScenarioInput) -> ScenarioResult:
     )
 
 
+def _for_year(values: tuple[float, ...], year: int) -> float:
+    if not values:
+        return 0.0
+    return values[min(year, len(values) - 1)]
+
+
+def _asp_subsidy(
+    scenario: ScenarioInput, mortgage: Schedule, principal: float, asp_share: float, month: int
+) -> float:
+    """State interest subsidy on the ASP part of the mortgage for one month."""
+    policy = scenario.policy
+    if asp_share == 0 or month >= policy.asp_interest_subsidy_max_years * 12:
+        return 0.0
+    balance = principal if month == 0 else mortgage.balance[month - 1]
+    excess = max(
+        0.0,
+        scenario.buy.mortgage.rate_for_month(month) - policy.asp_interest_subsidy_threshold_rate,
+    )
+    return policy.asp_interest_subsidy_share * excess * balance * asp_share / 12
+
+
 def _record_year(
     scenario: ScenarioInput,
     tracks: dict[Option, _Track],
@@ -171,7 +212,10 @@ def _record_year(
     year = months // 12
 
     def portfolio_gain(track: _Track) -> float:
-        return track.portfolio.gain if invest.tax_gains else 0.0
+        if not invest.tax_gains or invest.surplus_strategy == "park":
+            return 0.0
+        portfolio = track.portfolio
+        return taxable_securities_gain(portfolio.value, portfolio.contributions, months, policy)
 
     track = tracks["buy"]
     debt_free_price = buy.price_per_m2 * scenario.size_m2

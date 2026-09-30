@@ -50,6 +50,7 @@ class MortgageInput(_Model):
     rate_path: RatePath
     fixed_rate: float | None = Field(default=None, ge=-0.05, le=0.30)
     fixed_years: int | None = Field(default=None, ge=1, le=40)
+    asp_loan: bool = False
 
     @model_validator(mode="after")
     def _fixed_terms_given(self) -> "MortgageInput":
@@ -65,11 +66,18 @@ class MortgageInput(_Model):
 
 
 class BuyInput(_Model):
+    """A flat in a housing company.
+
+    `capital_charges_per_m2_month` holds the charge for renovations and investments of the
+    housing company in each year from the purchase, in today's euros; the last value repeats.
+    """
+
     price_per_m2: float = Field(gt=0)
     price_growth: float = Field(ge=-0.5, le=0.5)
     maintenance_charge_per_m2_month: float = Field(ge=0)
     maintenance_charge_growth: float = Field(ge=-0.5, le=0.5)
-    renovation_reserve_per_m2_year: float = Field(default=0.0, ge=0)
+    capital_charges_per_m2_month: tuple[float, ...] = ()
+    own_repairs_per_m2_year: float = Field(default=0.0, ge=0)
     housing_company_loan_share: float = Field(default=0.0, ge=0)
     housing_company_loan_years: int = Field(default=20, ge=1, le=40)
     selling_cost_rate: float = Field(ge=0, le=0.2)
@@ -89,7 +97,7 @@ class AsoInput(_Model):
 
 
 class InvestmentInput(_Model):
-    surplus_strategy: Literal["invest", "park"] = "invest"
+    surplus_strategy: Literal["invest", "park"] = "park"
     investment_return: float = Field(ge=-0.5, le=0.5)
     parked_cash_return: float = Field(ge=-0.5, le=0.5)
     tax_gains: bool = True
@@ -103,14 +111,20 @@ class InvestmentInput(_Model):
 
 class PolicyInput(_Model):
     transfer_tax_rate: float = Field(ge=0, le=0.1)
-    capital_income_tax_rate_lower: float = Field(ge=0, le=1)
-    capital_income_tax_rate_upper: float = Field(ge=0, le=1)
-    capital_income_tax_threshold: float = Field(ge=0)
+    capital_income_tax_rate: float = Field(ge=0, le=1)
+    interest_tax_at_source_rate: float = Field(ge=0, le=1)
     home_sale_exemption_min_years: int = Field(ge=0)
     presumptive_acquisition_cost_rate_short: float = Field(ge=0, le=1)
     presumptive_acquisition_cost_rate_long: float = Field(ge=0, le=1)
     presumptive_acquisition_cost_threshold_years: int = Field(ge=0)
+    presumptive_acquisition_cost_rate_securities_short: float = Field(ge=0, le=1)
+    presumptive_acquisition_cost_rate_securities_long: float = Field(ge=0, le=1)
     max_loan_to_collateral: float = Field(gt=0, le=1)
+    asp_interest_subsidy_threshold_rate: float = Field(default=0.0, ge=0, le=1)
+    asp_interest_subsidy_share: float = Field(default=0.0, ge=0, le=1)
+    asp_interest_subsidy_max_years: int = Field(default=0, ge=0)
+    asp_min_savings_share: float = Field(default=0.0, ge=0, le=1)
+    asp_loan_max: float = Field(default=0.0, ge=0)
 
 
 class ScenarioInput(_Model):

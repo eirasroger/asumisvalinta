@@ -237,6 +237,49 @@ TABLES: tuple[PxTable, ...] = (
             "asvu_q3": "rent_upper_quartile",
         },
     ),
+    PxTable(
+        name="housing_company_finances_by_age_yearly",
+        database="StatFin",
+        subject="asyta",
+        table_file="15gi.px",
+        time_dimension="timeperiod_y",
+        content_dimension="contentscode",
+        dimensions={
+            "timeperiod_y": "period",
+            "vast_vaihtoehdo_242_20130101": "company_type",
+            "rak_valm_v_20_20201229": "construction_period",
+            "Tuloslaskelma_3_20220310": "account_item",
+        },
+        contents={"tuloslaskelmaeran_arvo": "value_cents_per_m2_month"},
+    ),
+    PxTable(
+        name="owner_renovation_costs_yearly",
+        database="StatFin",
+        subject="kora",
+        table_file="15gd.px",
+        time_dimension="timeperiod_y",
+        content_dimension="contentscode",
+        dimensions={
+            "timeperiod_y": "period",
+            "rakennusosa_2_20080201": "structure_element",
+            "vast_vaihtoehdo_243_20130101": "dwelling_type",
+        },
+        contents={
+            "omas_korjauskustannukset": "renovation_costs_eur_million",
+            "omas_korjauskustannukset_per_m2": "renovation_costs_eur_per_m2",
+        },
+    ),
+    PxTable(
+        name="consumer_price_index_yearly",
+        database="StatFin",
+        subject="khi",
+        table_file="11xt.px",
+        time_dimension="timeperiod_y",
+        content_dimension="contentscode",
+        dimensions={"timeperiod_y": "period", "indeksisarja_1_20160101": "index_series"},
+        contents={"Pisteluku": "index_value"},
+        selection={"indeksisarja_1_20160101": ["0_2015"]},
+    ),
 )
 
 

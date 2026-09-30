@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export function Footer() {
+export function Footer({ dataDocs }: { dataDocs: boolean }) {
   if (usePathname() === "/") return null;
   return (
     <footer className="border-t border-line">
@@ -16,9 +16,11 @@ export function Footer() {
           <Link href="/methodology" className="hover:text-ink">
             Methodology
           </Link>
-          <a href="/data-docs/index.html" className="hover:text-ink">
-            Data model
-          </a>
+          {dataDocs && (
+            <a href="/data-docs/index.html" className="hover:text-ink">
+              Data model
+            </a>
+          )}
         </p>
       </div>
     </footer>

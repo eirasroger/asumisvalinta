@@ -42,7 +42,9 @@ def test_portfolio_gain_is_taxed_at_liquidation(simple_scenario):
         update={
             "aso": None,
             "rent": simple_scenario.rent.model_copy(update={"rent_per_m2_month": 35}),
-            "investment": simple_scenario.investment.model_copy(update={"investment_return": 0.12}),
+            "investment": simple_scenario.investment.model_copy(
+                update={"surplus_strategy": "invest", "investment_return": 0.12}
+            ),
         }
     )
     rent = simulate(scenario).option("rent")
@@ -51,22 +53,27 @@ def test_portfolio_gain_is_taxed_at_liquidation(simple_scenario):
     assert rent.end_wealth == pytest.approx(23_000 * 1.12 - 828)
 
 
-def test_parked_cash_uses_the_parked_return(simple_scenario):
+def test_deposit_interest_is_taxed_at_source_every_year(simple_scenario):
+    # 23 000 € in a savings account at 2 % for two years; 30 % of the interest is withheld
+    # when it is paid, so the balance grows by 1.4 % a year and nothing is due at the end.
+    # Rent 35 €/m² = 1 750 € equals the buyer's outflow, so there is no monthly surplus.
     scenario = simple_scenario.model_copy(
         update={
             "aso": None,
+            "horizon_years": 2,
             "rent": simple_scenario.rent.model_copy(update={"rent_per_m2_month": 35}),
             "investment": simple_scenario.investment.model_copy(
                 update={
                     "surplus_strategy": "park",
                     "investment_return": 0.12,
-                    "parked_cash_return": 0.01,
-                    "tax_gains": False,
+                    "parked_cash_return": 0.02,
                 }
             ),
         }
     )
-    assert simulate(scenario).option("rent").end_wealth == pytest.approx(23_000 * 1.01)
+    rent = simulate(scenario).option("rent")
+    assert rent.breakdown["tax"] == 0.0
+    assert rent.end_wealth == pytest.approx(23_000 * 1.014**2)
 
 
 def test_aso_refund_is_indexed_and_tax_free_after_two_years(simple_scenario):
@@ -160,3 +167,55 @@ def test_results_cover_every_year_up_to_thirty(simple_scenario):
     result = simulate(simple_scenario)
     assert [point.year for point in result.years] == list(range(1, 31))
     assert result.years[0].wealth["rent"] == pytest.approx(32_000)
+
+
+def _with_buy(scenario, **changes):
+    return scenario.model_copy(update={"buy": scenario.buy.model_copy(update=changes)})
+
+
+def _buy_paid(scenario):
+    return simulate(scenario).option("buy").total_paid
+
+
+def test_capital_charges_follow_the_yearly_schedule(simple_scenario):
+    # 1 €/m² a month in year 1 and 2 €/m² from year 2 on, for 50 m²: 600 € + 1 200 €.
+    base = simple_scenario.model_copy(update={"horizon_years": 2})
+    charged = _with_buy(base, capital_charges_per_m2_month=(1.0, 2.0))
+    assert _buy_paid(charged) - _buy_paid(base) == pytest.approx(1_800)
+
+
+def test_own_repairs_are_paid_monthly(simple_scenario):
+    # 12 €/m² a year for 50 m² = 600 € in the first year.
+    repaired = _with_buy(simple_scenario, own_repairs_per_m2_year=12)
+    assert _buy_paid(repaired) - _buy_paid(simple_scenario) == pytest.approx(600)
+
+
+def _at_five_percent(scenario, asp_loan):
+    mortgage = scenario.buy.mortgage.model_copy(
+        update={"rate_path": RatePath(kind="flat", start_rate=0.05), "asp_loan": asp_loan}
+    )
+    return _with_buy(scenario, mortgage=mortgage)
+
+
+def test_asp_interest_subsidy_by_hand(simple_scenario):
+    # Mortgage 180 000 € repaid 1 500 € a month; balance before month m is 180 000 - 1 500 m.
+    # The state pays 70 % of the interest above 3.8 %: 0.7 * 1.2 % / 12 = 0.07 % of the
+    # balance a month. Year 1: 0.0007 * (12 * 180 000 - 1 500 * 66) = 1 442.70 €.
+    without = _buy_paid(_at_five_percent(simple_scenario, False))
+    with_asp = _buy_paid(_at_five_percent(simple_scenario, True))
+    assert without - with_asp == pytest.approx(1_442.70)
+
+
+def test_asp_subsidy_covers_only_the_loan_up_to_the_cap(simple_scenario):
+    # With a 160 000 € cap, 160 000 / 180 000 of the balance is subsidised.
+    capped = simple_scenario.model_copy(
+        update={"policy": simple_scenario.policy.model_copy(update={"asp_loan_max": 160_000})}
+    )
+    without = _buy_paid(_at_five_percent(capped, False))
+    with_asp = _buy_paid(_at_five_percent(capped, True))
+    assert without - with_asp == pytest.approx(1_442.70 * 160 / 180)
+
+
+def test_no_asp_subsidy_below_the_threshold_rate(simple_scenario):
+    mortgage = simple_scenario.buy.mortgage.model_copy(update={"asp_loan": True})
+    assert _buy_paid(_with_buy(simple_scenario, mortgage=mortgage)) == _buy_paid(simple_scenario)

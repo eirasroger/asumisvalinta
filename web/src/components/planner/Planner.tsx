@@ -7,8 +7,8 @@ import { AssumptionInputs } from "@/components/planner/AssumptionInputs";
 import { Outcome } from "@/components/planner/Outcome";
 import { YourNumbers } from "@/components/planner/YourNumbers";
 import { PostalCodeSearch } from "@/components/PostalCodeSearch";
-import { NumberField, Popover, Segmented, Slider } from "@/components/ui";
-import { api, type PlannerRun, type PlannerStart, ROOM_TYPES } from "@/lib/api";
+import { Hint, NumberField, Popover, Segmented, Slider } from "@/components/ui";
+import { api, type PlannerRun, type PlannerStart, ROOM_NOTE, ROOM_TYPES } from "@/lib/api";
 import {
   type Assumptions,
   buildScenario,
@@ -120,13 +120,13 @@ export function Planner() {
             </Link>
           </Popover>
         </div>
-        <Cell label="Rooms">
+        <Cell label={<Hint trigger={<button type="button" className="underline decoration-line-strong decoration-dotted underline-offset-4">Home</button>}>{ROOM_NOTE}</Hint>}>
           <Segmented
-            label="Rooms"
+            label="Home"
             size="sm"
             value={flat.room_type}
             onChange={(room_type) => update({ room_type })}
-            options={ROOM_TYPES.map((type) => ({ value: type.value, label: type.short.replace(/ rooms?/, "") }))}
+            options={ROOM_TYPES.map((type) => ({ value: type.value, label: type.short.replace("bedrooms", "bed").replace("bedroom", "bed") }))}
           />
         </Cell>
         <Cell label="Size">
@@ -195,7 +195,7 @@ export function Planner() {
   );
 }
 
-function Cell({ label, wide, children }: { label: string; wide?: boolean; children: React.ReactNode }) {
+function Cell({ label, wide, children }: { label: React.ReactNode; wide?: boolean; children: React.ReactNode }) {
   return (
     <div className={`flex flex-col justify-center gap-1.5 border-line px-5 py-3 lg:border-l ${wide ? "lg:min-w-52 lg:max-w-64 lg:flex-1" : ""}`}>
       <span className="num text-[13px] text-ink-3">{label}</span>

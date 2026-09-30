@@ -461,7 +461,8 @@ models:
   - name: fct_interest_rates
     description: >
       Average interest rates on new housing loans to households in Finland, by rate fixation period,
-      monthly. Annualised agreed rates. Source: ECB statistics.
+      and on new household deposits with an agreed maturity, monthly. Annualised agreed rates.
+      Source: ECB statistics.
     semantic_model:
       enabled: true
       name: interest_rates
@@ -499,6 +500,8 @@ models:
         description: Average rate on new housing loans fixed for over one and up to five years.
       - name: new_mortgage_rate_fixed_5_to_10y_pct
         description: Average rate on new housing loans fixed for over five and up to ten years.
+      - name: new_deposit_rate_up_to_1y_pct
+        description: Average rate on new household deposits with an agreed maturity of up to one year, percent per year.
       - name: new_mortgage_rate_fixed_over_10y_pct
         description: Average rate on new housing loans fixed for over ten years.
     metrics:
@@ -537,6 +540,14 @@ models:
         type: simple
         agg: average
         expr: new_mortgage_rate_fixed_over_10y_pct
+      - name: new_deposit_rate
+        label: Average rate on new household deposits (%)
+        description: >
+          Average interest rate on new household deposits in Finland with an agreed maturity of up to
+          one year, percent per year, before the 30 % tax at source.
+        type: simple
+        agg: average
+        expr: new_deposit_rate_up_to_1y_pct
 
   - name: fct_building_cost_index
     description: >
@@ -821,3 +832,46 @@ models:
               arguments:
                 min_value: 100
                 max_value: 10000
+
+  - name: fct_housing_company_charges_by_age
+    description: >
+      Profit and loss items of housing companies by year of construction, euros per m² per month,
+      yearly. Used for maintenance and capital charges by building age. Source: Statistics Finland.
+    columns:
+      - name: housing_company_charge_by_age_key
+        description: Unique key of the row.
+        data_tests: [unique, not_null]
+      - name: construction_period_code
+        description: Statistics Finland code of the construction period; 0 is all years.
+      - name: first_construction_year
+        description: First construction year of the period, empty for the oldest period and for all years.
+      - name: last_construction_year
+        description: Last construction year of the period, empty for the newest period and for all years.
+      - name: account_item_code
+        description: >
+          Profit and loss item, for example k3001 residential unit charges or k3283 charge for common
+          capital expenditure.
+      - name: value_eur_per_m2_month
+        description: Value of the item, euros per m² per month.
+
+  - name: fct_owner_renovation_costs
+    description: >
+      Renovation costs that owner-occupiers contract out, euros per m² of floor area per year, by
+      structure element and dwelling type. Source: Statistics Finland.
+    columns:
+      - name: owner_renovation_cost_key
+        description: Unique key of the row.
+        data_tests: [unique, not_null]
+      - name: renovation_costs_eur_per_m2_year
+        description: Renovation costs relative to the floor area of the building stock, euros per m² per year.
+
+  - name: fct_consumer_price_index
+    description: >
+      Consumer price index, overall index (2015=100), yearly. Source: Statistics Finland.
+    columns:
+      - name: consumer_price_index_key
+        description: Unique key of the row.
+        data_tests: [unique, not_null]
+      - name: consumer_price_index_2015
+        description: Point figure of the consumer price index, 2015=100.
+        data_tests: [not_null]

@@ -14,7 +14,8 @@ export interface Offer {
   price: number | null;
   company_loan: number | null;
   maintenance: number | null;
-  renovation: number | null;
+  capital_charges: number | null;
+  own_repairs: number | null;
   aso_fee: number | null;
   aso_charge: number | null;
 }
@@ -24,13 +25,15 @@ export const MARKET_OFFER: Offer = {
   price: null,
   company_loan: null,
   maintenance: null,
-  renovation: null,
+  capital_charges: null,
+  own_repairs: null,
   aso_fee: null,
   aso_charge: null,
 };
 
 export interface Assumptions {
   include_aso: boolean;
+  asp_loan?: boolean;
   down_payment_share?: number;
   rate_type?: "variable" | "fixed";
   start_rate?: number;
@@ -61,7 +64,8 @@ export function typicalValues(start: PlannerStart, size: number): Typical {
     price: buy.price_per_m2 * size,
     company_loan: buy.housing_company_loan_share,
     maintenance: buy.maintenance_charge_per_m2_month * size,
-    renovation: buy.renovation_reserve_per_m2_year * size,
+    capital_charges: (buy.capital_charges_per_m2_month[0] ?? 0) * size,
+    own_repairs: buy.own_repairs_per_m2_year * size,
     aso_fee: (aso?.fee_per_m2 ?? start.market.aso.fee_per_m2.median) * size,
     aso_charge: (aso?.charge_per_m2_month ?? start.market.aso.charge_per_m2.median) * size,
   };
@@ -88,7 +92,8 @@ export function buildScenario(start: PlannerStart, flat: Flat, offer: Offer, ass
       ...base.buy,
       price_per_m2: value("price") / size,
       maintenance_charge_per_m2_month: value("maintenance") / size,
-      renovation_reserve_per_m2_year: value("renovation") / size,
+      capital_charges_per_m2_month: scaledSchedule(base.buy.capital_charges_per_m2_month, typical.capital_charges, value("capital_charges"), size),
+      own_repairs_per_m2_year: value("own_repairs") / size,
       housing_company_loan_share: value("company_loan"),
       price_growth: assumptions.price_growth ?? base.buy.price_growth,
       maintenance_charge_growth: assumptions.charge_growth ?? base.buy.maintenance_charge_growth,
@@ -108,6 +113,7 @@ export function buildScenario(start: PlannerStart, flat: Flat, offer: Offer, ass
         },
         fixed_rate: rateType === "fixed" ? (assumptions.fixed_rate ?? mortgage.fixed_rate ?? startRate) : null,
         fixed_years: rateType === "fixed" ? (assumptions.fixed_years ?? mortgage.fixed_years ?? 5) : null,
+        asp_loan: assumptions.asp_loan ?? false,
       },
     },
     rent: {
@@ -130,6 +136,12 @@ export function buildScenario(start: PlannerStart, flat: Flat, offer: Offer, ass
       parked_cash_return: assumptions.parked_cash_return ?? base.investment.parked_cash_return,
     },
   };
+}
+
+/** The renovation charge rises as the building ages; a user's figure scales the whole path. */
+function scaledSchedule(schedule: number[], typical: number, chosen: number, size: number) {
+  if (typical > 0 && schedule.length > 0) return schedule.map((value) => (value * chosen) / typical);
+  return [chosen / size];
 }
 
 const ROOM_VALUES: RoomType[] = ["one_room", "two_room", "three_room_plus"];

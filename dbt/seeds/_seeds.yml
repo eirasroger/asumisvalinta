@@ -89,3 +89,17 @@ seeds:
           - accepted_values:
               arguments:
                 values: [true]
+
+  - name: asp_major_cities
+    description: >
+      Municipalities where the higher maximum ASP loan applies. The ASP scheme gives first-time buyers
+      an interest subsidy on part of their home loan.
+    config:
+      column_types:
+        municipality_code: varchar
+        retrieved_on: date
+    columns:
+      - name: municipality_code
+        data_tests: [unique, not_null]
+      - name: source_url
+        data_tests: [not_null]

@@ -141,7 +141,7 @@ def test_planner_run_returns_result_and_what_ifs(client):
     body = client.post("/api/planner/run", json=start["scenario"]).json()
     assert {o["option"] for o in body["result"]["options"]} == {"buy", "rent", "aso"}
     keys = {w["key"] for w in body["what_ifs"]}
-    assert keys == {"rates_up", "prices_flat", "rents_faster", "returns_lower"}
+    assert keys == {"rates_up", "prices_flat", "rents_faster", "charges_faster", "savings_lower"}
     base = {o["option"]: o["end_wealth"] for o in body["result"]["options"]}
     rates_up = next(w for w in body["what_ifs"] if w["key"] == "rates_up")
     assert rates_up["end_wealth"]["buy"] < base["buy"]

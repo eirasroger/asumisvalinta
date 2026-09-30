@@ -2,7 +2,7 @@
 
 import NumberFlow from "@number-flow/react";
 import { Dialog, Popover as RadixPopover, Slider as RadixSlider, Switch as RadixSwitch, ToggleGroup } from "radix-ui";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { formatNumber, parseNumber } from "@/lib/format";
 
 export function Segmented<T extends string>({
@@ -248,5 +248,71 @@ export function Money({ value, signed = false, className = "" }: { value: number
       format={{ style: "currency", currency: "EUR", maximumFractionDigits: 0, signDisplay: signed ? "exceptZero" : "auto" }}
       className={`num ${className}`}
     />
+  );
+}
+
+/** Popover that opens on hover with a mouse and on tap with touch. */
+export function Hint({
+  trigger,
+  children,
+  align = "start",
+  width = 320,
+}: {
+  trigger: React.ReactNode;
+  children: React.ReactNode;
+  align?: "start" | "center" | "end";
+  width?: number;
+}) {
+  const [open, setOpen] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const show = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setOpen(true), 80);
+  };
+  const hide = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setOpen(false), 140);
+  };
+  return (
+    <RadixPopover.Root open={open} onOpenChange={setOpen}>
+      <RadixPopover.Trigger
+        asChild
+        onPointerEnter={(event) => event.pointerType === "mouse" && show()}
+        onPointerLeave={(event) => event.pointerType === "mouse" && hide()}
+      >
+        {trigger}
+      </RadixPopover.Trigger>
+      <RadixPopover.Portal>
+        <RadixPopover.Content
+          align={align}
+          sideOffset={8}
+          collisionPadding={12}
+          onPointerEnter={(event) => event.pointerType === "mouse" && show()}
+          onPointerLeave={(event) => event.pointerType === "mouse" && hide()}
+          onOpenAutoFocus={(event) => event.preventDefault()}
+          style={{ width }}
+          className="z-50 rounded-xl border border-line bg-paper p-4 text-sm shadow-float outline-none"
+        >
+          {children}
+        </RadixPopover.Content>
+      </RadixPopover.Portal>
+    </RadixPopover.Root>
+  );
+}
+
+export function InfoLabel({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <Hint
+      trigger={
+        <button
+          type="button"
+          className="justify-self-start text-left text-sm text-ink-2 underline decoration-line-strong decoration-dotted underline-offset-4 hover:text-ink hover:decoration-ink-3"
+        >
+          {label}
+        </button>
+      }
+    >
+      {children}
+    </Hint>
   );
 }

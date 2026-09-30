@@ -12,3 +12,10 @@ models:
           - accepted_values:
               arguments:
                 values: [all, variable_up_to_1y, fixed_1_to_5y, fixed_5_to_10y, fixed_over_10y]
+
+  - name: stg_ecb__deposit_rates
+    description: Interest rates on new household deposits with an agreed maturity of up to one year in Finland, monthly.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [month_start_date]

@@ -23,7 +23,7 @@ class ScenarioOverrides(BaseModel):
     loan_term_years: int | None = Field(default=None, ge=1, le=40)
     repayment: Literal["annuity", "equal_principal"] | None = None
     maintenance_charge_per_m2_month: float | None = Field(default=None, ge=0)
-    renovation_reserve_per_m2_year: float | None = Field(default=None, ge=0)
+    own_repairs_per_m2_year: float | None = Field(default=None, ge=0)
     aso_fee_per_m2: float | None = Field(default=None, ge=0)
     aso_charge_per_m2_month: float | None = Field(default=None, gt=0)
     investment_return: float | None = None
@@ -61,7 +61,7 @@ def apply_overrides(scenario: ScenarioInput, overrides: ScenarioOverrides) -> Sc
         price_per_m2=overrides.price_per_m2,
         price_growth=overrides.price_growth,
         maintenance_charge_per_m2_month=overrides.maintenance_charge_per_m2_month,
-        renovation_reserve_per_m2_year=overrides.renovation_reserve_per_m2_year,
+        own_repairs_per_m2_year=overrides.own_repairs_per_m2_year,
     )
     rent = _update(
         scenario.rent,

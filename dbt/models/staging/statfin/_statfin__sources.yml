@@ -56,3 +56,21 @@ sources:
         description: Profit and loss account items of housing companies by region, 2009 to 2024 (discontinued table asyta/13jx).
         config:
           freshness: null
+      - name: housing_company_finances_by_age_yearly
+        description: Profit and loss account items of housing companies by year of construction, cents per m² per month (table asyta/15gi).
+        config:
+          freshness:
+            warn_after: {count: 400, period: day}
+            error_after: {count: 550, period: day}
+      - name: owner_renovation_costs_yearly
+        description: Renovation costs contracted out by owner-occupiers, total and per m² of floor area (table kora/15gd).
+        config:
+          freshness:
+            warn_after: {count: 400, period: day}
+            error_after: {count: 550, period: day}
+      - name: consumer_price_index_yearly
+        description: Consumer price index, overall index, yearly (table khi/11xt).
+        config:
+          freshness:
+            warn_after: {count: 400, period: day}
+            error_after: {count: 550, period: day}

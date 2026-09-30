@@ -2,10 +2,13 @@ export type RoomType = "one_room" | "two_room" | "three_room_plus";
 export type Option = "buy" | "rent" | "aso";
 
 export const ROOM_TYPES: { value: RoomType; label: string; short: string; flats: string }[] = [
-  { value: "one_room", label: "One room (yksiö)", short: "1 room", flats: "one-room flats" },
-  { value: "two_room", label: "Two rooms (kaksio)", short: "2 rooms", flats: "two-room flats" },
-  { value: "three_room_plus", label: "Three rooms or more (kolmio+)", short: "3+ rooms", flats: "flats with three or more rooms" },
+  { value: "one_room", label: "Studio (yksiö)", short: "Studio", flats: "studios" },
+  { value: "two_room", label: "1 bedroom (kaksio)", short: "1 bedroom", flats: "one-bedroom flats" },
+  { value: "three_room_plus", label: "2+ bedrooms (kolmio+)", short: "2+ bedrooms", flats: "flats with two or more bedrooms" },
 ];
+
+export const ROOM_NOTE =
+  "Finnish listings count rooms without the kitchen: a yksiö is a studio, a kaksio has one bedroom and a living room, and a kolmio or larger has two or more bedrooms. Statistics Finland publishes these three groups only.";
 
 export const OPTION_LABELS: Record<Option, string> = {
   buy: "Buy",
@@ -75,7 +78,8 @@ export interface ScenarioInput {
     price_growth: number;
     maintenance_charge_per_m2_month: number;
     maintenance_charge_growth: number;
-    renovation_reserve_per_m2_year: number;
+    capital_charges_per_m2_month: number[];
+    own_repairs_per_m2_year: number;
     housing_company_loan_share: number;
     housing_company_loan_years: number;
     selling_cost_rate: number;
@@ -87,6 +91,7 @@ export interface ScenarioInput {
       rate_path: RatePath;
       fixed_rate: number | null;
       fixed_years: number | null;
+      asp_loan: boolean;
     };
   };
   rent: { rent_per_m2_month: number; rent_growth: number };
@@ -135,7 +140,14 @@ export interface PlannerStart {
       range_monthly: Range | null;
     };
     maintenance_charge_per_m2: number;
-    aso: { scope: string; buildings: number; fee_per_m2: Range; charge_per_m2: Range };
+    aso: {
+      scope: string;
+      buildings: number;
+      fee_per_m2: Range;
+      charge_per_m2: Range;
+      charge_to_rent: number;
+      fee_to_price: number;
+    };
   };
 }
 

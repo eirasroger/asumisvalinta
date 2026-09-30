@@ -56,11 +56,16 @@ TABLES: dict[str, str] = {
     "raw_statfin.housing_company_finances_yearly_2009": (
         "account_item = 'k3001' and period >= '2014'"
     ),
+    "raw_statfin.housing_company_finances_by_age_yearly": (
+        "account_item in ('k3001', 'k3283') and company_type = '2'"
+    ),
+    "raw_statfin.owner_renovation_costs_yearly": "true",
+    "raw_statfin.consumer_price_index_yearly": "true",
     "raw_statfin_classifications.classification_items": "true",
     "raw_statfin_classifications.correspondence_maps": "true",
     "raw_statfin_classifications.area_postal_codes": "true",
     "raw_paavo.postal_areas": "true",
-    "raw_ecb.mir_housing_loan_rates": "time_period >= '2020-01'",
+    "raw_ecb.mir_interest_rates": "time_period >= '2020-01'",
 }
 
 
