@@ -227,3 +227,9 @@ data/
 
 # Evaluation outputs
 evals/results/
+
+# Warehouse copy downloaded by deployments
+serving/
+
+# Front-end source folder named lib
+!web/src/lib/

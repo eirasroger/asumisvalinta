@@ -224,13 +224,16 @@ def _inputs_summary(scenario: Any) -> dict[str, Any]:
 FILTER_GUIDE = (
     "Filters are objects {field, operator, value}. `field` is an entity (postal_area, room_type, "
     "area), a dimension such as dwelling_price__building_type, or a time grain such as "
-    "metric_time__quarter. Operators: =, !=, >, >=, <, <=, in (value is then a list). Entity "
-    "values: postal_area = five-digit postal code; room_type = one_room, two_room, "
-    "three_room_plus or all; area = '<scheme>:<code>' from search_areas, for example "
-    "price_area:091 (Helsinki, prices), rent_area:091 (Helsinki, rents), rent_area:091_1 "
-    "(rent sub-area Helsinki 1), price_area:SSS (whole country). Time values are the first day of "
-    "the period, for example 2025-10-01 for 2025 Q4. Area-level prices and rents need a "
-    "room_type filter (all for all room types)."
+    "metric_time__quarter. Operators: =, !=, >, >=, <, <=, in (value is then a list). Values: "
+    "postal_area = five-digit postal code; room_type = one_room, two_room, three_room_plus or "
+    "all (the published figure for all room types); building types = block_of_flats, "
+    "terraced_house or all; area = '<scheme>:<code>' from search_areas, for example "
+    "price_area:091 (Helsinki, prices), rent_area:091 (Helsinki, rents), rent_area:091_1 (rent "
+    "sub-area Helsinki 1), price_area:SSS and rent_area:SSS (whole country), "
+    "housing_finance_area:pks (Greater Helsinki, charges). Time values: 2025, 2025Q4, 2025-07 or "
+    "a date. Price, rent and charge metrics must fix room type, building type and area to one "
+    "value each (or group by them); the tool says what is missing. Query the time grain the "
+    "question asks for (metric_time__year for a year) instead of combining values yourself."
 )
 EMPTY_RESULT_HINT = (
     "No value matched. Check the filter values with list_dimension_values or search_areas, and "
@@ -300,15 +303,30 @@ def semantic_tools(semantic_layer: SemanticLayer, warehouse: Path) -> list[Tool]
     ) -> dict[str, Any]:
         try:
             conditions = tuple(Filter(**condition) for condition in filters or ())
-            result = semantic_layer.query(
-                MetricQuery(
-                    metrics=tuple(metrics),
-                    group_by=tuple(group_by or ()),
-                    filters=conditions,
-                    order_by=tuple(order_by or ()),
-                    limit=min(limit or MAX_ROWS, MAX_ROWS),
-                )
+        except (TypeError, ValueError) as error:
+            raise ToolError(f"Invalid filter: {error}") from error
+        grouping = list(group_by or ())
+        for condition in conditions:
+            if condition.field.startswith("metric_time__") and condition.field not in grouping:
+                grouping.append(condition.field)
+        query = MetricQuery(
+            metrics=tuple(metrics),
+            group_by=tuple(grouping),
+            filters=conditions,
+            order_by=tuple(order_by or ()),
+            limit=min(limit or MAX_ROWS, MAX_ROWS),
+        )
+        try:
+            missing = semantic_layer.missing_grain(query)
+        except ValueError as error:
+            raise ToolError(str(error)) from error
+        if missing:
+            raise ToolError(
+                "Fix these to one value with an = filter, or group by them, so published totals "
+                f"and details are not added together: {', '.join(missing)}."
             )
+        try:
+            result = semantic_layer.query(query)
         except Exception as error:
             raise ToolError(f"Query failed: {error}") from error
         rows = [[_round(value) for value in row] for row in result.rows]

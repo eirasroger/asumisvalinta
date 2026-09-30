@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from asumisvalinta.agent import Agent, baseline_agent, semantic_agent
+from asumisvalinta.agent import Agent, AgentRun, baseline_agent, semantic_agent
 from asumisvalinta.agent.llm import ChatResponse, ToolCall
 from asumisvalinta.agent.tools import ToolError, answer_tool, sql_tools
 from asumisvalinta.evaluation.golden import GoldenQuestion, Tolerance, load_golden_set
@@ -35,7 +35,7 @@ def call(name: str, arguments: dict[str, Any], call_id: str = "1") -> ChatRespon
     )
 
 
-def submit(status: str = "answered", value: float | None = 1.0) -> ChatResponse:
+def submit(status: str = "answered", value: float | None = None) -> ChatResponse:
     return call(
         "submit_answer",
         {"status": status, "answer": "text", "value": value, "unit": None, "sources": "test"},
@@ -105,7 +105,7 @@ def _question(kind: str) -> GoldenQuestion:
 
 
 def test_grading_within_tolerance():
-    run = Agent("a", "s", [answer_tool()], ScriptedModel([submit(value=100.4)])).run("?")
+    run = AgentRun(agent="a", model="m", question="?", status="answered", value=100.4)
     assert grade(_question("metric"), run, 100.0, Tolerance(relative=0.005)).correct
     assert not grade(_question("metric"), run, 100.0, Tolerance(relative=0.001)).correct
 
@@ -187,7 +187,7 @@ class TestWithWarehouse:
                         "overrides": {"interest_rate": 0.05},
                     },
                 ),
-                submit(value=1.0),
+                submit(),
             ]
         )
         run = semantic_agent(model, WAREHOUSE).run("Buy or rent?")
@@ -251,3 +251,88 @@ class TestLookupsWithWarehouse:
     def test_room_type_values_are_listed_without_a_query(self, tools):
         values = tools["list_dimension_values"](metrics=["avg_price_per_m2"], dimension="room_type")
         assert values == ["one_room", "two_room", "three_room_plus", "all"]
+
+    def test_area_totals_and_details_cannot_be_added_together(self, tools):
+        with pytest.raises(ToolError, match="room_type"):
+            tools["query_metrics"](
+                metrics=["transaction_count"],
+                filters=[
+                    {"field": "area", "operator": "=", "value": "price_area:SSS"},
+                    {
+                        "field": "dwelling_price__building_type",
+                        "operator": "=",
+                        "value": "block_of_flats",
+                    },
+                    {"field": "metric_time__quarter", "operator": "=", "value": "2025Q4"},
+                ],
+            )
+
+    def test_published_total_is_used_when_room_type_is_all(self, tools):
+        result = tools["query_metrics"](
+            metrics=["transaction_count"],
+            filters=[
+                {"field": "area", "operator": "=", "value": "price_area:SSS"},
+                {"field": "room_type", "operator": "=", "value": "all"},
+                {
+                    "field": "dwelling_price__building_type",
+                    "operator": "=",
+                    "value": "block_of_flats",
+                },
+                {"field": "metric_time__quarter", "operator": "=", "value": "2025Q4"},
+            ],
+        )
+        assert result["rows"][0][1] == 10947
+
+    def test_postal_code_queries_average_over_room_types(self, tools):
+        result = tools["query_metrics"](
+            metrics=["avg_price_per_m2"],
+            filters=[
+                {"field": "postal_area", "operator": "=", "value": "00100"},
+                {
+                    "field": "dwelling_price__building_type",
+                    "operator": "=",
+                    "value": "block_of_flats",
+                },
+                {"field": "metric_time__quarter", "operator": "=", "value": "2025-10-01"},
+            ],
+        )
+        assert result["rows"][0][1] == pytest.approx(7341.55)
+
+    def test_offset_metric_values_come_from_its_inputs(self, tools):
+        values = tools["list_dimension_values"](
+            metrics=["price_index_yoy_change"], dimension="price_index_observation__building_type"
+        )
+        assert "block_of_flats" in values
+
+
+def test_time_values_are_normalised():
+    from asumisvalinta.semantic.client import normalise_time
+
+    assert normalise_time("2024") == "2024-01-01"
+    assert normalise_time("2025Q4") == "2025-10-01"
+    assert normalise_time("2023-07") == "2023-07-01"
+    assert normalise_time("2025-10-01 00:00:00") == "2025-10-01"
+
+
+def _echo_tool():
+    from asumisvalinta.agent.tools import Tool
+
+    return Tool(
+        name="echo",
+        description="",
+        parameters={"type": "object", "properties": {}},
+        handler=lambda: {"rows": [[3.02], [3.28], [3.935]]},
+    )
+
+
+def test_numeric_answer_must_come_from_a_tool_result():
+    model = ScriptedModel([call("echo", {}), submit(value=3.77), submit(value=3.94)])
+    run = Agent("test", "system", [_echo_tool(), answer_tool()], model).run("?")
+    rejected = run.tool_calls[1]
+    assert rejected.ok is False and "does not appear" in rejected.result
+    assert run.value == 3.94  # 3.935 rounded to two decimals is accepted
+
+
+def test_answer_without_a_number_needs_no_tool_result():
+    model = ScriptedModel([submit("refused", None)])
+    assert Agent("test", "system", [answer_tool()], model).run("?").status == "refused"

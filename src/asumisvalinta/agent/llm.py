@@ -4,8 +4,6 @@ import os
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from asumisvalinta.config import load_dotenv
-
 DEFAULT_BASE_URL = "https://api.openai.com/v1"
 DEFAULT_MODEL = "gpt-5.4-mini-2026-03-17"
 
@@ -19,7 +17,6 @@ class LLMSettings:
 
     @classmethod
     def from_env(cls) -> "LLMSettings":
-        load_dotenv()
         api_key = os.environ.get("ASUMISVALINTA_LLM_API_KEY") or os.environ.get("OPENAI_API_KEY")
         if not api_key:
             raise RuntimeError("Set ASUMISVALINTA_LLM_API_KEY in the environment or in .env")

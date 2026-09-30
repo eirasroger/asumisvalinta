@@ -15,7 +15,7 @@ from typing import Any
 
 from asumisvalinta.agent import LLMSettings, OpenAIChatModel, baseline_agent, semantic_agent
 from asumisvalinta.agent.tools import to_json
-from asumisvalinta.config import REPO_ROOT, duckdb_path
+from asumisvalinta.config import REPO_ROOT, duckdb_path, load_dotenv
 from asumisvalinta.evaluation.golden import (
     GoldenQuestion,
     ReferenceError,
@@ -121,6 +121,7 @@ def main() -> None:
     parser.add_argument("--warehouse", type=Path, default=duckdb_path())
     parser.add_argument("--check", action="store_true", help="only compute reference values")
     args = parser.parse_args()
+    load_dotenv()
     logging.basicConfig(level=logging.WARNING)
 
     questions = load_golden_set().questions

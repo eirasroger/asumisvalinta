@@ -1,5 +1,6 @@
 """Tool-calling agent loop with a log of every tool call."""
 
+import contextlib
 import json
 import logging
 import time
@@ -26,6 +27,42 @@ log = logging.getLogger(__name__)
 
 MAX_STEPS = 12
 SUBMIT_REMINDER = "Call submit_answer now with your final answer."
+ROUNDING_TOLERANCE = 0.005
+UNGROUNDED_VALUE = (
+    "The value {value} does not appear in any tool result. Report a number exactly as a tool "
+    "returned it; to get a total, average or change, query the metric at the grain the "
+    "question asks for."
+)
+
+
+def numbers_in(result: str) -> list[float]:
+    """Every number in a JSON tool result."""
+    found: list[float] = []
+
+    def walk(item: Any) -> None:
+        if isinstance(item, bool):
+            return
+        if isinstance(item, int | float):
+            found.append(float(item))
+        elif isinstance(item, dict):
+            for value in item.values():
+                walk(value)
+        elif isinstance(item, list):
+            for value in item:
+                walk(value)
+
+    with contextlib.suppress(json.JSONDecodeError):
+        walk(json.loads(result))
+    return found
+
+
+def is_grounded(value: float, results: list[str]) -> bool:
+    """True when the value matches a number from a tool result, allowing for rounding."""
+    for result in results:
+        for number in numbers_in(result):
+            if abs(value - number) <= max(abs(number) * ROUNDING_TOLERANCE, 0.01):
+                return True
+    return False
 
 
 @dataclass(frozen=True)
@@ -87,6 +124,8 @@ class Agent:
 
             for call in response.tool_calls:
                 record = self._execute(tools, call.name, call.arguments, step)
+                if record.ok and call.name == ANSWER_TOOL:
+                    record = self._check_grounding(record, run.tool_calls)
                 run.tool_calls.append(record)
                 messages.append({"role": "tool", "tool_call_id": call.id, "content": record.result})
                 if call.name == ANSWER_TOOL and record.ok:
@@ -100,6 +139,24 @@ class Agent:
 
         run.error = f"No answer after {self.max_steps} steps"
         return run
+
+    @staticmethod
+    def _check_grounding(record: ToolCallRecord, previous: list[ToolCallRecord]) -> ToolCallRecord:
+        value = record.arguments.get("value")
+        if not isinstance(value, int | float) or isinstance(value, bool):
+            return record
+        results = [call.result for call in previous if call.ok and call.tool != ANSWER_TOOL]
+        if is_grounded(float(value), results):
+            return record
+        log.info("ungrounded_answer %s", to_json({"value": value}))
+        return ToolCallRecord(
+            step=record.step,
+            tool=record.tool,
+            arguments=record.arguments,
+            ok=False,
+            result=to_json({"error": UNGROUNDED_VALUE.format(value=value)}),
+            seconds=record.seconds,
+        )
 
     def _execute(
         self, tools: dict[str, Tool], name: str, raw_arguments: str, step: int

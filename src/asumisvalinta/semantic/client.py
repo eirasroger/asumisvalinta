@@ -5,6 +5,7 @@ metrics; they are hidden from `list_metrics` and cannot be queried directly.
 """
 
 import os
+import re
 from dataclasses import dataclass, field
 from functools import cached_property
 from pathlib import Path
@@ -29,6 +30,36 @@ class MetricInfo:
 
 OPERATORS = ("=", "!=", ">", ">=", "<", "<=", "in")
 TIME_PREFIX = "metric_time__"
+GEOGRAPHY = "area or postal_area"
+
+# Area-level rows hold published totals next to their details (for example "all rooms"
+# next to each room type). A query on them must fix these dimensions to one value or group
+# by them, so totals and details are never added together. Postal code rows hold details
+# only, so a query fixed to a postal code needs only the geography.
+REQUIRED_GRAIN: dict[str, tuple[str, ...]] = {
+    "dwelling_prices": ("room_type", "dwelling_price__building_type", GEOGRAPHY),
+    "price_index": ("room_type", "price_index_observation__building_type", GEOGRAPHY),
+    "rents": ("room_type", GEOGRAPHY),
+    "housing_company_charges": ("housing_company_charge__building_type", GEOGRAPHY),
+    "market_levels": ("room_type",),
+}
+
+_QUARTER = re.compile(r"^(\d{4})\s*-?\s*Q([1-4])$", re.IGNORECASE)
+_YEAR = re.compile(r"^\d{4}$")
+_MONTH = re.compile(r"^\d{4}-\d{2}$")
+
+
+def normalise_time(value: str) -> str:
+    """First day of a period written as 2024, 2025Q4, 2023-07 or a date."""
+    text = str(value).strip()
+    if _YEAR.match(text):
+        return f"{text}-01-01"
+    if match := _QUARTER.match(text):
+        month = (int(match.group(2)) - 1) * 3 + 1
+        return f"{match.group(1)}-{month:02d}-01"
+    if _MONTH.match(text):
+        return f"{text}-01"
+    return text[:10]
 
 
 @dataclass(frozen=True)
@@ -43,19 +74,25 @@ class Filter:
     def to_where(self) -> str:
         if self.operator not in OPERATORS:
             raise ValueError(f"Unknown operator {self.operator}; use one of {', '.join(OPERATORS)}")
+        value = self.value
         if self.field.startswith(TIME_PREFIX):
             grain = self.field.removeprefix(TIME_PREFIX)
             target = f"{{{{ TimeDimension('metric_time', '{grain}') }}}}"
+            value = (
+                [normalise_time(v) for v in value]
+                if isinstance(value, list)
+                else normalise_time(str(value))
+            )
         elif "__" in self.field:
             target = f"{{{{ Dimension('{self.field}') }}}}"
         else:
             target = f"{{{{ Entity('{self.field}') }}}}"
         if self.operator == "in":
-            values = self.value if isinstance(self.value, list) else [self.value]
+            values = value if isinstance(value, list) else [value]
             return f"{target} in ({', '.join(_literal(v) for v in values)})"
-        if isinstance(self.value, list):
+        if isinstance(value, list):
             raise ValueError(f"Operator {self.operator} takes a single value")
-        return f"{target} {self.operator} {_literal(self.value)}"
+        return f"{target} {self.operator} {_literal(value)}"
 
 
 def _literal(value: str | float) -> str:
@@ -134,11 +171,52 @@ class SemanticLayer:
         return sorted(names)
 
     def dimension_values(self, metric_names: list[str], dimension: str) -> list[str]:
-        """Distinct values of a dimension or time grain for the given metrics."""
+        """Distinct values of a dimension or time grain for the given metrics.
+
+        Derived metrics with a time offset cannot be queried for values directly, so
+        their input metrics are used instead.
+        """
         self._check_metrics(metric_names)
+        names = [base for name in metric_names for base in self._base_metrics(name)]
         return self._engine.get_dimension_values(
-            metric_names=list(metric_names), get_group_by_values=dimension
+            metric_names=list(dict.fromkeys(names)), get_group_by_values=dimension
         )
+
+    def missing_grain(self, query: "MetricQuery") -> list[str]:
+        """Dimensions that must be fixed to one value or grouped by, and are not."""
+        self._check_metrics(query.metrics)
+        pinned = set(query.group_by)
+        pinned |= {condition.field for condition in query.filters if condition.operator == "="}
+        by_postal_code = any(name.startswith("postal_area") for name in pinned)
+        by_area = any(name == "area" or name.startswith("area__") for name in pinned)
+        missing: list[str] = []
+        for model in self._semantic_models(query.metrics):
+            for requirement in REQUIRED_GRAIN.get(model, ()):
+                if requirement == GEOGRAPHY:
+                    satisfied = by_postal_code or by_area
+                else:
+                    satisfied = requirement in pinned or (by_postal_code and not by_area)
+                if not satisfied and requirement not in missing:
+                    missing.append(requirement)
+        return missing
+
+    def _semantic_models(self, metric_names: tuple[str, ...] | list[str]) -> set[str]:
+        definitions = self._definitions
+        return {
+            getattr(model, "semantic_model_name", str(model))
+            for name in metric_names
+            for model in (definitions[name].semantic_models or ())
+        }
+
+    def _base_metrics(self, name: str) -> list[str]:
+        definition = self._definitions[name]
+        inputs = getattr(definition.type_params, "metrics", None) or []
+        has_offset = any(item.offset_window or item.offset_to_grain for item in inputs)
+        return [item.name for item in inputs] if has_offset else [name]
+
+    @cached_property
+    def _definitions(self) -> dict[str, Any]:
+        return {metric.name: metric for metric in self._engine.list_metrics()}
 
     def query(self, query: MetricQuery) -> MetricResult:
         self._check_metrics(query.metrics)

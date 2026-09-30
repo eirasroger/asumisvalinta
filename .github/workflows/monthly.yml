@@ -1,0 +1,102 @@
+name: Monthly data refresh
+
+on:
+  schedule:
+    - cron: "0 5 3 * *"
+  workflow_dispatch:
+    inputs:
+      bootstrap:
+        description: Start from an empty warehouse (only for the very first run)
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: monthly-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    env:
+      DBT_PROJECT_DIR: dbt
+      DBT_PROFILES_DIR: dbt
+      ASUMISVALINTA_DUCKDB_PATH: data/asumisvalinta.duckdb
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked --all-groups
+
+      - name: Restore last month's warehouse
+        if: ${{ !inputs.bootstrap }}
+        run: |
+          mkdir -p data
+          gh release download --pattern asumisvalinta.duckdb --dir data
+
+      - name: Ingest sources
+        run: uv run asumisvalinta-ingest
+
+      - name: Build and test models
+        run: uv run dbt build
+
+      - name: Check source freshness
+        continue-on-error: true
+        run: uv run dbt source freshness
+
+      - name: Validate semantic layer
+        run: uv run python scripts/validate_semantic_layer.py
+
+      - name: Check golden set references
+        run: uv run asumisvalinta-eval --check
+
+      - name: Build release files
+        run: uv run python scripts/build_release.py --output dist
+
+      - name: Publish release
+        run: |
+          tag="data-$(date -u +%Y-%m-%d)"
+          cp data/asumisvalinta.duckdb dist/asumisvalinta.duckdb
+          gh release create "$tag" \
+            dist/asumisvalinta.duckdb \
+            dist/asumisvalinta-serving.duckdb \
+            dist/raw-parquet.zip \
+            --title "Data $(date -u +%Y-%m-%d)" \
+            --notes "Warehouse built by the monthly refresh. Sources: Statistics Finland (CC BY 4.0), ECB statistics." \
+            --latest
+
+      - name: Redeploy the website
+        env:
+          DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        if: ${{ env.DEPLOY_HOOK != '' }}
+        run: curl -fsS -X POST "$DEPLOY_HOOK" > /dev/null
+
+      - name: Generate dbt docs
+        run: |
+          uv run dbt docs generate
+          mkdir -p site
+          cp dbt/target/index.html dbt/target/manifest.json dbt/target/catalog.json site/
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  docs:
+    needs: refresh
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

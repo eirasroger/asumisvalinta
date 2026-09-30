@@ -21,9 +21,16 @@ def load_dotenv(path: Path = REPO_ROOT / ".env") -> None:
 
 
 def duckdb_path() -> Path:
-    """Location of the warehouse file. Override with ASUMISVALINTA_DUCKDB_PATH."""
-    default = REPO_ROOT / "data" / "asumisvalinta.duckdb"
-    return Path(os.environ.get("ASUMISVALINTA_DUCKDB_PATH", default))
+    """Location of the warehouse file. Override with ASUMISVALINTA_DUCKDB_PATH.
+
+    Defaults to the full warehouse in data/, or to the serving copy in serving/ that
+    deployments download.
+    """
+    if configured := os.environ.get("ASUMISVALINTA_DUCKDB_PATH"):
+        return Path(configured)
+    full = REPO_ROOT / "data" / "asumisvalinta.duckdb"
+    serving = REPO_ROOT / "serving" / "asumisvalinta.duckdb"
+    return serving if serving.exists() and not full.exists() else full
 
 
 def connect_read_only(path: Path | None = None) -> duckdb.DuckDBPyConnection:
