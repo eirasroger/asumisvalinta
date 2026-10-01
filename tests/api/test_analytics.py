@@ -33,6 +33,8 @@ def test_record_does_nothing_without_a_database(monkeypatch):
 
 @pytest.fixture
 def recorded(monkeypatch):
+    monkeypatch.delenv("ASUMISVALINTA_ANALYTICS_DATABASE_URL", raising=False)
+    monkeypatch.delenv("DATABASE_URL", raising=False)
     events = []
     monkeypatch.setattr(analytics, "record", lambda kind, payload: events.append((kind, payload)))
     return events
@@ -240,3 +242,74 @@ def test_questions_keep_the_visit_number(monkeypatch, recorded):
     question = {"question": "Rent in 00100?", "session_id": "session-77", "visit": VISIT}
     assert client.post("/api/ask", json=question).status_code == 200
     assert recorded[0][1]["visit"] == VISIT
+
+
+def test_questions_must_wait_between_calls(monkeypatch, recorded):
+    from asumisvalinta.api import app as app_module
+    from asumisvalinta.api import throttle
+
+    calls = []
+    monkeypatch.setattr(app_module, "_agent", lambda: _FakeAgent())
+    monkeypatch.setattr(throttle, "allow", lambda ip, scope, seconds: calls.append(ip) and False)
+    client = TestClient(app)
+    response = client.post(
+        "/api/ask",
+        json={"question": "Rent in 00100?", "session_id": "session-5"},
+        headers={"x-vercel-forwarded-for": "203.0.113.7, 10.0.0.1"},
+    )
+    assert response.status_code == 429
+    assert response.headers["retry-after"] == "15"
+    assert calls == ["203.0.113.7"]
+    assert recorded == []
+
+
+def test_frequent_events_are_dropped(monkeypatch, recorded):
+    from asumisvalinta.api import throttle
+
+    monkeypatch.setattr(throttle, "allow", lambda ip, scope, seconds: False)
+    body = {"type": "area", "postal_code": "00100", "room_type": "two_room", "source": "map"}
+    assert TestClient(app).post("/api/events", json=body).status_code == 204
+    assert recorded == []
+
+
+def test_unreachable_database_pauses_questions(monkeypatch, recorded):
+    from asumisvalinta.api import app as app_module
+
+    monkeypatch.setattr(app_module, "_agent", lambda: _FakeAgent())
+    monkeypatch.setenv(
+        "ASUMISVALINTA_ANALYTICS_DATABASE_URL", "postgresql://nobody@127.0.0.1:1/none"
+    )
+    response = TestClient(app).post(
+        "/api/ask", json={"question": "Rent in 00100?", "session_id": "session-6"}
+    )
+    assert response.status_code == 503
+
+
+@pytest.mark.skipif(not POSTGRES, reason="needs a Postgres test database")
+def test_request_limits_in_postgres(monkeypatch):
+    from asumisvalinta.api import throttle
+
+    monkeypatch.setenv("ASUMISVALINTA_ANALYTICS_DATABASE_URL", POSTGRES)
+    with psycopg.connect(POSTGRES, autocommit=True) as connection:
+        connection.execute("drop table if exists request_limits")
+    assert throttle.allow("203.0.113.7", "ask", 15)
+    assert not throttle.allow("203.0.113.7", "ask", 15)
+    assert throttle.allow("203.0.113.8", "ask", 15)
+    assert throttle.allow("203.0.113.7", "event:area", 10)
+    with psycopg.connect(POSTGRES, autocommit=True) as connection:
+        stored = [row[0] for row in connection.execute("select client from request_limits")]
+        connection.execute("update request_limits set last_at = now() - interval '20 seconds'")
+    assert not any("203.0.113" in client for client in stored)
+    assert throttle.allow("203.0.113.7", "ask", 15)
+
+
+@pytest.mark.skipif(not POSTGRES, reason="needs a Postgres test database")
+def test_events_stop_at_the_daily_limit(monkeypatch):
+    monkeypatch.setenv("ASUMISVALINTA_ANALYTICS_DATABASE_URL", POSTGRES)
+    monkeypatch.setenv("ASUMISVALINTA_EVENTS_DAILY_LIMIT", "2")
+    with psycopg.connect(POSTGRES, autocommit=True) as connection:
+        connection.execute("drop table if exists analytics_events")
+    for code in ("00100", "00120", "00130"):
+        analytics.record("area", {"postal_code": code})
+    with psycopg.connect(POSTGRES) as connection:
+        assert connection.execute("select count(*) from analytics_events").fetchone()[0] == 2

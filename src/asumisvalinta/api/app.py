@@ -11,7 +11,7 @@ from fastapi import BackgroundTasks, Body, FastAPI, HTTPException, Query, Reques
 from fastapi import Path as PathParam
 from pydantic import BaseModel, ConfigDict, Field
 
-from asumisvalinta.api import analytics, usage
+from asumisvalinta.api import analytics, throttle, usage
 from asumisvalinta.api.limits import LimitReached, QuestionLimits
 from asumisvalinta.config import connect_read_only, duckdb_path, load_dotenv
 from asumisvalinta.scenario import ScenarioInput, ScenarioResult, simulate
@@ -245,11 +245,21 @@ def _agent():
 
 
 @app.post("/api/ask")
-def ask(request: AskRequest, background: BackgroundTasks) -> dict[str, Any]:
+def ask(request: AskRequest, http: Request, background: BackgroundTasks) -> dict[str, Any]:
     try:
         agent = _agent()
     except RuntimeError as error:
         raise HTTPException(503, "The question service is not configured.") from error
+    try:
+        allowed = throttle.allow(throttle.client_ip(http), "ask", throttle.ASK_INTERVAL_SECONDS)
+    except throttle.Unavailable as error:
+        raise HTTPException(503, "The assistant is not available right now.") from error
+    if not allowed:
+        raise HTTPException(
+            429,
+            f"Please wait {throttle.ASK_INTERVAL_SECONDS} seconds between questions.",
+            headers={"Retry-After": str(throttle.ASK_INTERVAL_SECONDS)},
+        )
     try:
         usage.check()
     except usage.BudgetExhausted as error:
@@ -323,12 +333,22 @@ class ScenarioEvent(BaseModel):
 @app.post("/api/events", status_code=204)
 def events(
     event: Annotated[AreaEvent | ScenarioEvent, Body(discriminator="type")],
+    http: Request,
     background: BackgroundTasks,
 ) -> Response:
-    """Record an anonymous usage event."""
+    """Record an anonymous usage event, at most one of each type per client every few seconds."""
     payload = event.model_dump(exclude={"type"})
-    background.add_task(analytics.record, event.type, payload)
+    background.add_task(_record_event, throttle.client_ip(http), event.type, payload)
     return Response(status_code=204)
+
+
+def _record_event(ip: str, event_type: str, payload: dict[str, Any]) -> None:
+    try:
+        allowed = throttle.allow(ip, f"event:{event_type}", throttle.EVENT_INTERVAL_SECONDS)
+    except throttle.Unavailable:
+        return
+    if allowed:
+        analytics.record(event_type, payload)
 
 
 def _range(q1: float | None, median: float | None, q3: float | None, **context: Any) -> Any:

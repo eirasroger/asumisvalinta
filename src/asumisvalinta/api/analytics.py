@@ -2,8 +2,9 @@
 
 Events carry no IP address, cookie or other identifier. Question text is scrubbed of
 email addresses, phone numbers, personal identity codes and bank account numbers.
-Events older than the retention period are deleted. Recording is off when no database
-URL is configured, and a failure never affects the request that triggered it.
+Events older than the retention period are deleted, and at most a daily limit of events
+is stored per UTC day. Recording is off when no database URL is configured, and a
+failure never affects the request that triggered it.
 """
 
 import json
@@ -17,6 +18,7 @@ import psycopg
 log = logging.getLogger(__name__)
 
 RETENTION_DAYS = 365
+DEFAULT_DAILY_LIMIT = 20_000
 PHONE_MIN_DIGITS = 9
 
 _REDACTIONS = (
@@ -49,6 +51,10 @@ def redact(text: str) -> str:
     return _DIGIT_RUN.sub(_phone, text)
 
 
+def daily_limit() -> int:
+    return int(os.environ.get("ASUMISVALINTA_EVENTS_DAILY_LIMIT", DEFAULT_DAILY_LIMIT))
+
+
 def database_url() -> str | None:
     return os.environ.get("ASUMISVALINTA_ANALYTICS_DATABASE_URL") or os.environ.get("DATABASE_URL")
 
@@ -62,8 +68,10 @@ def record(event_type: str, payload: dict[str, Any]) -> None:
         with psycopg.connect(url, connect_timeout=5, autocommit=True) as connection:
             connection.execute(_SCHEMA)
             connection.execute(
-                "insert into analytics_events (event_type, payload) values (%s, %s::jsonb)",
-                (event_type, json.dumps(payload)),
+                "insert into analytics_events (event_type, payload) select %s, %s::jsonb "
+                "where (select count(*) from analytics_events where created_at >= "
+                "(now() at time zone 'utc')::date::timestamp at time zone 'utc') < %s",
+                (event_type, json.dumps(payload), daily_limit()),
             )
             connection.execute(
                 "delete from analytics_events where created_at < now() - make_interval(days => %s)",

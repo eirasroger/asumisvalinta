@@ -31,11 +31,16 @@ export default function PrivacyPage() {
           </li>
           <li>Questions submitted to the assistant and the status of the answer.</li>
           <li>Page views, counted by Vercel Web Analytics without identifiers.</li>
+          <li>
+            A keyed one-way hash of the IP address, used only to limit how often requests can be sent. The key
+            changes daily and the hash is stored apart from all other data.
+          </li>
         </ul>
       </Section>
 
       <Section number={3} title="Purpose and legal basis">
-        Maintaining and improving the service, on the basis of legitimate interest (Article 6(1)(f) GDPR).
+        Maintaining and improving the service and protecting it against misuse, on the basis of legitimate interest
+        (Article 6(1)(f) GDPR).
       </Section>
 
       <Section number={4} title="Recipients and transfers">
@@ -44,7 +49,7 @@ export default function PrivacyPage() {
       </Section>
 
       <Section number={5} title="Retention">
-        Data is deleted after twelve months.
+        Usage data and questions are deleted after twelve months. IP address hashes are deleted after one day.
       </Section>
 
       <Section number={6} title="Cookies">
