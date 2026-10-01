@@ -322,6 +322,16 @@ class TestLookupsWithWarehouse:
         assert {row["municipality_name"] for row in result["rows"]} == {"Espoo"}
         assert result["ranked_among"].endswith("in espoo")
 
+    def test_rank_areas_reports_differences_from_the_shown_values(self, tools):
+        result = tools["rank_areas"](
+            measure="price", level="postal_code", order="highest", within="helsinki", limit=2
+        )
+        top, second = result["rows"]
+        assert top["difference_to_next"] == top["value"] - second["value"]
+        assert top["difference_to_other_end"] == top["value"] - result["other_end"]["value"]
+        assert top["percent_vs_median"] > 0
+        assert "difference_to_next" not in result["other_end"]
+
     def test_area_prices_lists_every_flat_size(self, tools):
         result = tools["area_prices"](postal_code="00100")
         assert result["municipality"] == "Helsinki"

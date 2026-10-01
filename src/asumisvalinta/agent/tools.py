@@ -3,6 +3,7 @@
 import datetime as dt
 import json
 import re
+import statistics
 from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal
@@ -499,8 +500,22 @@ def semantic_tools(semantic_layer: SemanticLayer, warehouse: Path) -> list[Tool]
             if not rows:
                 raise ToolError(f"No {level} areas with published data in {within}.")
         rows.sort(key=lambda row: row["value"], reverse=order == "highest")
+
+        def money(value: float) -> float:
+            return round(value) if measure == "price" else round(value, 2)
+
         for row in rows:
-            row["value"] = round(row["value"]) if measure == "price" else round(row["value"], 2)
+            row["value"] = money(row["value"])
+        median = money(statistics.median(row["value"] for row in rows))
+        other_end = dict(rows[-1])
+        shown = rows[: max(1, min(limit, MAX_RANKED))]
+        for position, row in enumerate(shown):
+            following = rows[position + 1] if position + 1 < len(rows) else None
+            row["difference_to_next"] = (
+                money(row["value"] - following["value"]) if following else None
+            )
+            row["difference_to_other_end"] = money(row["value"] - other_end["value"])
+            row["percent_vs_median"] = round((row["value"] / median - 1) * 100, 1)
         return {
             "measure": ranking.description,
             "unit": ranking.unit,
@@ -509,7 +524,9 @@ def semantic_tools(semantic_layer: SemanticLayer, warehouse: Path) -> list[Tool]
             "period": period,
             "ranked_among": f"{len(rows)} areas with published data"
             + (f" in {within}" if within else " in Finland"),
-            "rows": rows[: max(1, min(limit, MAX_RANKED))],
+            "median_of_areas": median,
+            "other_end": other_end,
+            "rows": shown,
         }
 
     string_list = {"type": "array", "items": {"type": "string"}}
@@ -616,7 +633,9 @@ def semantic_tools(semantic_layer: SemanticLayer, warehouse: Path) -> list[Tool]
                 "Rank areas of Finland from the highest or lowest price or rent per m², for "
                 "questions such as the most expensive or cheapest area or city. Prices rank by "
                 "postal_code or municipality; rents rank by sub_area or municipality. `years` is "
-                "the number of latest published years averaged."
+                "the number of latest published years averaged. Each row comes with its "
+                "difference to the next area, to the other end of the ranking and to the median "
+                "area, for questions about by how much."
             ),
             parameters={
                 "type": "object",
