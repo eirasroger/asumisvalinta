@@ -169,6 +169,21 @@ def test_results_cover_every_year_up_to_thirty(simple_scenario):
     assert result.years[0].wealth["rent"] == pytest.approx(32_000)
 
 
+def test_start_is_the_day_of_moving_in(simple_scenario):
+    result = simulate(simple_scenario)
+    buy, policy = simple_scenario.buy, simple_scenario.policy
+    price = buy.price_per_m2 * simple_scenario.size_m2
+    start = result.start
+    assert start.year == 0
+    assert start.wealth["rent"] == pytest.approx(result.initial_capital)
+    assert start.wealth["buy"] == pytest.approx(
+        result.initial_capital - policy.transfer_tax_rate * price - buy.selling_cost_rate * price
+    )
+    if "aso" in start.wealth:
+        assert start.wealth["aso"] == pytest.approx(result.initial_capital)
+    assert start.total_paid["rent"] == 0
+
+
 def _with_buy(scenario, **changes):
     return scenario.model_copy(update={"buy": scenario.buy.model_copy(update=changes)})
 

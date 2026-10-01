@@ -122,6 +122,8 @@ def simulate(scenario: ScenarioInput) -> ScenarioResult:
         start = initial_capital - aso_fee
         tracks["aso"] = _Track(aso_fee, _Portfolio(start, start, monthly_return))
 
+    opening = (mortgage_principal, buy.housing_company_loan_share)
+    _record_year(scenario, tracks, 0, mortgage, company_loan, aso_fee, opening)
     for month in range(MONTHS):
         year = month // 12
         charge_growth = buy.maintenance_charge_growth
@@ -147,7 +149,7 @@ def simulate(scenario: ScenarioInput) -> ScenarioResult:
 
         months_elapsed = month + 1
         if months_elapsed % 12 == 0:
-            _record_year(scenario, tracks, months_elapsed, mortgage, company_loan, aso_fee)
+            _record_year(scenario, tracks, months_elapsed, mortgage, company_loan, aso_fee, opening)
 
     horizon = scenario.horizon_years
     options = tuple(
@@ -161,19 +163,20 @@ def simulate(scenario: ScenarioInput) -> ScenarioResult:
         )
         for option, track in tracks.items()
     )
-    years = tuple(
-        YearPoint(
+
+    def point(year: int) -> YearPoint:
+        return YearPoint(
             year=year,
             wealth={option: track.wealth_by_year[year] for option, track in tracks.items()},
             total_paid={option: track.paid_by_year[year] for option, track in tracks.items()},
         )
-        for year in range(1, MAX_YEARS + 1)
-    )
+
     return ScenarioResult(
         horizon_years=horizon,
         initial_capital=initial_capital,
         options=options,
-        years=years,
+        start=point(0),
+        years=tuple(point(year) for year in range(1, MAX_YEARS + 1)),
         break_even_years_buy_vs_rent=_break_even(tracks["buy"], tracks["rent"]),
         break_even_years_buy_vs_aso=_break_even(tracks["buy"], tracks["aso"]) if aso else None,
         warnings=tuple(warnings),
@@ -208,7 +211,9 @@ def _record_year(
     mortgage: Schedule,
     company_loan: Schedule,
     aso_fee: float,
+    opening: tuple[float, float],
 ) -> None:
+    """Wealth if everything were sold after `months`; month 0 is the day of moving in."""
     buy, policy, invest = scenario.buy, scenario.policy, scenario.investment
     year = months // 12
 
@@ -222,8 +227,8 @@ def _record_year(
     debt_free_price = buy.price_per_m2 * scenario.size_m2
     home_value = _grown(debt_free_price, buy.price_growth, months / 12)
     selling_costs = buy.selling_cost_rate * home_value
-    mortgage_left = mortgage.balance[months - 1]
-    company_loan_left = company_loan.balance[months - 1]
+    mortgage_left = mortgage.balance[months - 1] if months else opening[0]
+    company_loan_left = company_loan.balance[months - 1] if months else opening[1]
     home_gain = taxable_home_gain(
         home_value,
         debt_free_price + policy.transfer_tax_rate * debt_free_price,

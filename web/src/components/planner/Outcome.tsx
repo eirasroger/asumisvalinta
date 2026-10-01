@@ -238,6 +238,16 @@ function lineSeries(options: Option[], values: (option: Option) => number[], ste
   }));
 }
 
+/** Wealth from the day of moving in (year 0) to the end of the horizon. */
+function wealthPoints(run: PlannerRun) {
+  return [run.result.start, ...run.result.years.slice(0, run.result.horizon_years)];
+}
+
+function yearLabel(year: number | string, short = false) {
+  if (String(year) === "0") return "Start";
+  return short ? `Yr ${year}` : `Year ${year}`;
+}
+
 function baseLine(years: number[]) {
   return {
     animationDurationUpdate: 450,
@@ -249,7 +259,7 @@ function baseLine(years: number[]) {
       boundaryGap: false,
       axisLine: { lineStyle: { color: LINE } },
       axisTick: { show: false },
-      axisLabel: { ...AXIS_LABEL, formatter: (value: string) => `Yr ${value}` },
+      axisLabel: { ...AXIS_LABEL, formatter: (value: string) => yearLabel(value, true) },
     },
     yAxis: {
       type: "value",
@@ -264,7 +274,7 @@ function baseLine(years: number[]) {
       axisPointer: { type: "line", lineStyle: { color: INK_3, type: [3, 3] } },
       formatter: (items: { axisValue: string; seriesName: string; value: number; color: string }[]) =>
         tooltipBox(
-          `Year ${items[0].axisValue}`,
+          yearLabel(items[0].axisValue),
           [...items]
             .sort((a, b) => b.value - a.value)
             .map((item) => ({ color: item.color, label: item.seriesName, value: formatEuro(item.value) })),
@@ -276,7 +286,7 @@ function baseLine(years: number[]) {
 function WealthChart({ run }: { run: PlannerRun }) {
   const option = useMemo(() => {
     const { options } = ordered(run);
-    const points = run.result.years.slice(0, run.result.horizon_years);
+    const points = wealthPoints(run);
     const breakEven = run.result.break_even_years_buy_vs_rent;
     const series = lineSeries(
       options.map((item) => item.option),
@@ -387,7 +397,7 @@ function YearTable({ run, kind }: { run: PlannerRun; kind: "wealth" | "cost" }) 
   const { options } = ordered(run);
   const rows =
     kind === "wealth"
-      ? run.result.years.slice(0, run.result.horizon_years).map((point) => ({ year: point.year, ...point.wealth }))
+      ? wealthPoints(run).map((point) => ({ year: point.year, ...point.wealth }))
       : run.monthly_costs;
   return (
     <div className="max-h-[260px] overflow-auto px-2">
@@ -405,7 +415,7 @@ function YearTable({ run, kind }: { run: PlannerRun; kind: "wealth" | "cost" }) 
         <tbody>
           {rows.map((row) => (
             <tr key={row.year} className="border-t border-line">
-              <td className="py-1.5 text-ink-2">{row.year}</td>
+              <td className="py-1.5 text-ink-2">{row.year === 0 ? yearLabel(0) : row.year}</td>
               {options.map((item) => (
                 <td key={item.option} className="py-1.5 text-right">
                   {formatEuro((row as Partial<Record<Option, number>>)[item.option] ?? 0)}

@@ -114,7 +114,7 @@ Both rates are entered before tax.
 - **Selling the flat.** The sale is tax-free when the flat was owned and lived in for at least two years. Otherwise the taxable gain is the lower of (sale price − purchase price − transfer tax − selling costs) and (sale price × (1 − presumptive rate)), with the same presumptive rates.
 - **Right of occupancy.** Giving up the right is taxed like selling one's own home: the index increase is tax-free after two years.
 - **Mortgage interest** is not deductible for owner-occupied homes since 2023.
-- **Transfer tax** is 1.5 % of the debt-free price for contracts signed from 12 October 2023.
+- **Transfer tax** is 1.5 % of the debt-free price for contracts signed from 12 October 2023. A right of occupancy is not a security, so neither paying the fee nor giving up the right carries transfer tax.
 
 The rules come from the `policy_parameters` table, where each rule has a validity period, a source URL and a retrieval date. The calculator uses the rules valid on the purchase date.
 

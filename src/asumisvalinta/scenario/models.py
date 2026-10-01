@@ -170,6 +170,7 @@ class ScenarioResult(_Model):
     horizon_years: int
     initial_capital: float
     options: tuple[OptionResult, ...]
+    start: YearPoint
     years: tuple[YearPoint, ...]
     break_even_years_buy_vs_rent: int | None
     break_even_years_buy_vs_aso: int | None

@@ -163,11 +163,18 @@ export interface OptionResult {
   breakdown: Record<string, number>;
 }
 
+export interface YearPoint {
+  year: number;
+  wealth: Partial<Record<Option, number>>;
+  total_paid: Partial<Record<Option, number>>;
+}
+
 export interface ScenarioResult {
   horizon_years: number;
   initial_capital: number;
   options: OptionResult[];
-  years: { year: number; wealth: Partial<Record<Option, number>>; total_paid: Partial<Record<Option, number>> }[];
+  start: YearPoint;
+  years: YearPoint[];
   break_even_years_buy_vs_rent: number | null;
   break_even_years_buy_vs_aso: number | null;
   warnings: string[];
