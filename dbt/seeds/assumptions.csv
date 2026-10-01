@@ -6,3 +6,4 @@ down_payment_share,Default down payment as a share of the debt-free price,0.10,r
 rent_growth_floor,Minimum yearly rent increase in the default lease clause (rent follows inflation but rises at least this much),0.02,ratio,true,Common lease indexation clause; editable in the app,,2026-09-30
 invest_surplus_by_default,Whether money not spent on housing is invested by default (1) or kept in a savings account (0),0,flag,true,A savings account is the cautious default; investing is a choice in the app,,2026-09-30
 owner_renovation_cost_years,Number of latest years averaged for owner-occupiers' own renovation costs,5,years,true,Smooths year-to-year variation in the survey,,2026-09-30
+aso_fee_growth,Yearly growth of the building cost index that raises the right-of-occupancy fee refund,0.01,ratio,true,Cautious default below recent index growth; editable in the app,,2026-09-30

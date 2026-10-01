@@ -106,3 +106,8 @@ def test_every_default_has_a_source(defaults):
 def test_defaults_run_through_the_engine(defaults):
     result = simulate(defaults.scenario)
     assert {option.option for option in result.options} == {"buy", "rent", "aso"}
+
+
+def test_fee_refund_grows_by_the_cautious_assumption(defaults):
+    assert defaults.scenario.aso.building_cost_index_growth == 0.01
+    assert "Assumption" in defaults.sources["building_cost_index_growth"]

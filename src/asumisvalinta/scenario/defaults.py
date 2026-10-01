@@ -362,7 +362,7 @@ def load_defaults(
             fee_per_m2=aso_sample.fee_per_m2[1],
             charge_per_m2_month=aso_sample.charge_per_m2[1],
             charge_growth=aso_charge_growth,
-            building_cost_index_growth=index_growth,
+            building_cost_index_growth=assumptions["aso_fee_growth"],
         ),
         investment=InvestmentInput(
             surplus_strategy="invest" if invest else "park",
@@ -407,7 +407,8 @@ def load_defaults(
             f"{aso_change_years[0]} to {aso_change_years[1]} (Varke)"
         ),
         "building_cost_index_growth": (
-            f"Building cost index, {GROWTH_YEARS}-year growth to {index_month:%Y-%m}"
+            f"Assumption. The building cost index grew {index_growth:.1%} a year over "
+            f"{GROWTH_YEARS} years to {index_month:%Y-%m}"
         ),
         "policy": f"Tax and lending rules valid on {purchase_date:%Y-%m-%d}",
         "assumptions": "Calculator assumptions (editable)",

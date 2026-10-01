@@ -47,6 +47,7 @@ export interface Assumptions {
   rent_growth?: number;
   charge_growth?: number;
   aso_charge_growth?: number;
+  fee_growth?: number;
   selling_cost_rate?: number;
   surplus_strategy?: "invest" | "park";
   investment_return?: number;
@@ -128,6 +129,7 @@ export function buildScenario(start: PlannerStart, flat: Flat, offer: Offer, ass
             fee_per_m2: value("aso_fee") / size,
             charge_per_m2_month: value("aso_charge") / size,
             charge_growth: assumptions.aso_charge_growth ?? base.aso.charge_growth,
+            building_cost_index_growth: assumptions.fee_growth ?? base.aso.building_cost_index_growth,
           }
         : null,
     investment: {

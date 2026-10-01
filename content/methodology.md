@@ -138,7 +138,7 @@ The what-if table reruns the whole calculation with one assumption changed: inte
 | Savings account rate | Latest average rate on new household deposits with a maturity of up to one year in Finland (ECB statistics) |
 | Right-of-occupancy fee and charge | Sampled right-of-occupancy buildings: each building's charge divided by the market rent per m² where it stands, and its fee divided by the market price per m² there. The medians of these ratios, from buildings of a similar age when there are enough, are applied to the rent and price of the chosen area |
 | Right-of-occupancy charge growth | Average yearly change of right-of-occupancy charges in the whole country, 2019 to 2025, from the market reviews of Varke |
-| Building cost index growth | Growth of the building cost index over the last 10 years |
+| Fee refund growth | Assumption of 1 % a year for the building cost index that raises the refund, below its growth over the last 10 years, which the app shows; editable |
 | Selling costs, investment return, loan term, down payment | Assumptions in the `assumptions` table, all editable |
 
 ## Simplifications

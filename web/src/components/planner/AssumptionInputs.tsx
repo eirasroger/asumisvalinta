@@ -230,6 +230,14 @@ export function AssumptionInputs({ start, assumptions, onChange, price }: Props)
                 {...percent}
               />
             </Setting>
+            <Setting label="Right-of-occupancy fee refund" about={`${sources.building_cost_index_growth}.`}>
+              <NumberField
+                label="Fee refund growth"
+                value={assumptions.fee_growth ?? base.aso?.building_cost_index_growth ?? 0}
+                onChange={set("fee_growth")}
+                {...percent}
+              />
+            </Setting>
           </Group>
 
           <Group title="Selling">
