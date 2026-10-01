@@ -10,16 +10,17 @@ Rent, right of occupancy (asumisoikeus) or buy a flat in Finland? Asumisvalinta 
 
 | Layer | Tools | What it does |
 |---|---|---|
-| Ingestion | dlt, Python | Loads Statistics Finland (PxWeb API), the ECB (SDMX API) and Paavo postal areas into DuckDB. Tables reload only when the source publishes an update. |
+| Ingestion | dlt, Python | Loads Statistics Finland (PxWeb API), the ECB (SDMX API) and Paavo postal areas into DuckDB. Tables reload only when the source publishes an update, and ECB series load incrementally. |
 | Warehouse | DuckDB, Snowflake | DuckDB for development, CI and serving. The same dbt project also runs on Snowflake as a second target. |
-| Transformation | dbt | Staging, intermediate and mart models with tests, seeds for tax rules and assumptions, and a snapshot that keeps revised figures. SQL stays portable through dbt cross-database macros. |
-| Semantic layer | MetricFlow | Governed metrics such as price per m², rent per m², price change and interest rates, queried with dimensions and filters instead of raw SQL. |
+| Transformation | dbt | 42 staging, intermediate and mart models with 125 data tests, seeds for tax rules and assumptions, and a snapshot that keeps revised figures. SQL stays portable through dbt cross-database macros. |
+| Semantic layer | MetricFlow | 22 governed metrics, such as price per m², rent per m², price change and interest rates, queried with dimensions and filters instead of raw SQL. At runtime MetricFlow reads the compiled semantic manifest through a read-only DuckDB client, without dbt. |
 | Scenario engine | Python, Pydantic | Month-by-month cash flows, loans, Finnish capital income tax rules and break-even. All arithmetic is deterministic and tested against hand calculations. |
-| Agent | OpenAI-compatible API | Answers questions through tools that call the semantic layer and the scenario engine. Every number in an answer must come from a tool result. |
+| Agent | OpenAI-compatible API | Answers questions through tools that query governed metrics, rank areas, look up the latest prices and rents of a postal code and run the scenario engine. Every number in an answer must come from a tool result. |
 | Evaluation | pytest, YAML golden set | 58 questions with reference answers computed from the warehouse. The governed agent is scored against a text-to-SQL baseline. |
-| API | FastAPI | Serves market data, scenario runs and the agent from a read-only copy of the warehouse. |
-| Front end | Next.js, TypeScript, Tailwind CSS, MapLibre, ECharts, Radix UI | Map, comparison and question pages. |
-| Delivery | GitHub Actions, Vercel | CI on every push, a monthly data refresh that publishes a release, and deployment of the web app and API to Vercel. |
+| API | FastAPI, Postgres (Neon) | Serves market data, scenario runs and the agent from a read-only copy of the warehouse. Reads are cached at the CDN. Postgres holds the agent's daily token cap and per-client request limits, shared by all instances. |
+| Front end | Next.js, React, TypeScript, Tailwind CSS, MapLibre GL, ECharts, Radix UI | Map, comparison and question pages. The postal code map is simplified with mapshaper and shipped as TopoJSON. |
+| Quality | pytest, ruff, SQLFluff, ESLint | Unit and integration tests against a fixture warehouse, Python and SQL linting, and type-checked TypeScript. |
+| Delivery | GitHub Actions, Vercel | CI on every push, a monthly data refresh that publishes a GitHub release, a manually triggered evaluation run, and deployment of the web app and API as one Vercel project. |
 
 ```mermaid
 flowchart LR
@@ -45,6 +46,7 @@ flowchart LR
 - **Assumptions are visible and editable.** Tax rules and default assumptions live in dbt seeds with a source URL and a retrieval date.
 - **The model computes, the language model does not.** The agent reaches data only through the semantic layer and the scenario engine, and an answer is rejected when its number is not in a tool result.
 - **Right of occupancy is compared locally.** Charges and fees of sampled right-of-occupancy buildings are expressed relative to the market rent and price where each building stands, and applied to the chosen area.
+- **A locked-down public API.** Queries reach the warehouse on a read-only connection with file and network access disabled, filter names are validated before they reach the query, and each client waits a few seconds between questions within a daily token budget.
 - **One data release a month.** The monthly workflow restores the previous warehouse, loads new data, runs dbt and the evaluation checks, and publishes the warehouse, dbt documentation and map as a GitHub release that the website builds from.
 
 ## Evaluation
