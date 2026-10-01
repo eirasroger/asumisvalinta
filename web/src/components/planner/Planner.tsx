@@ -200,10 +200,11 @@ export function Planner() {
             </Link>
           </Popover>
         </div>
-        <Cell label={<Hint trigger={<button type="button" className="underline decoration-line-strong decoration-dotted underline-offset-4">Home</button>}>{ROOM_NOTE}</Hint>}>
+        <Cell full label={<Hint trigger={<button type="button" className="underline decoration-line-strong decoration-dotted underline-offset-4">Home</button>}>{ROOM_NOTE}</Hint>}>
           <Segmented
             label="Home"
             size="sm"
+            className="max-lg:w-full"
             value={flat.room_type}
             onChange={(room_type) => update({ room_type })}
             options={ROOM_TYPES.map((type) => ({ value: type.value, label: type.short.replace("bedrooms", "bed").replace("bedroom", "bed") }))}
@@ -231,7 +232,7 @@ export function Planner() {
             onClear={() => update({ building_year: null })}
           />
         </Cell>
-        <Cell label={`${flat.horizon_years} ${flat.horizon_years === 1 ? "year" : "years"}`} wide>
+        <Cell label={`${flat.horizon_years} ${flat.horizon_years === 1 ? "year" : "years"}`} wide full>
           <Slider label="Years" min={1} max={30} value={flat.horizon_years} onChange={(years) => update({ horizon_years: years })} />
         </Cell>
       </div>
@@ -279,9 +280,11 @@ export function Planner() {
   );
 }
 
-function Cell({ label, wide, children }: { label: React.ReactNode; wide?: boolean; children: React.ReactNode }) {
+function Cell({ label, wide, full, children }: { label: React.ReactNode; wide?: boolean; full?: boolean; children: React.ReactNode }) {
   return (
-    <div className={`flex flex-col justify-center gap-1.5 border-line px-5 py-3 lg:border-l ${wide ? "lg:min-w-52 lg:max-w-64 lg:flex-1" : ""}`}>
+    <div
+      className={`flex flex-col justify-center gap-1.5 border-line px-5 py-3 lg:border-l ${wide ? "lg:min-w-52 lg:max-w-64 lg:flex-1" : ""} ${full ? "max-lg:col-span-2" : ""}`}
+    >
       <span className="num text-[13px] text-ink-3">{label}</span>
       {children}
     </div>

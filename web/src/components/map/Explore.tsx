@@ -3,29 +3,49 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import NumberFlow from "@number-flow/react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { EChart, INK_3, LINE } from "@/components/charts/EChart";
-import type { HoverInfo } from "@/components/map/AreaMap";
+import type { HoverInfo, Padding } from "@/components/map/AreaMap";
 import { PostalCodeSearch } from "@/components/PostalCodeSearch";
 import { track } from "@/lib/analytics";
 import { Segmented } from "@/components/ui";
-import { api, type Market, ROOM_TYPES, type RoomType, type SeriesPoint } from "@/lib/api";
-import { formatEuro, formatEuroCents, formatNumber } from "@/lib/format";
+import { type MapTrends, type MapValue, ROOM_TYPES, type RoomType } from "@/lib/api";
+import { formatEuro } from "@/lib/format";
 import {
   inScope,
+  isEstimated,
+  loadShapes,
   type MapMetric,
   type MapScope,
   METRICS,
   metricValue,
   quantileCuts,
   SCOPES,
+  preloadMap,
+  preloadRest,
   SEQUENTIAL,
+  useMapTrends,
   useMapValues,
 } from "@/lib/mapData";
 
 const AreaMap = dynamic(() => import("@/components/map/AreaMap").then((module) => module.AreaMap), { ssr: false });
 
 const PANEL = 380;
+const PHONE = "(max-width: 639px)";
+
+function usePhone() {
+  return useSyncExternalStore(
+    (onChange) => {
+      const query = window.matchMedia(PHONE);
+      query.addEventListener("change", onChange);
+      return () => query.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia(PHONE).matches,
+    () => false,
+  );
+}
+const REVEAL_LIMIT_MS = 10_000;
 
 export function Explore() {
   const router = useRouter();
@@ -38,8 +58,43 @@ export function Explore() {
   const [metric, setMetric] = useState<MapMetric>("price");
   const [scope, setScope] = useState<MapScope>("metro");
   const [hover, setHover] = useState<HoverInfo | null>(null);
-  const { rows, error } = useMapValues(roomType);
+  const [shown, setShown] = useState(false);
+  const [shapes, setShapes] = useState(false);
+  const [shapesError, setShapesError] = useState<string | null>(null);
+  const { rows, loading, error } = useMapValues(roomType);
+  const trends = useMapTrends(roomType, shown);
   const info = METRICS.find((item) => item.value === metric)!;
+  const row = useMemo(() => rows?.find((item) => item.postal_code === selected), [rows, selected]);
+  const [firstRoomType] = useState(roomType);
+  const phone = usePhone();
+  // Keep the areas clear of the controls: on a phone the panel and legend sit at the bottom.
+  const padding = useMemo<Padding>(
+    () =>
+      phone
+        ? { top: 190, right: 0, bottom: selected ? 300 : 170, left: 0 }
+        : { top: 0, right: selected ? PANEL + 16 : 0, bottom: 0, left: 0 },
+    [phone, selected],
+  );
+
+  useEffect(() => {
+    preloadMap(firstRoomType);
+    loadShapes().then(
+      () => setShapes(true),
+      (caught: Error) => setShapesError(caught.message),
+    );
+  }, [firstRoomType]);
+
+  // Never keep the loader up if the map cannot draw, for example without WebGL.
+  const dataReady = shapes && rows !== null;
+  useEffect(() => {
+    if (!dataReady) return;
+    const timer = setTimeout(() => setShown(true), REVEAL_LIMIT_MS);
+    return () => clearTimeout(timer);
+  }, [dataReady]);
+
+  useEffect(() => {
+    if (shown) preloadRest(roomType);
+  }, [shown, roomType]);
 
   const cuts = useMemo(
     () =>
@@ -68,7 +123,8 @@ export function Explore() {
         selected={selected}
         onSelect={(code) => select(code, "map")}
         onHover={setHover}
-        padding={{ right: selected ? PANEL + 16 : 0, bottom: 0 }}
+        onReady={() => setShown(true)}
+        padding={padding}
       />
 
       <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex flex-col gap-2 sm:inset-x-4 sm:top-4 sm:w-[360px]">
@@ -91,7 +147,7 @@ export function Explore() {
             options={ROOM_TYPES.map((type) => ({ value: type.value, label: type.short }))}
           />
         </div>
-        {error && <p className="pointer-events-auto rounded-lg bg-paper px-3 py-2 text-sm text-bad shadow-float">{error}</p>}
+        {loading && shown && <div className="busy relative h-0.5 overflow-hidden rounded-full bg-line" role="status" aria-label="Loading" />}
       </div>
 
       {cuts.length > 0 && (
@@ -128,7 +184,7 @@ export function Explore() {
 
       {hover && (
         <div
-          className="pointer-events-none absolute z-20 rounded-lg bg-paper px-3 py-2 shadow-float"
+          className="pointer-events-none absolute z-20 rounded-lg bg-paper px-3 py-2 shadow-float [@media(hover:none)]:hidden"
           style={{ left: hover.x + 14, top: hover.y + 14 }}
         >
           <p className="text-[13px]">
@@ -138,79 +194,134 @@ export function Explore() {
         </div>
       )}
 
-      {selected && <AreaPanel postalCode={selected} roomType={roomType} onClose={() => select(null)} />}
+      {selected && shown && (
+        <AreaPanel postalCode={selected} row={row} roomType={roomType} trends={trends} onClose={() => select(null)} />
+      )}
+
+      <MapLoader steps={[shapes, rows !== null, shown]} error={error ?? shapesError} />
     </div>
   );
 }
 
-function AreaPanel({ postalCode, roomType, onClose }: { postalCode: string; roomType: RoomType; onClose: () => void }) {
-  const [market, setMarket] = useState<Market | null>(null);
-  const [prices, setPrices] = useState<SeriesPoint[]>([]);
-  const [failed, setFailed] = useState<string | null>(null);
+const LOADER_STEPS = ["3,018 postal code areas", "Prices and rents", "Drawing the map"];
 
-  useEffect(() => {
-    let current = true;
-    Promise.all([api.market(postalCode), api.marketHistory(postalCode, roomType)]).then(
-      ([levels, history]) => {
-        if (!current) return;
-        setMarket(levels);
-        setPrices(history.prices.filter((point) => typeof point.avg_price_per_m2_annual === "number"));
-        setFailed(null);
-      },
-      (caught: Error) => current && setFailed(caught.message),
-    );
-    return () => {
-      current = false;
-    };
-  }, [postalCode, roomType]);
+function MapLoader({ steps: status, error }: { steps: boolean[]; error: string | null }) {
+  const [gone, setGone] = useState(false);
+  if (gone) return null;
+  const done = status[status.length - 1];
+  const steps = LOADER_STEPS.map((label, index) => ({ label, done: status[index] }));
+  const progress = (status.filter(Boolean).length + 0.5) / (status.length + 0.5);
+  return (
+    <div
+      className={`absolute inset-0 z-30 grid place-items-center bg-frost transition-opacity duration-500 ${done ? "pointer-events-none opacity-0" : ""}`}
+      onTransitionEnd={() => done && setGone(true)}
+      role="status"
+      aria-live="polite"
+    >
+      <div className="w-[min(320px,calc(100%-48px))]">
+        <p className="text-[13px] font-medium tracking-wide text-ink-3 uppercase">Housing market, Finland</p>
+        <p className="mt-1 text-[22px] leading-tight font-semibold tracking-tight">Preparing the map</p>
+        <div className="mt-5 h-1 overflow-hidden rounded-full bg-line">
+          <div className="h-full rounded-full bg-ink transition-[width] duration-700 ease-out" style={{ width: `${progress * 100}%` }} />
+        </div>
+        {error ? (
+          <div className="mt-5 text-sm">
+            <p className="text-bad">{error}</p>
+            <button type="button" onClick={() => window.location.reload()} className="mt-3 rounded-lg bg-ink px-4 py-2 font-medium text-paper">
+              Try again
+            </button>
+          </div>
+        ) : (
+          <ul className="mt-5 space-y-2 text-sm">
+            {steps.map((step) => (
+              <li key={step.label} className={`flex items-center gap-2.5 transition-colors ${step.done ? "text-ink" : "text-ink-3"}`}>
+                <span
+                  className={`grid size-4 place-items-center rounded-full transition-colors ${step.done ? "bg-ink text-paper" : "border border-line-strong"}`}
+                  aria-hidden="true"
+                >
+                  {step.done && (
+                    <svg width="9" height="9" viewBox="0 0 12 12">
+                      <path d="m2.5 6.2 2.3 2.3 4.7-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </span>
+                {step.label}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
 
-  const level = market?.levels.find((item) => item.room_type === roomType);
-  const loaded = market?.postal_area.postal_code === postalCode;
+function AreaPanel({
+  postalCode,
+  row,
+  roomType,
+  trends,
+  onClose,
+}: {
+  postalCode: string;
+  row: MapValue | undefined;
+  roomType: RoomType;
+  trends: MapTrends | null;
+  onClose: () => void;
+}) {
   const room = ROOM_TYPES.find((type) => type.value === roomType)!;
+  const series = trends?.prices[postalCode];
+  const points = useMemo(
+    () =>
+      trends && series
+        ? trends.years.flatMap((year, index) => (series[index] === null ? [] : [{ year, value: series[index] as number }]))
+        : [],
+    [trends, series],
+  );
 
   return (
-    <aside
-      className="absolute inset-x-3 bottom-3 z-20 flex max-h-[70%] flex-col overflow-hidden rounded-xl bg-paper shadow-float sm:inset-x-auto sm:top-4 sm:right-4 sm:bottom-auto sm:max-h-[calc(100%-2rem)]"
-    >
-      <div className="flex w-full flex-col overflow-y-auto sm:w-[380px]">
-        <div className="flex items-start justify-between gap-4 px-5 pt-5">
+    <aside className="panel-in absolute inset-x-3 bottom-3 z-20 flex max-h-[62%] flex-col overflow-hidden rounded-xl bg-paper shadow-float sm:inset-x-auto sm:top-4 sm:right-4 sm:bottom-auto sm:max-h-[calc(100%-2rem)]">
+      <div className="flex w-full flex-col overflow-y-auto overscroll-contain sm:w-[380px]">
+        <div className="flex items-start justify-between gap-4 px-5 pt-4 sm:pt-5">
           <div className="min-w-0">
-            <h2 className="truncate text-[22px] leading-tight font-semibold tracking-tight">
-              {loaded ? market.postal_area.postal_area_name : " "}
+            <h2 className="truncate text-[20px] leading-tight font-semibold tracking-tight sm:text-[22px]">
+              {row?.postal_area_name ?? postalCode}
             </h2>
             <p className="num text-sm text-ink-3">
               {postalCode}
-              {loaded ? `, ${market.postal_area.municipality_name}` : ""}
+              {row ? `, ${row.municipality_name}` : ""}
             </p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="-mt-1 -mr-2 rounded-md p-2 text-ink-3 hover:bg-well hover:text-ink">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="-mt-1.5 -mr-2.5 grid size-10 shrink-0 place-items-center rounded-md text-ink-3 hover:bg-well hover:text-ink"
+          >
             <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
               <path d="m4 4 8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
             </svg>
           </button>
         </div>
 
-        {failed && <p className="px-5 pt-4 text-sm text-bad">{failed}</p>}
-
-        {loaded && level && (
-          <>
-            <dl className="mt-5 divide-y divide-line border-y border-line">
-              <Figure label={`Price, ${room.short}`} value={`${formatEuro(level.price_per_m2)} / m²`} estimated={level.price_geography_level !== "postal_code"} />
-              <Figure label="Rent" value={`${formatEuroCents(level.rent_per_m2)} / m²`} estimated={level.rent_geography_level !== "postal_code"} />
-              <Figure
-                label="Price-to-rent"
-                value={level.price_to_rent_ratio !== null ? `${formatNumber(level.price_to_rent_ratio)} years` : "–"}
-              />
-            </dl>
-            {prices.length > 2 && (
-              <div className="max-sm:hidden">
-                <PriceTrend points={prices} />
-              </div>
-            )}
-          </>
+        {row ? (
+          <dl className="mt-4 divide-y divide-line border-y border-line sm:mt-5">
+            <Figure label={`Price, ${room.short}`} value={row.price_per_m2} digits={0} suffix=" / m²" estimated={isEstimated(row, "price")} />
+            <Figure label="Rent" value={row.rent_per_m2} digits={2} suffix=" / m²" estimated={isEstimated(row, "rent")} />
+            <Figure label="Price-to-rent" value={row.price_to_rent_ratio} digits={1} suffix=" years" currency={false} />
+          </dl>
+        ) : (
+          <p className="px-5 pt-4 text-sm text-ink-3">No published figures for this area.</p>
         )}
 
-        <div className="p-5">
+        <div className="max-sm:hidden">
+          {trends === null ? (
+            <div className="shimmer mx-5 mt-4 h-[124px] rounded-lg" />
+          ) : points.length > 2 ? (
+            <PriceTrend points={points} />
+          ) : null}
+        </div>
+
+        <div className="p-4 sm:p-5">
           <Link
             href={`/compare?postal=${postalCode}&rooms=${roomType}`}
             className="flex h-11 w-full items-center justify-center rounded-lg bg-ink text-[15px] font-medium text-paper transition-opacity hover:opacity-90"
@@ -223,13 +334,42 @@ function AreaPanel({ postalCode, roomType, onClose }: { postalCode: string; room
   );
 }
 
-function Figure({ label, value, estimated }: { label: string; value: string; estimated?: boolean }) {
+function Figure({
+  label,
+  value,
+  digits,
+  suffix,
+  estimated,
+  currency = true,
+}: {
+  label: string;
+  value: number | null;
+  digits: number;
+  suffix: string;
+  estimated?: boolean;
+  currency?: boolean;
+}) {
   return (
     <div className="flex items-baseline justify-between px-5 py-3">
       <dt className="text-sm text-ink-2">{label}</dt>
       <dd className="num text-right text-[17px] font-semibold">
-        {value}
-        {estimated && (
+        {value === null ? (
+          "–"
+        ) : (
+          <>
+            <NumberFlow
+              value={value}
+              locales="en-IE"
+              format={{
+                ...(currency ? { style: "currency" as const, currency: "EUR" } : {}),
+                minimumFractionDigits: digits,
+                maximumFractionDigits: digits,
+              }}
+            />
+            {suffix}
+          </>
+        )}
+        {estimated && value !== null && (
           <span className="ml-1 align-top text-[11px] font-normal text-ink-3" title="Figure from a larger area">
             ≈
           </span>
@@ -239,9 +379,9 @@ function Figure({ label, value, estimated }: { label: string; value: string; est
   );
 }
 
-function PriceTrend({ points }: { points: SeriesPoint[] }) {
-  const years = useMemo(() => points.map((point) => String(point.period).slice(0, 4)), [points]);
-  const values = useMemo(() => points.map((point) => point.avg_price_per_m2_annual as number), [points]);
+function PriceTrend({ points }: { points: { year: number; value: number }[] }) {
+  const years = useMemo(() => points.map((point) => String(point.year)), [points]);
+  const values = useMemo(() => points.map((point) => point.value), [points]);
   const change = values[values.length - 1] / values[0] - 1;
   const option = useMemo(
     () => ({

@@ -204,13 +204,13 @@ export function AssumptionInputs({ start, assumptions, onChange, price }: Props)
               <NumberField label="Flat price growth" value={assumptions.price_growth ?? base.buy.price_growth} onChange={set("price_growth")} {...percent} />
             </Setting>
             <div className="py-2.5">
-              <div className="grid grid-cols-[1fr_auto] items-center gap-3">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
                 <InfoLabel label="Rents">
                   <p className="leading-relaxed">
                     {sources.rent_growth}. Market trend: {sources.rent_growth_market.toLowerCase()}.
                   </p>
                 </InfoLabel>
-                <div className="flex min-w-40 justify-end">
+                <div className="flex justify-end [&>div:has(input)]:w-36 sm:[&>div:has(input)]:w-40">
                   <NumberField label="Rent growth" value={rentGrowth} onChange={set("rent_growth")} {...percent} />
                 </div>
               </div>
@@ -299,11 +299,11 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 
 function Setting({ label, about, children }: { label: string; about: string; children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[1fr_auto] items-center gap-3 py-2.5">
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-2.5">
       <InfoLabel label={label}>
         <p className="leading-relaxed">{about}</p>
       </InfoLabel>
-      <div className="flex min-w-40 justify-end">{children}</div>
+      <div className="flex justify-end [&>div:has(input)]:w-36 sm:[&>div:has(input)]:w-40">{children}</div>
     </div>
   );
 }

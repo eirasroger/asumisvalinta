@@ -166,3 +166,16 @@ def test_map_values_cover_every_postal_code(client):
     row = next(r for r in rows if r["postal_code"] == "00100")
     assert row["price_to_rent_ratio"] == pytest.approx(7167 / (25.14 * 12))
     assert row["municipality_name"] == "Helsinki"
+
+
+def test_map_trends_match_the_area_history(client):
+    trends = client.get("/api/map/trends", params={"room_type": "two_room"}).json()
+    history = client.get("/api/market/00100/history", params={"room_type": "two_room"}).json()
+    published = {
+        int(point["period"][:4]): round(point["avg_price_per_m2_annual"])
+        for point in history["prices"]
+        if point.get("avg_price_per_m2_annual") is not None
+    }
+    series = dict(zip(trends["years"], trends["prices"]["00100"], strict=True))
+    assert published
+    assert {year: series[year] for year in published} == published

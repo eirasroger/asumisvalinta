@@ -502,6 +502,33 @@ def _monthly_costs(result: ScenarioResult) -> list[dict[str, Any]]:
     return rows
 
 
+@app.get("/api/map/trends")
+def map_trends(room_type: RoomType = "two_room") -> dict[str, Any]:
+    """Yearly price per m² of flats in every postal code, one list per code aligned to `years`."""
+    result = semantic_layer().query(
+        MetricQuery(
+            metrics=("avg_price_per_m2_annual",),
+            group_by=("postal_area", "metric_time__year"),
+            filters=(
+                Filter("dwelling_price__geography_level", "=", "postal_code"),
+                Filter("dwelling_price__building_type", "=", "block_of_flats"),
+                Filter("room_type", "=", room_type),
+            ),
+        )
+    )
+    code, year, value = (
+        result.columns.index(name)
+        for name in ("postal_area", "metric_time__year", "avg_price_per_m2_annual")
+    )
+    rows = [row for row in result.rows if row[code] and row[value] is not None]
+    years = sorted({row[year].year for row in rows})
+    prices: dict[str, list[int | None]] = {}
+    for row in rows:
+        series = prices.setdefault(row[code], [None] * len(years))
+        series[years.index(row[year].year)] = round(row[value])
+    return {"years": years, "prices": prices}
+
+
 @app.get("/api/map/values")
 def map_values(room_type: RoomType = "two_room") -> list[dict[str, Any]]:
     """Price, rent and price-to-rent ratio of every postal code, for the map."""

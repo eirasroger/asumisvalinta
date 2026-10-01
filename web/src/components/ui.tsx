@@ -32,8 +32,8 @@ export function Segmented<T extends string>({
         <ToggleGroup.Item
           key={option.value}
           value={option.value}
-          className={`flex-1 rounded-md px-3 whitespace-nowrap text-ink-2 transition-colors hover:text-ink data-[state=on]:bg-paper data-[state=on]:font-medium data-[state=on]:text-ink data-[state=on]:shadow-[0_1px_2px_rgba(26,37,48,0.12)] ${
-            size === "sm" ? "h-7 text-[13px]" : "h-8 text-sm"
+          className={`min-w-0 flex-1 rounded-md px-2 py-1 leading-tight text-ink-2 transition-colors hover:text-ink data-[state=on]:bg-paper data-[state=on]:font-medium data-[state=on]:text-ink data-[state=on]:shadow-[0_1px_2px_rgba(26,37,48,0.12)] sm:px-3 sm:whitespace-nowrap ${
+            size === "sm" ? "min-h-7 text-[13px]" : "min-h-8 text-sm"
           }`}
         >
           {option.label}
@@ -153,7 +153,7 @@ export function Slider({
       </RadixSlider.Track>
       <RadixSlider.Thumb
         aria-label={label}
-        className="block h-4 w-4 rounded-full border-2 border-ink bg-paper shadow-sm transition-transform hover:scale-110"
+        className="relative block size-5 rounded-full border-2 border-ink bg-paper shadow-sm transition-transform after:absolute after:-inset-2.5 after:content-[''] hover:scale-110 sm:size-4"
       />
     </RadixSlider.Root>
   );
@@ -189,7 +189,7 @@ export function Popover({
           align={align}
           sideOffset={8}
           collisionPadding={12}
-          className="z-50 w-80 rounded-xl border border-line bg-paper p-4 text-sm shadow-float outline-none"
+          className="z-50 w-80 max-w-[calc(100vw-24px)] rounded-xl border border-line bg-paper p-4 text-sm shadow-float outline-none"
         >
           {children}
         </RadixPopover.Content>
@@ -216,7 +216,7 @@ export function Sheet({
         <Dialog.Content className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-paper shadow-float outline-none">
           <div className="flex h-14 shrink-0 items-center justify-between border-b border-line px-6">
             <Dialog.Title className="text-[17px] font-semibold tracking-tight">{title}</Dialog.Title>
-            <Dialog.Close className="rounded-md p-1.5 text-ink-3 hover:bg-well hover:text-ink" aria-label="Close">
+            <Dialog.Close className="-mr-2 grid size-10 place-items-center rounded-md text-ink-3 hover:bg-well hover:text-ink" aria-label="Close">
               <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
                 <path d="m4 4 8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               </svg>
@@ -290,7 +290,7 @@ export function Hint({
           onPointerEnter={(event) => event.pointerType === "mouse" && show()}
           onPointerLeave={(event) => event.pointerType === "mouse" && hide()}
           onOpenAutoFocus={(event) => event.preventDefault()}
-          style={{ width }}
+          style={{ width, maxWidth: "calc(100vw - 24px)" }}
           className="z-50 rounded-xl border border-line bg-paper p-4 text-sm shadow-float outline-none"
         >
           {children}

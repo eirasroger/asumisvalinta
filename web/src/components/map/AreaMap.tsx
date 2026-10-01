@@ -1,6 +1,6 @@
 "use client";
 
-import type { Feature, FeatureCollection, Geometry, Position } from "geojson";
+import type { FeatureCollection, Geometry, Position } from "geojson";
 import {
   type ExpressionSpecification,
   type GeoJSONSource,
@@ -12,30 +12,20 @@ import {
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { feature } from "topojson-client";
-import type { GeometryCollection, Topology } from "topojson-specification";
 import type { MapValue } from "@/lib/api";
-import { isEstimated, type MapMetric, type MapScope, metricValue, SCOPES, SEQUENTIAL } from "@/lib/mapData";
-
-type Shape = Feature<Geometry, { postal_code: string; municipality_code: string }>;
+import {
+  isEstimated,
+  loadShapes,
+  type MapMetric,
+  type MapScope,
+  metricValue,
+  SCOPES,
+  SEQUENTIAL,
+  type Shape,
+} from "@/lib/mapData";
 
 const STYLE = "https://tiles.openfreemap.org/styles/positron";
 const SOURCE = "areas";
-let shapes: Promise<Shape[]> | null = null;
-
-function loadShapes() {
-  shapes ??= fetch("/geo/postal-areas.topo.json")
-    .then((response) => {
-      if (!response.ok) throw new Error("The postal area map could not be loaded.");
-      return response.json() as Promise<Topology<{ postal_areas: GeometryCollection<Shape["properties"]> }>>;
-    })
-    .then((topology) => (feature(topology, topology.objects.postal_areas) as FeatureCollection<Geometry, Shape["properties"]>).features)
-    .catch((error) => {
-      shapes = null;
-      throw error;
-    });
-  return shapes;
-}
 
 function bounds(geometry: Geometry): LngLatBoundsLike {
   let minX = Infinity;
@@ -86,20 +76,45 @@ interface Props {
   selected: string | null;
   onSelect: (postalCode: string) => void;
   onHover: (info: HoverInfo | null) => void;
-  padding?: { right: number; bottom: number };
+  onReady?: () => void;
+  padding?: Padding;
 }
 
-export function AreaMap({ rows, metric, cuts, scope, selected, onSelect, onHover, padding }: Props) {
+export interface Padding {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+function inset(extra: Padding | undefined, base: number) {
+  return {
+    top: base + (extra?.top ?? 0),
+    right: base + (extra?.right ?? 0),
+    bottom: base + (extra?.bottom ?? 0),
+    left: base + (extra?.left ?? 0),
+  };
+}
+
+const SETTLE_LIMIT_MS = 1500;
+
+export function AreaMap({ rows, metric, cuts, scope, selected, onSelect, onHover, onReady, padding }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibre | null>(null);
   const [ready, setReady] = useState(false);
   const [all, setAll] = useState<Shape[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const handlers = useRef({ onSelect, onHover });
+  const handlers = useRef({ onSelect, onHover, onReady });
   useEffect(() => {
-    handlers.current = { onSelect, onHover };
-  }, [onSelect, onHover]);
+    handlers.current = { onSelect, onHover, onReady };
+  }, [onSelect, onHover, onReady]);
+  const announced = useRef(false);
   const initialScope = useRef(scope);
+  const initialPadding = useRef(padding);
+  const paddingRef = useRef(padding);
+  useEffect(() => {
+    paddingRef.current = padding;
+  }, [padding]);
 
   useEffect(() => {
     loadShapes().then(setAll, (caught: Error) => setError(caught.message));
@@ -112,7 +127,7 @@ export function AreaMap({ rows, metric, cuts, scope, selected, onSelect, onHover
       container: container.current,
       style: STYLE,
       bounds: SCOPES.find((item) => item.value === initialScope.current)!.bounds,
-      fitBoundsOptions: { padding: 24 },
+      fitBoundsOptions: { padding: inset(initialPadding.current, 24) },
       attributionControl: { compact: true },
       dragRotate: false,
       pitchWithRotate: false,
@@ -213,8 +228,19 @@ export function AreaMap({ rows, metric, cuts, scope, selected, onSelect, onHover
 
   useEffect(() => {
     if (!ready || !collection) return;
-    (map.current?.getSource(SOURCE) as GeoJSONSource | undefined)?.setData(collection);
-  }, [ready, collection]);
+    const instance = map.current;
+    (instance?.getSource(SOURCE) as GeoJSONSource | undefined)?.setData(collection);
+    if (!instance || !rows || announced.current) return;
+    announced.current = true;
+    // Reveal once the coloured areas are drawn, or after a short wait on slow connections.
+    const reveal = () => {
+      clearTimeout(timer);
+      instance.off("idle", reveal);
+      handlers.current.onReady?.();
+    };
+    const timer = setTimeout(reveal, SETTLE_LIMIT_MS);
+    instance.once("idle", reveal);
+  }, [ready, collection, rows]);
 
   useEffect(() => {
     if (!ready || cuts.length === 0) return;
@@ -243,24 +269,19 @@ export function AreaMap({ rows, metric, cuts, scope, selected, onSelect, onHover
     const view = instance.getBounds();
     const [[minX, minY], [maxX, maxY]] = target as [[number, number], [number, number]];
     if (!view.contains([minX, minY]) || !view.contains([maxX, maxY])) {
-      instance.fitBounds(target, { padding: { top: 80, left: 80, right: (padding?.right ?? 0) + 80, bottom: (padding?.bottom ?? 0) + 80 }, maxZoom: 12, duration: 900 });
+      instance.fitBounds(target, { padding: inset(paddingRef.current, 48), maxZoom: 12, duration: 900 });
     }
-  }, [ready, selected, all, padding?.right, padding?.bottom]);
+  }, [ready, selected, all]);
 
   const firstScope = useRef(true);
-  const paddingRef = useRef(padding);
-  useEffect(() => {
-    paddingRef.current = padding;
-  }, [padding]);
   useEffect(() => {
     if (!ready) return;
     if (firstScope.current) {
       firstScope.current = false;
       return;
     }
-    const extra = paddingRef.current;
     map.current?.fitBounds(SCOPES.find((item) => item.value === scope)!.bounds, {
-      padding: { top: 24, left: 24, right: (extra?.right ?? 0) + 24, bottom: (extra?.bottom ?? 0) + 24 },
+      padding: inset(paddingRef.current, 24),
       duration: 1200,
     });
   }, [ready, scope]);

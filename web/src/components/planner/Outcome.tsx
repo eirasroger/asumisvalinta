@@ -111,9 +111,9 @@ export function Outcome({ run, loading, strategy }: { run: PlannerRun; loading: 
           <thead>
             <tr className="text-left text-[13px] text-ink-3">
               <th className="py-2.5 pl-5 font-normal">Option</th>
-              <th className="py-2.5 text-right font-normal">Wealth after {horizon} yrs</th>
+              <th className="py-2.5 pl-4 text-right font-normal">Wealth after {horizon} yrs</th>
               <th className="py-2.5 text-right font-normal max-sm:hidden">Monthly, year 1</th>
-              <th className="py-2.5 pr-5 text-right font-normal">Upfront</th>
+              <th className="py-2.5 pr-5 pl-4 text-right font-normal">Upfront</th>
             </tr>
           </thead>
           <tbody>
@@ -142,7 +142,7 @@ export function Outcome({ run, loading, strategy }: { run: PlannerRun; loading: 
                   </Popover>
                 </td>
                 <td className="py-3 text-right max-sm:hidden">{formatEuro(firstYear[item.option] ?? 0)}</td>
-                <td className="py-3 pr-5 text-right">{formatEuro(item.upfront_payment)}</td>
+                <td className="py-3 pr-5 pl-4 text-right">{formatEuro(item.upfront_payment)}</td>
               </tr>
             ))}
           </tbody>
@@ -173,15 +173,18 @@ function MonthlySplit({ run, strategy }: { run: PlannerRun; strategy: Strategy }
         {costs.map(({ option, cost }) => {
           const left = budget - cost;
           return (
-            <div key={option} className="grid grid-cols-[minmax(0,140px)_1fr_auto] items-center gap-3 text-[13px]">
+            <div
+              key={option}
+              className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 text-[13px] sm:grid-cols-[minmax(0,140px)_1fr_auto]"
+            >
               <span className="flex items-center gap-2 truncate">
                 <Dot color={COLORS[option]} />
                 {OPTION_LABELS[option]}
               </span>
-              <div className="flex h-2.5 overflow-hidden rounded-full bg-well" aria-hidden="true">
+              <div className="flex h-2.5 overflow-hidden rounded-full bg-well max-sm:order-last max-sm:col-span-2" aria-hidden="true">
                 <div style={{ width: `${(cost / budget) * 100}%`, background: COLORS[option] }} />
               </div>
-              <span className="w-36 text-right">
+              <span className="text-right sm:w-36">
                 {left >= 1 ? (
                   <>
                     <span className="font-semibold">{formatEuro(left)}</span>{" "}

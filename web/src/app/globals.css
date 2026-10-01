@@ -92,3 +92,45 @@ body {
   background: var(--ink);
   animation: sweep 900ms ease-in-out infinite;
 }
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.panel-in {
+  animation: panel-in 220ms ease-out;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, var(--well) 25%, var(--frost) 50%, var(--well) 75%) 0 0 / 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@media (max-width: 639px) {
+  .maplibregl-ctrl-bottom-right {
+    display: none;
+  }
+
+  /* Safari zooms into fields with smaller text and keeps the page zoomed. */
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}

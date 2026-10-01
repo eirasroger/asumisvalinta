@@ -205,6 +205,11 @@ export interface MapValue {
   price_to_rent_ratio: number | null;
 }
 
+export interface MapTrends {
+  years: number[];
+  prices: Record<string, (number | null)[]>;
+}
+
 export interface AskResponse {
   status: "answered" | "refused" | "needs_clarification" | "error";
   answer: string;
@@ -275,6 +280,7 @@ export const api = {
       signal,
     }),
   mapValues: (roomType: RoomType) => request<MapValue[]>(`/api/map/values?room_type=${roomType}`),
+  mapTrends: (roomType: RoomType) => request<MapTrends>(`/api/map/trends?room_type=${roomType}`),
   ask: (question: string, sessionId: string) =>
     request<AskResponse>("/api/ask", {
       method: "POST",
