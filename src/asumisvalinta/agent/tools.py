@@ -20,6 +20,12 @@ from asumisvalinta.semantic.client import DBT_PROJECT_DIR
 
 MAX_ROWS = 200
 ROOM_TYPES = ["one_room", "two_room", "three_room_plus"]
+FLAT_LABELS = {
+    "one_room": "studio",
+    "two_room": "1 bedroom",
+    "three_room_plus": "2+ bedrooms",
+    "all": "all flats",
+}
 ANSWER_TOOL = "submit_answer"
 
 SIMPLIFICATIONS = [
@@ -237,8 +243,67 @@ FILTER_GUIDE = (
 )
 EMPTY_RESULT_HINT = (
     "No value matched. Check the filter values with list_dimension_values or search_areas, and "
-    "whether the period has published data."
+    "whether the period has published data. Postal codes publish flat prices by room type only: "
+    "leave room_type out to cover all flats of a postal code."
 )
+MAX_RANKED = 20
+
+
+@dataclass(frozen=True)
+class _Ranking:
+    metric: str
+    unit: str
+    description: str
+    names: tuple[str, ...]
+    filters: tuple[Filter, ...]
+
+
+def _ranking(measure: str, level: str, room_type: str) -> _Ranking:
+    room = (Filter("room_type", "=", room_type),)
+    if measure == "price":
+        flats = (Filter("dwelling_price__building_type", "=", "block_of_flats"), *room)
+        price = "average price per m² of old flats in blocks of flats, yearly statistics"
+        if level == "postal_code":
+            # Postal codes publish flats by room type only; the metric weights them by sales.
+            if room_type == "all":
+                flats = (
+                    Filter("dwelling_price__building_type", "=", "block_of_flats"),
+                    Filter("room_type", "in", ROOM_TYPES),
+                )
+            return _Ranking(
+                "avg_price_per_m2_annual",
+                "€/m²",
+                price,
+                ("postal_area", "postal_area__postal_area_name", "postal_area__municipality_name"),
+                (Filter("dwelling_price__geography_level", "=", "postal_code"), *flats),
+            )
+        if level == "municipality":
+            return _Ranking(
+                "avg_price_per_m2_annual",
+                "€/m²",
+                price,
+                ("area", "area__area_name"),
+                (Filter("area__area_scheme", "=", "municipality_2015"), *flats),
+            )
+    if measure == "rent" and level in ("sub_area", "municipality"):
+        return _Ranking(
+            "avg_rent_per_m2",
+            "€/m² per month",
+            "average monthly rent per m² of free-market rental flats",
+            ("area", "area__area_name"),
+            (
+                Filter("area__area_scheme", "=", "rent_area"),
+                Filter("area__area_level", "=", level),
+                *room,
+            ),
+        )
+    raise ToolError(
+        "Prices rank by postal_code or municipality; rents rank by sub_area or municipality."
+    )
+
+
+def _year(value: Any) -> int:
+    return value.year if isinstance(value, dt.date) else int(str(value)[:4])
 
 
 def semantic_tools(semantic_layer: SemanticLayer, warehouse: Path) -> list[Tool]:
@@ -336,6 +401,117 @@ def semantic_tools(semantic_layer: SemanticLayer, warehouse: Path) -> list[Tool]
             response["note"] = EMPTY_RESULT_HINT
         return response
 
+    def area_prices(postal_code: str) -> dict[str, Any]:
+        result = semantic_layer.query(
+            MetricQuery(
+                metrics=("current_price_per_m2", "current_rent_per_m2"),
+                group_by=(
+                    "room_type",
+                    "postal_area__postal_area_name",
+                    "postal_area__municipality_name",
+                    "market_level__price_geography_level",
+                    "market_level__price_period_label",
+                    "market_level__rent_geography_level",
+                    "market_level__rent_period_label",
+                ),
+                filters=(Filter("postal_area", "=", postal_code.strip()),),
+            )
+        )
+        if not result.rows:
+            raise ToolError(f"No market data for postal code {postal_code}. Use search_areas.")
+        rows = [dict(zip(result.columns, row, strict=True)) for row in result.rows]
+        first = rows[0]
+        return {
+            "postal_code": postal_code.strip(),
+            "name": first["postal_area__postal_area_name"],
+            "municipality": first["postal_area__municipality_name"],
+            "by_room_type": [
+                {
+                    "flat": FLAT_LABELS.get(row["room_type"], row["room_type"]),
+                    "price_per_m2": None
+                    if row["current_price_per_m2"] is None
+                    else round(row["current_price_per_m2"]),
+                    "price_area_level": row["market_level__price_geography_level"],
+                    "price_period": row["market_level__price_period_label"],
+                    "rent_per_m2_month": _round(row["current_rent_per_m2"]),
+                    "rent_area_level": row["market_level__rent_geography_level"],
+                    "rent_period": row["market_level__rent_period_label"],
+                }
+                for row in sorted(rows, key=lambda row: str(row["room_type"]))
+            ],
+        }
+
+    def rank_areas(
+        measure: str,
+        level: str,
+        order: str = "highest",
+        years: int = 1,
+        room_type: str = "all",
+        limit: int = 5,
+        within: str | None = None,
+    ) -> dict[str, Any]:
+        ranking = _ranking(measure, level, room_type)
+        by_quarter = semantic_layer.query(
+            MetricQuery(
+                metrics=(ranking.metric,),
+                group_by=("metric_time__quarter",),
+                filters=ranking.filters,
+            )
+        )
+        published = [row[0] for row in by_quarter.rows if row[-1] is not None]
+        if not published:
+            raise ToolError(EMPTY_RESULT_HINT)
+        latest = max(published)
+        last = _year(latest)
+        first = last - max(1, min(years, 10)) + 1
+        period = str(last) if first == last else f"{first} to {last}"
+        if measure == "rent" and latest.month < 10:
+            period += f" (to Q{(latest.month - 1) // 3 + 1})"
+        result = semantic_layer.query(
+            MetricQuery(
+                metrics=(ranking.metric,),
+                group_by=ranking.names,
+                filters=(
+                    *ranking.filters,
+                    Filter("metric_time__year", ">=", str(first)),
+                    Filter("metric_time__year", "<=", str(last)),
+                ),
+            )
+        )
+        keys = [
+            "postal_code" if name == "postal_area" else name.split("__")[-1]
+            for name in ranking.names
+        ]
+        rows = [
+            {**dict(zip(keys, row[:-1], strict=True)), "value": row[-1]}
+            for row in result.rows
+            if row[-1] is not None
+        ]
+        if within:
+            place = within.strip().lower()
+            rows = [
+                row
+                for row in rows
+                if str(row.get("municipality_name") or row.get("area_name"))
+                .lower()
+                .startswith(place)
+            ]
+            if not rows:
+                raise ToolError(f"No {level} areas with published data in {within}.")
+        rows.sort(key=lambda row: row["value"], reverse=order == "highest")
+        for row in rows:
+            row["value"] = round(row["value"]) if measure == "price" else round(row["value"], 2)
+        return {
+            "measure": ranking.description,
+            "unit": ranking.unit,
+            "level": level,
+            "flat": FLAT_LABELS[room_type],
+            "period": period,
+            "ranked_among": f"{len(rows)} areas with published data"
+            + (f" in {within}" if within else " in Finland"),
+            "rows": rows[: max(1, min(limit, MAX_RANKED))],
+        }
+
     string_list = {"type": "array", "items": {"type": "string"}}
     filter_list = {
         "type": "array",
@@ -400,7 +576,9 @@ def semantic_tools(semantic_layer: SemanticLayer, warehouse: Path) -> list[Tool]
             name="query_metrics",
             description=(
                 "Query governed metrics. `group_by` takes names from list_dimensions, for example "
-                "metric_time__quarter or postal_area__municipality_name. " + FILTER_GUIDE
+                "metric_time__quarter or postal_area__municipality_name. `order_by` takes "
+                "metric or dimension names; put '-' in front for highest first, for example "
+                "['-avg_price_per_m2_annual'], and use `limit` for the top rows. " + FILTER_GUIDE
             ),
             parameters={
                 "type": "object",
@@ -414,6 +592,52 @@ def semantic_tools(semantic_layer: SemanticLayer, warehouse: Path) -> list[Tool]
                 "required": ["metrics"],
             },
             handler=query_metrics,
+        ),
+        Tool(
+            name="area_prices",
+            description=(
+                "Latest price per m² and monthly rent per m² of flats in a postal code, by room "
+                "type (one_room is a studio), with the area level and period each figure comes "
+                "from. Only for the latest figures: when the question names a year or quarter, "
+                "use query_metrics for that period."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "postal_code": {"type": "string", "description": "Five-digit postal code."}
+                },
+                "required": ["postal_code"],
+            },
+            handler=area_prices,
+        ),
+        Tool(
+            name="rank_areas",
+            description=(
+                "Rank areas of Finland from the highest or lowest price or rent per m², for "
+                "questions such as the most expensive or cheapest area or city. Prices rank by "
+                "postal_code or municipality; rents rank by sub_area or municipality. `years` is "
+                "the number of latest published years averaged."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "measure": {"type": "string", "enum": ["price", "rent"]},
+                    "level": {
+                        "type": "string",
+                        "enum": ["postal_code", "sub_area", "municipality"],
+                    },
+                    "order": {"type": "string", "enum": ["highest", "lowest"]},
+                    "years": {"type": "integer", "minimum": 1, "maximum": 10},
+                    "room_type": {"type": "string", "enum": [*ROOM_TYPES, "all"]},
+                    "limit": {"type": "integer", "minimum": 1, "maximum": MAX_RANKED},
+                    "within": {
+                        "type": "string",
+                        "description": "Optional municipality name, to rank the areas inside it.",
+                    },
+                },
+                "required": ["measure", "level", "order"],
+            },
+            handler=rank_areas,
         ),
     ]
 

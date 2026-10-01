@@ -117,7 +117,7 @@ export default function AskPage() {
         <article className="space-y-4 rounded-xl border border-line bg-paper p-5">
           <p className="text-[13px] font-medium text-ink-3">{STATUS_LABELS[answer.status]}</p>
           <p className="text-[15px] leading-relaxed whitespace-pre-line">{answer.answer}</p>
-          {(answer.sources || answer.tools_used.length > 0) && (
+          {answer.sources && (
             <div className="space-y-1 border-t border-line pt-3 text-xs text-ink-3">
               {answer.sources && (
                 <p>
@@ -125,7 +125,6 @@ export default function AskPage() {
                   {answer.sources}
                 </p>
               )}
-              {answer.tools_used.length > 0 && <p>Tools: {answer.tools_used.join(", ")}</p>}
             </div>
           )}
         </article>

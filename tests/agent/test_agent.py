@@ -298,6 +298,45 @@ class TestLookupsWithWarehouse:
         )
         assert result["rows"][0][1] == pytest.approx(7341.55)
 
+    def test_rank_areas_orders_postal_codes_by_price(self, tools):
+        result = tools["rank_areas"](measure="price", level="postal_code", order="highest", years=2)
+        values = [row["value"] for row in result["rows"]]
+        assert len(values) == 5
+        assert values == sorted(values, reverse=True)
+        assert result["rows"][0]["municipality_name"] == "Helsinki"
+        assert " to " in result["period"]
+
+    def test_rank_areas_lowest_rents_by_municipality(self, tools):
+        result = tools["rank_areas"](
+            measure="rent", level="municipality", order="lowest", room_type="one_room", limit=3
+        )
+        values = [row["value"] for row in result["rows"]]
+        assert values == sorted(values)
+        assert all(row["area"].startswith("rent_area:") for row in result["rows"])
+
+    def test_rank_areas_within_a_municipality(self, tools):
+        result = tools["rank_areas"](
+            measure="price", level="postal_code", order="lowest", within="espoo", limit=20
+        )
+        assert result["rows"]
+        assert {row["municipality_name"] for row in result["rows"]} == {"Espoo"}
+        assert result["ranked_among"].endswith("in espoo")
+
+    def test_area_prices_lists_every_flat_size(self, tools):
+        result = tools["area_prices"](postal_code="00100")
+        assert result["municipality"] == "Helsinki"
+        flats = {row["flat"]: row for row in result["by_room_type"]}
+        assert set(flats) == {"studio", "1 bedroom", "2+ bedrooms"}
+        assert all(row["rent_per_m2_month"] > 0 for row in flats.values())
+
+    def test_area_prices_reports_unknown_postal_codes(self, tools):
+        with pytest.raises(ToolError, match="search_areas"):
+            tools["area_prices"](postal_code="99999")
+
+    def test_rank_areas_rejects_levels_without_data(self, tools):
+        with pytest.raises(ToolError, match="rents rank by"):
+            tools["rank_areas"](measure="rent", level="postal_code", order="highest")
+
     def test_offset_metric_values_come_from_its_inputs(self, tools):
         values = tools["list_dimension_values"](
             metrics=["price_index_yoy_change"], dimension="price_index_observation__building_type"
