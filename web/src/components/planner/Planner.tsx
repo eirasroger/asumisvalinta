@@ -7,7 +7,7 @@ import { AssumptionInputs } from "@/components/planner/AssumptionInputs";
 import { Outcome } from "@/components/planner/Outcome";
 import { YourNumbers } from "@/components/planner/YourNumbers";
 import { PostalCodeSearch } from "@/components/PostalCodeSearch";
-import { track } from "@/lib/analytics";
+import { type ScenarioEvent, track } from "@/lib/analytics";
 import { Hint, NumberField, Popover, Segmented, Slider } from "@/components/ui";
 import { ApiError, api, type PlannerRun, type PlannerStart, ROOM_NOTE, ROOM_TYPES } from "@/lib/api";
 import {
@@ -38,7 +38,17 @@ export function Planner() {
   const [run, setRun] = useState<PlannerRun | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
-  const lastTracked = useRef("");
+  const inputs = useRef({ flat, offer, assumptions });
+  const latest = useRef<{ event: ScenarioEvent; key: string } | null>(null);
+  const updates = useRef(0);
+  const lastSent = useRef("");
+
+  function flushScenario() {
+    const current = latest.current;
+    if (!current || current.key === lastSent.current) return;
+    lastSent.current = current.key;
+    track({ ...current.event, updates: updates.current });
+  }
   const [refresh, setRefresh] = useState(0);
 
   const update = (patch: Partial<Flat>) => setFlat((current) => ({ ...current, ...patch }));
@@ -99,38 +109,52 @@ export function Planner() {
     };
   }, [scenario, refresh]);
 
+  // Usage is recorded once per flat looked at: the final configuration and how many times it was
+  // recalculated, sent when the visitor leaves the page, switches area or goes elsewhere.
+  useEffect(() => {
+    inputs.current = { flat, offer, assumptions };
+  }, [flat, offer, assumptions]);
+
   useEffect(() => {
     if (!run) return;
-    const wealth = Object.fromEntries(run.result.options.map((item) => [item.option, Math.round(item.end_wealth)]));
-    const best = [...run.result.options].sort((a, b) => b.end_wealth - a.end_wealth)[0].option;
-    const ownNumbers = Object.fromEntries(
-      Object.entries(offer).filter((entry): entry is [string, number] => entry[1] !== null),
-    );
-    const changed = Object.fromEntries(
-      Object.entries(assumptions).filter(
-        (entry): entry is [string, number | string | boolean] => entry[1] !== undefined,
+    const { flat: current, offer: own, assumptions: chosen } = inputs.current;
+    const event: ScenarioEvent = {
+      type: "scenario",
+      postal_code: current.postal_code,
+      room_type: current.room_type,
+      size_m2: current.size_m2,
+      building_year: current.building_year,
+      horizon_years: current.horizon_years,
+      own_numbers: Object.fromEntries(
+        Object.entries(own).filter((entry): entry is [string, number] => entry[1] !== null),
       ),
-    );
-    const event = {
-      type: "scenario" as const,
-      postal_code: flat.postal_code,
-      room_type: flat.room_type,
-      size_m2: flat.size_m2,
-      building_year: flat.building_year,
-      horizon_years: flat.horizon_years,
-      own_numbers: ownNumbers,
-      assumptions: changed,
-      best_option: best,
-      end_wealth: wealth,
+      assumptions: Object.fromEntries(
+        Object.entries(chosen).filter(
+          (entry): entry is [string, number | string | boolean] => entry[1] !== undefined,
+        ),
+      ),
+      best_option: [...run.result.options].sort((a, b) => b.end_wealth - a.end_wealth)[0].option,
+      end_wealth: Object.fromEntries(run.result.options.map((item) => [item.option, Math.round(item.end_wealth)])),
+      updates: 1,
     };
-    const key = JSON.stringify(event);
-    if (key === lastTracked.current) return;
-    const timer = setTimeout(() => {
-      lastTracked.current = key;
-      track(event);
-    }, 4000);
-    return () => clearTimeout(timer);
-  }, [run, flat, offer, assumptions]);
+    if (latest.current?.event.postal_code !== event.postal_code) {
+      flushScenario();
+      updates.current = 0;
+    }
+    updates.current += 1;
+    latest.current = { event, key: JSON.stringify(event) };
+  }, [run]);
+
+  useEffect(() => {
+    const onHide = () => document.visibilityState === "hidden" && flushScenario();
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("pagehide", flushScenario);
+    return () => {
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("pagehide", flushScenario);
+      flushScenario();
+    };
+  }, []);
 
   const area = start?.market;
 

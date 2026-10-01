@@ -69,10 +69,12 @@ def test_scenario_event_is_recorded(recorded):
         "assumptions": {"surplus_strategy": "invest"},
         "best_option": "aso",
         "end_wealth": {"buy": 107_000, "rent": 100_000, "aso": 113_000},
+        "updates": 7,
     }
     assert client.post("/api/events", json=body).status_code == 204
     assert recorded[0][0] == "scenario"
     assert recorded[0][1]["own_numbers"] == {"rent": 1450}
+    assert recorded[0][1]["updates"] == 7
 
 
 def test_events_with_unknown_fields_are_rejected(recorded):

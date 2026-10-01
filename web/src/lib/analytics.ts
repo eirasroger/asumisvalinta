@@ -19,6 +19,7 @@ export interface ScenarioEvent {
   assumptions: Record<string, number | string | boolean>;
   best_option: Option;
   end_wealth: Record<string, number>;
+  updates: number;
 }
 
 /** False when the browser asks not to be tracked. */

@@ -308,6 +308,7 @@ class ScenarioEvent(BaseModel):
     assumptions: dict[str, float | str | bool] = Field(max_length=25)
     best_option: Literal["buy", "rent", "aso"]
     end_wealth: dict[str, float] = Field(max_length=3)
+    updates: int = Field(default=1, ge=1, le=10_000)
 
 
 @app.post("/api/events", status_code=204)
