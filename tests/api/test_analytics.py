@@ -51,7 +51,13 @@ def test_area_event_is_recorded(recorded):
     assert recorded == [
         (
             "area",
-            {"postal_code": "00100", "room_type": "two_room", "source": "map", "metric": "price"},
+            {
+                "postal_code": "00100",
+                "room_type": "two_room",
+                "source": "map",
+                "metric": "price",
+                "visit": None,
+            },
         )
     ]
 
@@ -140,7 +146,12 @@ def test_questions_are_recorded_redacted_unless_the_browser_opts_out(monkeypatch
     assert recorded == [
         (
             "question",
-            {"question": "Rent in 00100? Reply to [email]", "status": "answered", "tools": []},
+            {
+                "question": "Rent in 00100? Reply to [email]",
+                "status": "answered",
+                "tools": [],
+                "visit": None,
+            },
         )
     ]
     assert client.post("/api/ask", json={**question, "record": False}).status_code == 200
@@ -202,3 +213,30 @@ def test_unreachable_database_refuses_questions(monkeypatch):
     )
     with pytest.raises(usage.BudgetUnavailable):
         usage.check()
+
+
+VISIT = "3f2b8c1e-9a4d-4c6b-8e2f-1a2b3c4d5e6f"
+
+
+def test_events_from_one_visit_share_its_number(recorded):
+    client = TestClient(app)
+    body = {
+        "type": "area",
+        "postal_code": "00100",
+        "room_type": "two_room",
+        "source": "map",
+        "visit": VISIT,
+    }
+    assert client.post("/api/events", json=body).status_code == 204
+    assert recorded[0][1]["visit"] == VISIT
+    assert client.post("/api/events", json={**body, "visit": "not a visit"}).status_code == 422
+
+
+def test_questions_keep_the_visit_number(monkeypatch, recorded):
+    from asumisvalinta.api import app as app_module
+
+    monkeypatch.setattr(app_module, "_agent", lambda: _FakeAgent())
+    client = TestClient(app)
+    question = {"question": "Rent in 00100?", "session_id": "session-77", "visit": VISIT}
+    assert client.post("/api/ask", json=question).status_code == 200
+    assert recorded[0][1]["visit"] == VISIT

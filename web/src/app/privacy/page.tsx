@@ -25,7 +25,10 @@ export default function PrivacyPage() {
 
       <Section number={2} title="Data processed">
         <ul className="list-disc space-y-1.5 pl-5">
-          <li>Usage data: inputs to the calculator and the map, and the results shown. Collected without identifiers.</li>
+          <li>
+            Usage data: inputs to the calculator and the map, and the results shown. Events from one visit share a
+            random number that is created when the page loads and is not stored on your device.
+          </li>
           <li>Questions submitted to the assistant and the status of the answer.</li>
           <li>Page views, counted by Vercel Web Analytics without identifiers.</li>
         </ul>

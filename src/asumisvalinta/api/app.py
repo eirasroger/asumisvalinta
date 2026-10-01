@@ -21,6 +21,7 @@ from asumisvalinta.semantic import Filter, MetricQuery, SemanticLayer
 
 RoomType = Literal["one_room", "two_room", "three_room_plus"]
 POSTAL_CODE = r"^\d{5}$"
+VISIT_ID = r"^[0-9a-f-]{36}$"
 PostalCode = Annotated[str, PathParam(pattern=POSTAL_CODE)]
 
 load_dotenv()
@@ -233,6 +234,7 @@ class AskRequest(BaseModel):
     question: str = Field(min_length=3, max_length=500)
     session_id: str = Field(min_length=8, max_length=64)
     record: bool = True
+    visit: str | None = Field(default=None, pattern=VISIT_ID)
 
 
 @lru_cache(maxsize=1)
@@ -268,7 +270,12 @@ def ask(request: AskRequest, background: BackgroundTasks) -> dict[str, Any]:
         background.add_task(
             analytics.record,
             "question",
-            {"question": analytics.redact(request.question), "status": status, "tools": tools},
+            {
+                "question": analytics.redact(request.question),
+                "status": status,
+                "tools": tools,
+                "visit": request.visit,
+            },
         )
     return {
         "status": status,
@@ -291,6 +298,7 @@ class AreaEvent(BaseModel):
     room_type: RoomType
     source: Literal["map", "search", "compare"]
     metric: Literal["price", "rent", "ratio"] | None = None
+    visit: str | None = Field(default=None, pattern=VISIT_ID)
 
 
 class ScenarioEvent(BaseModel):
@@ -309,6 +317,7 @@ class ScenarioEvent(BaseModel):
     best_option: Literal["buy", "rent", "aso"]
     end_wealth: dict[str, float] = Field(max_length=3)
     updates: int = Field(default=1, ge=1, le=10_000)
+    visit: str | None = Field(default=None, pattern=VISIT_ID)
 
 
 @app.post("/api/events", status_code=204)

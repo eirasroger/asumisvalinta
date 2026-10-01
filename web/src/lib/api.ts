@@ -1,4 +1,4 @@
-import { trackingAllowed } from "@/lib/analytics";
+import { trackingAllowed, visitId } from "@/lib/analytics";
 
 export type RoomType = "one_room" | "two_room" | "three_room_plus";
 export type Option = "buy" | "rent" | "aso";
@@ -271,6 +271,6 @@ export const api = {
   ask: (question: string, sessionId: string) =>
     request<AskResponse>("/api/ask", {
       method: "POST",
-      body: JSON.stringify({ question, session_id: sessionId, record: trackingAllowed() }),
+      body: JSON.stringify({ question, session_id: sessionId, record: trackingAllowed(), visit: visitId() }),
     }),
 };

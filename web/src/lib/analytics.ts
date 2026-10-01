@@ -29,10 +29,18 @@ export function trackingAllowed() {
   return navigator.doNotTrack !== "1" && privacy.globalPrivacyControl !== true;
 }
 
+let visit: string | null = null;
+
+/** A random number for this page load. It lives only in memory, so a new visit gets a new one. */
+export function visitId() {
+  visit ??= crypto.randomUUID();
+  return visit;
+}
+
 /** Send an anonymous usage event without waiting for it. */
 export function track(event: AreaEvent | ScenarioEvent) {
   if (!trackingAllowed()) return;
-  const body = JSON.stringify(event);
+  const body = JSON.stringify({ ...event, visit: visitId() });
   try {
     if (navigator.sendBeacon?.("/api/events", new Blob([body], { type: "application/json" }))) return;
   } catch {

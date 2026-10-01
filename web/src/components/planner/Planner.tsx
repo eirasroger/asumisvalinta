@@ -23,6 +23,8 @@ import {
   typicalValues,
 } from "@/lib/planner";
 
+const SETTLE_MS = 2000;
+
 function isAbort(error: unknown) {
   return error instanceof DOMException && error.name === "AbortError";
 }
@@ -41,13 +43,15 @@ export function Planner() {
   const inputs = useRef({ flat, offer, assumptions });
   const latest = useRef<{ event: ScenarioEvent; key: string } | null>(null);
   const updates = useRef(0);
+  const settling = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSent = useRef("");
 
   function flushScenario() {
     const current = latest.current;
     if (!current || current.key === lastSent.current) return;
     lastSent.current = current.key;
-    track({ ...current.event, updates: updates.current });
+    const unsettled = settling.current ? 1 : 0;
+    track({ ...current.event, updates: Math.max(updates.current + unsettled, 1) });
   }
   const [refresh, setRefresh] = useState(0);
 
@@ -141,7 +145,12 @@ export function Planner() {
       flushScenario();
       updates.current = 0;
     }
-    updates.current += 1;
+    // A configuration counts once it stays unchanged for SETTLE_MS, so typing does not inflate it.
+    if (settling.current) clearTimeout(settling.current);
+    settling.current = setTimeout(() => {
+      updates.current += 1;
+      settling.current = null;
+    }, SETTLE_MS);
     latest.current = { event, key: JSON.stringify(event) };
   }, [run]);
 
