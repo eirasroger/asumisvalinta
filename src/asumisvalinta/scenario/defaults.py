@@ -357,7 +357,7 @@ def load_defaults(
                 rate_path=RatePath(kind="flat", start_rate=variable_rate),
             ),
         ),
-        rent=RentInput(rent_per_m2_month=rent_per_m2, rent_growth=market_rent_growth),
+        rent=RentInput(rent_per_m2_month=rent_per_m2, rent_growth=lease_clause_growth),
         aso=AsoInput(
             fee_per_m2=aso_sample.fee_per_m2[1],
             charge_per_m2_month=aso_sample.charge_per_m2[1],
@@ -377,11 +377,11 @@ def load_defaults(
             f"Statistics Finland, non-subsidised, {rent_level} level, {rent_period}"
         ),
         "price_growth": f"Price index, average growth over {GROWTH_YEARS} years",
-        "rent_growth": f"Market rents here, average growth over {GROWTH_YEARS} years",
-        "rent_growth_lease_clause": (
-            f"Inflation {inflation:.1%} a year over {GROWTH_YEARS} years to {cpi_year}, "
-            f"at least {assumptions['rent_growth_floor']:.0%}"
+        "rent_growth": (
+            f"Lease clause: inflation {inflation:.1%} a year over {GROWTH_YEARS} years to "
+            f"{cpi_year}, at least {assumptions['rent_growth_floor']:.0%}"
         ),
+        "rent_growth_market": f"Market rents here, average growth over {GROWTH_YEARS} years",
         "maintenance_charge": (
             f"Housing company finances, area {charge_area}, {charge_end_year}, {age_note}"
         ),

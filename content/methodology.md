@@ -133,7 +133,7 @@ The what-if table reruns the whole calculation with one assumption changed: inte
 | Price per m² | Latest published average for the postal code and room group, or the nearest larger area with published data (price sub-area, municipality, region, country) |
 | Rent per m² | Latest free-market rent for new agreements in the rent sub-area, or the municipality, region or country |
 | Price growth | Compound annual growth of the price index over the last 10 years for the nearest area with an index |
-| Rent growth | Growth of market rents in the rent area over the last 10 years. The alternative is a common lease clause: inflation over the last 10 years (consumer price index), at least 2 % a year |
+| Rent growth | A common lease clause: inflation over the last 10 years (consumer price index), at least 2 % a year. The alternative is the growth of market rents in the rent area over the last 10 years |
 | Maintenance charge and its growth | Housing company finances for Greater Helsinki or the rest of Finland, latest year and 10-year growth, scaled by construction period |
 | Renovation charges | Housing company capital charges by construction period, following the building's age |
 | Repairs inside the flat | Owner-occupiers' contracted renovations per m², average of the last five years |

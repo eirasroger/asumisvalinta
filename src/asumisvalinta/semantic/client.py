@@ -29,6 +29,7 @@ class MetricInfo:
 
 OPERATORS = ("=", "!=", ">", ">=", "<", "<=", "in")
 TIME_PREFIX = "metric_time__"
+_NAME = re.compile(r"[a-z][a-z0-9_]*")
 GEOGRAPHY = "area or postal_area"
 
 # Area-level rows hold published totals next to their details (for example "all rooms"
@@ -71,6 +72,8 @@ class Filter:
     value: str | float | list[str]
 
     def to_where(self) -> str:
+        if not _NAME.fullmatch(self.field):
+            raise ValueError(f"Invalid field {self.field!r}; use a name from list_dimensions")
         if self.operator not in OPERATORS:
             raise ValueError(f"Unknown operator {self.operator}; use one of {', '.join(OPERATORS)}")
         value = self.value

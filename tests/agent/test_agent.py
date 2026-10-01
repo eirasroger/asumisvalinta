@@ -217,6 +217,19 @@ def test_filters_render_metricflow_syntax():
         Filter("area", "like", "x").to_where()
 
 
+@pytest.mark.parametrize(
+    "field",
+    [
+        "room_type') }} = 'x' or 1 = 1 or {{ Dimension('room_type",
+        "postal_area__municipality_name; select 1",
+        "Room_Type",
+    ],
+)
+def test_filter_fields_must_be_plain_names(field):
+    with pytest.raises(ValueError, match="Invalid field"):
+        Filter(field, "=", "x").to_where()
+
+
 @pytest.fixture(scope="module")
 def tools():
     agent = semantic_agent(ScriptedModel([]), WAREHOUSE)
@@ -297,6 +310,17 @@ class TestLookupsWithWarehouse:
             ],
         )
         assert result["rows"][0][1] == pytest.approx(7341.55)
+
+    def test_queries_cannot_read_files_or_change_settings(self):
+        import duckdb
+
+        from asumisvalinta.config import connect_read_only
+
+        with connect_read_only(WAREHOUSE) as connection:
+            with pytest.raises(duckdb.Error):
+                connection.execute("select content from read_text('pyproject.toml')")
+            with pytest.raises(duckdb.Error):
+                connection.execute("set enable_external_access = true")
 
     def test_rank_areas_orders_postal_codes_by_price(self, tools):
         result = tools["rank_areas"](measure="price", level="postal_code", order="highest", years=2)

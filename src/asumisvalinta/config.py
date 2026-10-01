@@ -37,7 +37,16 @@ def connect_read_only(path: Path | None = None) -> duckdb.DuckDBPyConnection:
     """Read-only connection with the same settings as the semantic layer's connection.
 
     DuckDB refuses a second connection to a file with different settings in one process.
+    Queries can read the warehouse only: no local files, network or extensions.
     """
     return duckdb.connect(
-        str(path or duckdb_path()), read_only=False, config={"access_mode": "READ_ONLY"}
+        str(path or duckdb_path()),
+        read_only=False,
+        config={
+            "access_mode": "READ_ONLY",
+            "enable_external_access": False,
+            "autoload_known_extensions": False,
+            "autoinstall_known_extensions": False,
+            "lock_configuration": True,
+        },
     )

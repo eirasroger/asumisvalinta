@@ -40,19 +40,19 @@ def test_aso_defaults_follow_the_local_market(defaults):
     assert defaults.scenario.aso.fee_per_m2 == pytest.approx(sample.fee_to_price * 7167)
 
 
-def test_rent_grows_like_market_rents_here(defaults):
+def test_market_rent_growth_is_offered(defaults):
     with connect_read_only(WAREHOUSE) as connection:
         market = connection.execute(
             "select rent_cagr_10y from marts.mart_market_levels "
             "where postal_code = '00100' and room_type = 'two_room'"
         ).fetchone()[0]
-    assert defaults.scenario.rent.rent_growth == pytest.approx(market)
     assert defaults.rent_growth_market == pytest.approx(market)
 
 
 def test_lease_clause_follows_inflation_but_at_least_two_percent(defaults):
     # Consumer price index 2015 = 100.0, 2025 = 122.7: 1.227 ** 0.1 - 1 = 2.07 % a year.
     assert defaults.rent_growth_lease_clause == pytest.approx(1.227**0.1 - 1)
+    assert defaults.scenario.rent.rent_growth == defaults.rent_growth_lease_clause
 
 
 def test_aso_charges_grow_like_the_varke_series(defaults):

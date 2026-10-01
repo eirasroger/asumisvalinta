@@ -207,7 +207,7 @@ export function AssumptionInputs({ start, assumptions, onChange, price }: Props)
               <div className="grid grid-cols-[1fr_auto] items-center gap-3">
                 <InfoLabel label="Rents">
                   <p className="leading-relaxed">
-                    Market trend: {sources.rent_growth.toLowerCase()}. Lease clause: {sources.rent_growth_lease_clause}.
+                    {sources.rent_growth}. Market trend: {sources.rent_growth_market.toLowerCase()}.
                   </p>
                 </InfoLabel>
                 <div className="flex min-w-40 justify-end">
@@ -223,8 +223,8 @@ export function AssumptionInputs({ start, assumptions, onChange, price }: Props)
                   set("rent_growth")(rule === "lease" ? start.rent_growth.lease_clause : start.rent_growth.market)
                 }
                 options={[
-                  { value: "market", label: `Market trend ${formatPercent(start.rent_growth.market)}` },
                   { value: "lease", label: `Lease clause ${formatPercent(start.rent_growth.lease_clause)}` },
+                  { value: "market", label: `Market trend ${formatPercent(start.rent_growth.market)}` },
                 ]}
               />
             </div>
