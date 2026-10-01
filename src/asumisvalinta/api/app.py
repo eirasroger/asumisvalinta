@@ -11,7 +11,7 @@ from fastapi import BackgroundTasks, Body, FastAPI, HTTPException, Query, Reques
 from fastapi import Path as PathParam
 from pydantic import BaseModel, ConfigDict, Field
 
-from asumisvalinta.api import analytics
+from asumisvalinta.api import analytics, usage
 from asumisvalinta.api.limits import LimitReached, QuestionLimits
 from asumisvalinta.config import connect_read_only, duckdb_path, load_dotenv
 from asumisvalinta.scenario import ScenarioInput, ScenarioResult, simulate
@@ -249,10 +249,19 @@ def ask(request: AskRequest, background: BackgroundTasks) -> dict[str, Any]:
     except RuntimeError as error:
         raise HTTPException(503, "The question service is not configured.") from error
     try:
+        usage.check()
+    except usage.BudgetExhausted as error:
+        raise HTTPException(
+            429, "The assistant has reached today's limit. Try again tomorrow."
+        ) from error
+    except usage.BudgetUnavailable as error:
+        raise HTTPException(503, "The assistant is not available right now.") from error
+    try:
         limits.take(request.session_id)
     except LimitReached as error:
         raise HTTPException(429, str(error)) from error
     run = agent.run(request.question)
+    usage.add(run.prompt_tokens + run.completion_tokens)
     status = run.status if not run.error else "error"
     tools = [call.tool for call in run.tool_calls if call.tool != "submit_answer"]
     if request.record:

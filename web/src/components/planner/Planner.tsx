@@ -227,7 +227,11 @@ export function Planner() {
             />
           </div>
           <div className="lg:sticky lg:top-[76px] lg:self-start">
-            {run ? <Outcome run={run} loading={running} /> : <Placeholder />}
+            {run ? (
+              <Outcome run={run} loading={running} strategy={scenario?.investment.surplus_strategy ?? "park"} />
+            ) : (
+              <Placeholder />
+            )}
           </div>
         </div>
       ) : (

@@ -219,3 +219,22 @@ def test_asp_subsidy_covers_only_the_loan_up_to_the_cap(simple_scenario):
 def test_no_asp_subsidy_below_the_threshold_rate(simple_scenario):
     mortgage = simple_scenario.buy.mortgage.model_copy(update={"asp_loan": True})
     assert _buy_paid(_with_buy(simple_scenario, mortgage=mortgage)) == _buy_paid(simple_scenario)
+
+
+def test_money_kept_without_investing_earns_nothing(simple_scenario):
+    # Rent leaves 750 € a month next to the buyer's 1 750 €; kept as cash for one year:
+    # 23 000 + 12 * 750 = 32 000 €, with no interest and no tax.
+    scenario = simple_scenario.model_copy(
+        update={
+            "investment": simple_scenario.investment.model_copy(
+                update={
+                    "surplus_strategy": "keep",
+                    "investment_return": 0.12,
+                    "parked_cash_return": 0.05,
+                }
+            )
+        }
+    )
+    rent = simulate(scenario).option("rent")
+    assert rent.end_wealth == pytest.approx(32_000)
+    assert rent.breakdown["tax"] == 0.0

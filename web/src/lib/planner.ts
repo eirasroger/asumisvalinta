@@ -49,7 +49,7 @@ export interface Assumptions {
   aso_charge_growth?: number;
   fee_growth?: number;
   selling_cost_rate?: number;
-  surplus_strategy?: "invest" | "park";
+  surplus_strategy?: "invest" | "park" | "keep";
   investment_return?: number;
   parked_cash_return?: number;
 }

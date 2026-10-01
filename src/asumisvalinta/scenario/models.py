@@ -97,7 +97,13 @@ class AsoInput(_Model):
 
 
 class InvestmentInput(_Model):
-    surplus_strategy: Literal["invest", "park"] = "park"
+    """What happens to money an option does not spend on housing.
+
+    `invest`: index funds at `investment_return`; `park`: a savings account at
+    `parked_cash_return`; `keep`: kept without interest. Both rates are before tax.
+    """
+
+    surplus_strategy: Literal["invest", "park", "keep"] = "park"
     investment_return: float = Field(ge=-0.5, le=0.5)
     parked_cash_return: float = Field(ge=-0.5, le=0.5)
     tax_gains: bool = True
@@ -106,7 +112,9 @@ class InvestmentInput(_Model):
     def annual_return(self) -> float:
         if self.surplus_strategy == "invest":
             return self.investment_return
-        return self.parked_cash_return
+        if self.surplus_strategy == "park":
+            return self.parked_cash_return
+        return 0.0
 
 
 class PolicyInput(_Model):

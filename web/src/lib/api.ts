@@ -104,7 +104,7 @@ export interface ScenarioInput {
     building_cost_index_growth: number;
   } | null;
   investment: {
-    surplus_strategy: "invest" | "park";
+    surplus_strategy: "invest" | "park" | "keep";
     investment_return: number;
     parked_cash_return: number;
     tax_gains: boolean;

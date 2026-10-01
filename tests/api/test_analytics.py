@@ -119,6 +119,8 @@ class _FakeRun:
     unit = "EUR/m2"
     sources = "Statistics Finland"
     tool_calls = ()
+    prompt_tokens = 900
+    completion_tokens = 100
 
 
 class _FakeAgent:
@@ -148,3 +150,53 @@ def test_reads_are_cached_and_writes_are_not(recorded):
     assert "s-maxage" in client.get("/api/health").headers["cache-control"]
     body = {"type": "area", "postal_code": "00100", "room_type": "two_room", "source": "map"}
     assert "cache-control" not in client.post("/api/events", json=body).headers
+
+
+def test_questions_are_refused_once_the_daily_tokens_are_used(monkeypatch, recorded):
+    from asumisvalinta.api import app as app_module
+    from asumisvalinta.api import usage
+
+    asked = []
+
+    class _CountingAgent(_FakeAgent):
+        def run(self, question):
+            asked.append(question)
+            return super().run(question)
+
+    def exhausted():
+        raise usage.BudgetExhausted("limit")
+
+    monkeypatch.setattr(app_module, "_agent", lambda: _CountingAgent())
+    monkeypatch.setattr(usage, "check", exhausted)
+    client = TestClient(app)
+    response = client.post(
+        "/api/ask", json={"question": "Rent in 00100?", "session_id": "session-9"}
+    )
+    assert response.status_code == 429
+    assert asked == []
+
+
+@pytest.mark.skipif(not POSTGRES, reason="needs a Postgres test database")
+def test_daily_token_budget_in_postgres(monkeypatch):
+    from asumisvalinta.api import usage
+
+    monkeypatch.setenv("ASUMISVALINTA_ANALYTICS_DATABASE_URL", POSTGRES)
+    monkeypatch.setenv("ASUMISVALINTA_LLM_DAILY_TOKEN_LIMIT", "1000")
+    with psycopg.connect(POSTGRES, autocommit=True) as connection:
+        connection.execute("drop table if exists llm_token_usage")
+    usage.check()
+    usage.add(600)
+    usage.check()
+    usage.add(600)
+    with pytest.raises(usage.BudgetExhausted):
+        usage.check()
+
+
+def test_unreachable_database_refuses_questions(monkeypatch):
+    from asumisvalinta.api import usage
+
+    monkeypatch.setenv(
+        "ASUMISVALINTA_ANALYTICS_DATABASE_URL", "postgresql://nobody@127.0.0.1:1/none"
+    )
+    with pytest.raises(usage.BudgetUnavailable):
+        usage.check()

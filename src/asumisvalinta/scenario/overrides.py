@@ -27,7 +27,7 @@ class ScenarioOverrides(BaseModel):
     aso_fee_per_m2: float | None = Field(default=None, ge=0)
     aso_charge_per_m2_month: float | None = Field(default=None, gt=0)
     investment_return: float | None = None
-    surplus_strategy: Literal["invest", "park"] | None = None
+    surplus_strategy: Literal["invest", "park", "keep"] | None = None
 
 
 def _update(model: BaseModel, **changes: Any) -> Any:

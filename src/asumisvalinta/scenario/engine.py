@@ -100,11 +100,12 @@ def simulate(scenario: ScenarioInput) -> ScenarioResult:
     buy_upfront = down_payment + transfer_tax
     initial_capital = max(buy_upfront, aso_fee)
     invest = scenario.investment
-    monthly_return = _monthly(
-        invest.investment_return
-        if invest.surplus_strategy == "invest"
-        else after_tax_interest_rate(invest.parked_cash_return, policy)
-    )
+    net_return = {
+        "invest": invest.investment_return,
+        "park": after_tax_interest_rate(invest.parked_cash_return, policy),
+        "keep": 0.0,
+    }[invest.surplus_strategy]
+    monthly_return = _monthly(net_return)
     asp_share = (
         min(1.0, policy.asp_loan_max / mortgage_principal)
         if buy.mortgage.asp_loan and mortgage_principal > 0
@@ -212,7 +213,7 @@ def _record_year(
     year = months // 12
 
     def portfolio_gain(track: _Track) -> float:
-        if not invest.tax_gains or invest.surplus_strategy == "park":
+        if not invest.tax_gains or invest.surplus_strategy != "invest":
             return 0.0
         portfolio = track.portfolio
         return taxable_securities_gain(portfolio.value, portfolio.contributions, months, policy)

@@ -94,6 +94,9 @@ Savings grow monthly: savings(t + 1) = savings(t) × (1 + i) + contribution(t).
 
 - **Savings account.** Banks withhold 30 % of deposit interest when they pay it, and that tax is final. The balance therefore compounds at the rate after tax: i = (1 + r × 0.7)^(1/12) − 1. Nothing is due at the end.
 - **Index funds.** The return compounds before tax: i = (1 + r)^(1/12) − 1. Tax is due on the gain when the units are sold at the end of the horizon.
+- **Not invested.** The money is kept as cash: no interest and no tax.
+
+Both rates are entered before tax.
 
 ## End of the horizon
 

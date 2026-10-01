@@ -30,7 +30,11 @@ function ordered(run: PlannerRun) {
   return { options, ranked: [...options].sort((a, b) => b.end_wealth - a.end_wealth) };
 }
 
-export function Outcome({ run, loading }: { run: PlannerRun; loading: boolean }) {
+const KEPT_AS: Record<Strategy, string> = { park: "to savings", invest: "invested", keep: "kept" };
+
+type Strategy = "park" | "invest" | "keep";
+
+export function Outcome({ run, loading, strategy }: { run: PlannerRun; loading: boolean; strategy: Strategy }) {
   const { result, monthly_costs: costs } = run;
   const horizon = result.horizon_years;
   const { options, ranked } = ordered(run);
@@ -62,6 +66,8 @@ export function Outcome({ run, loading }: { run: PlannerRun; loading: boolean })
           )}
         </p>
       </section>
+
+      <MonthlySplit run={run} strategy={strategy} />
 
       <section className="relative overflow-hidden rounded-xl border border-line bg-paper">
         {loading && <div className="busy absolute inset-x-0 top-0 h-0.5 overflow-hidden" />}
@@ -143,6 +149,53 @@ export function Outcome({ run, loading }: { run: PlannerRun; loading: boolean })
         </table>
       </section>
     </div>
+  );
+}
+
+/** Each month every option has the same budget: the cost of the most expensive one. */
+function MonthlySplit({ run, strategy }: { run: PlannerRun; strategy: Strategy }) {
+  const { options } = ordered(run);
+  const year = run.monthly_costs[0];
+  if (!year) return null;
+  const costs = options.map((item) => ({ option: item.option, cost: year[item.option] ?? 0 }));
+  const budget = Math.max(...costs.map((item) => item.cost));
+  const costliest = costs.find((item) => item.cost === budget)!.option;
+
+  return (
+    <section className="rounded-xl border border-line bg-paper px-5 py-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h3 className="text-[15px] font-semibold">Each month, year 1</h3>
+        <p className="text-[13px] text-ink-3">
+          Budget <span className="font-medium text-ink">{formatEuro(budget)}</span>, the cost of {GERUND[costliest]}
+        </p>
+      </div>
+      <div className="mt-3 space-y-2.5">
+        {costs.map(({ option, cost }) => {
+          const left = budget - cost;
+          return (
+            <div key={option} className="grid grid-cols-[minmax(0,140px)_1fr_auto] items-center gap-3 text-[13px]">
+              <span className="flex items-center gap-2 truncate">
+                <Dot color={COLORS[option]} />
+                {OPTION_LABELS[option]}
+              </span>
+              <div className="flex h-2.5 overflow-hidden rounded-full bg-well" aria-hidden="true">
+                <div style={{ width: `${(cost / budget) * 100}%`, background: COLORS[option] }} />
+              </div>
+              <span className="w-36 text-right">
+                {left >= 1 ? (
+                  <>
+                    <span className="font-semibold">{formatEuro(left)}</span>{" "}
+                    <span className="text-ink-3">{KEPT_AS[strategy]}</span>
+                  </>
+                ) : (
+                  <span className="text-ink-3">Nothing left over</span>
+                )}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 

@@ -48,7 +48,13 @@ export function AssumptionInputs({ start, assumptions, onChange, price }: Props)
       >
         <span className="text-[15px] font-semibold">Assumptions</span>
         <span className="ml-auto flex flex-wrap justify-end gap-1.5 text-[13px] text-ink-2">
-          <Chip>{strategy === "invest" ? `Funds ${formatPercent(investmentReturn)}` : `Savings ${formatPercent(savingsRate, 2)}`}</Chip>
+          <Chip>
+            {strategy === "invest"
+              ? `Funds ${formatPercent(investmentReturn)}`
+              : strategy === "park"
+                ? `Savings ${formatPercent(savingsRate, 2)}`
+                : "Not invested"}
+          </Chip>
           <Chip>Loan {formatPercent(startRate, 2)}</Chip>
           <Chip>{formatPercent(downPayment, 0)} down</Chip>
         </span>
@@ -65,7 +71,7 @@ export function AssumptionInputs({ start, assumptions, onChange, price }: Props)
                 selected={strategy === "park"}
                 onSelect={() => set("surplus_strategy")("park")}
                 title="Savings account"
-                detail={`${taxRate} tax on interest each year`}
+                detail={`Interest before tax; ${taxRate} tax on interest each year`}
               >
                 <NumberField label="Savings interest" className="w-28" value={savingsRate} onChange={set("parked_cash_return")} {...percent} digits={2} />
               </Choice>
@@ -73,9 +79,17 @@ export function AssumptionInputs({ start, assumptions, onChange, price }: Props)
                 selected={strategy === "invest"}
                 onSelect={() => set("surplus_strategy")("invest")}
                 title="Index funds"
-                detail={`${taxRate} tax on gains when sold`}
+                detail={`Return before tax; ${taxRate} tax on gains when sold`}
               >
                 <NumberField label="Expected return" className="w-28" value={investmentReturn} onChange={set("investment_return")} {...percent} />
+              </Choice>
+              <Choice
+                selected={strategy === "keep"}
+                onSelect={() => set("surplus_strategy")("keep")}
+                title="Not invested"
+                detail="Kept as cash, without interest"
+              >
+                <span />
               </Choice>
             </div>
           </Group>
