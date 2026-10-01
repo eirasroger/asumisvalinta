@@ -4,15 +4,20 @@ import type { Metadata } from "next";
 import { Schibsted_Grotesk } from "next/font/google";
 import Link from "next/link";
 import { Footer } from "@/components/Footer";
+import { LogoMark } from "@/components/Logo";
 import { Nav } from "@/components/Nav";
 import { PageAnalytics } from "@/components/PageAnalytics";
 import "./globals.css";
 
 const schibsted = Schibsted_Grotesk({ subsets: ["latin"], variable: "--font-schibsted", display: "swap" });
 
+const DESCRIPTION = "Rent, right of occupancy or buy? Compare all three for any flat in Finland.";
+
 export const metadata: Metadata = {
   title: "Asumisvalinta",
-  description: "Compare renting, right of occupancy and buying a flat in Finland with your own numbers.",
+  description: DESCRIPTION,
+  openGraph: { title: "Asumisvalinta", description: DESCRIPTION, siteName: "Asumisvalinta", type: "website", locale: "en" },
+  twitter: { card: "summary_large_image", title: "Asumisvalinta", description: DESCRIPTION },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -22,10 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <header className="sticky top-0 z-40 border-b border-line bg-paper">
           <div className="flex h-14 items-center gap-6 px-4 sm:gap-8 sm:px-6">
             <Link href="/" className="flex items-center gap-2 text-[17px] font-semibold tracking-tight">
-              <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
-                <path d="M3 17V8.5L10 3l7 5.5V17" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinejoin="round" />
-                <path d="M7.5 17v-5h5v5" fill="var(--series-buy)" />
-              </svg>
+              <LogoMark size={24} className="-ml-0.5" />
               <span className="max-sm:sr-only">Asumisvalinta</span>
             </Link>
             <Nav />
