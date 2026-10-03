@@ -113,8 +113,8 @@ export function buildScenario(start: PlannerStart, flat: Flat, offer: Offer, ass
           change_per_year: assumptions.change_per_year ?? (mortgage.rate_path.change_per_year || 0.0025),
           custom_rates: [],
         },
-        fixed_rate: rateType === "fixed" ? (assumptions.fixed_rate ?? mortgage.fixed_rate ?? startRate) : null,
-        fixed_years: rateType === "fixed" ? (assumptions.fixed_years ?? mortgage.fixed_years ?? 5) : null,
+        fixed_rate: rateType === "fixed" ? fixedRate(assumptions, mortgage.fixed_rate, startRate) : null,
+        fixed_years: rateType === "fixed" ? fixedYears(assumptions, mortgage) : null,
         asp_loan: assumptions.asp_loan ?? false,
       },
     },
@@ -141,11 +141,25 @@ export function buildScenario(start: PlannerStart, flat: Flat, offer: Offer, ass
   };
 }
 
+/** The fixed rate follows the interest rate field until the user sets it apart. */
+export function fixedRate(assumptions: Assumptions, defaultFixed: number | null | undefined, startRate: number) {
+  return assumptions.fixed_rate ?? (assumptions.start_rate ?? defaultFixed ?? startRate);
+}
+
+/** A default fixed for the whole term stays so when the user changes the term. */
+export function fixedYears(assumptions: Assumptions, mortgage: ScenarioInput["buy"]["mortgage"]) {
+  if (assumptions.fixed_years != null) return assumptions.fixed_years;
+  if (mortgage.fixed_years != null && mortgage.fixed_years === mortgage.term_years) return assumptions.term_years ?? mortgage.term_years;
+  return mortgage.fixed_years ?? 5;
+}
+
 /** The renovation charge rises as the building ages; a user's figure scales the whole path. */
 function scaledSchedule(schedule: number[], typical: number, chosen: number, size: number) {
   if (typical > 0 && schedule.length > 0) return schedule.map((value) => (value * chosen) / typical);
   return [chosen / size];
 }
+
+const DEFAULT_BUILDING_YEAR = 1980;
 
 const ROOM_VALUES: RoomType[] = ["one_room", "two_room", "three_room_plus"];
 
@@ -156,7 +170,8 @@ export function flatFromParams(params: URLSearchParams): Flat {
   };
   const postal = params.get("postal") ?? "";
   const rooms = params.get("rooms") as RoomType;
-  const year = number("year", 0, 1800, 2035);
+  // An empty year means the user cleared it: all building ages.
+  const year = params.get("year") === "" ? 0 : number("year", DEFAULT_BUILDING_YEAR, 1800, 2035);
   return {
     postal_code: /^\d{5}$/.test(postal) ? postal : "00100",
     room_type: ROOM_VALUES.includes(rooms) ? rooms : "two_room",
@@ -173,6 +188,6 @@ export function flatToParams(flat: Flat) {
     size: String(flat.size_m2),
     years: String(flat.horizon_years),
   });
-  if (flat.building_year) params.set("year", String(flat.building_year));
+  params.set("year", flat.building_year ? String(flat.building_year) : "");
   return params.toString();
 }

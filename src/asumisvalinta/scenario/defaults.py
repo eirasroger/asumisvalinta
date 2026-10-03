@@ -339,6 +339,8 @@ def load_defaults(
         fee_to_price=fee_to_price[1],
     )
     invest = assumptions["invest_surplus_by_default"] == 1
+    fixed = assumptions["fixed_rate_by_default"] == 1
+    loan_term = int(assumptions["loan_term_years"])
 
     scenario = ScenarioInput(
         size_m2=size_m2,
@@ -347,14 +349,17 @@ def load_defaults(
             price_per_m2=price_per_m2,
             price_growth=price_growth,
             maintenance_charge_per_m2_month=maintenance_charge,
-            maintenance_charge_growth=maintenance_growth,
+            maintenance_charge_growth=aso_charge_growth,
             capital_charges_per_m2_month=capital_charges,
             own_repairs_per_m2_year=repairs_per_m2_year,
             selling_cost_rate=assumptions["selling_cost_rate"],
             mortgage=MortgageInput(
                 down_payment_share=assumptions["down_payment_share"],
-                term_years=int(assumptions["loan_term_years"]),
+                term_years=loan_term,
+                rate_type="fixed" if fixed else "variable",
                 rate_path=RatePath(kind="flat", start_rate=variable_rate),
+                fixed_rate=variable_rate if fixed else None,
+                fixed_years=loan_term if fixed else None,
             ),
         ),
         rent=RentInput(rent_per_m2_month=rent_per_m2, rent_growth=lease_clause_growth),
@@ -385,7 +390,11 @@ def load_defaults(
         "maintenance_charge": (
             f"Housing company finances, area {charge_area}, {charge_end_year}, {age_note}"
         ),
-        "maintenance_charge_growth": f"Housing company finances, {GROWTH_YEARS}-year growth",
+        "maintenance_charge_growth": (
+            f"Same as right-of-occupancy charges, {aso_change_years[0]} to "
+            f"{aso_change_years[1]} (Varke). Housing company charges in this region "
+            f"grew {maintenance_growth:.1%} a year over {GROWTH_YEARS} years"
+        ),
         "capital_charges": (
             f"Housing company capital charges by building age, {charges_year}, {age_note}"
         ),
@@ -393,7 +402,10 @@ def load_defaults(
             f"Renovations owner-occupiers of flats pay themselves, "
             f"average of {repairs_first} to {repairs_last}"
         ),
-        "mortgage_rate": f"ECB, variable rate on new housing loans in Finland, {rate_month:%Y-%m}",
+        "mortgage_rate": (
+            f"ECB, average variable rate on new housing loans in Finland, {rate_month:%Y-%m}"
+            + (", fixed for the whole loan term" if fixed else "")
+        ),
         "savings_rate": (
             f"ECB, new household deposits up to one year in Finland, {deposit_month:%Y-%m}"
         ),

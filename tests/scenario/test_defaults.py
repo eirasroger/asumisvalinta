@@ -31,6 +31,14 @@ def test_mortgage_rate_is_the_latest_variable_rate(defaults):
     assert defaults.scenario.buy.mortgage.rate_path.start_rate == pytest.approx(0.0316)
 
 
+def test_mortgage_is_fixed_for_the_whole_term_with_a_fifth_down(defaults):
+    mortgage = defaults.scenario.buy.mortgage
+    assert mortgage.rate_type == "fixed"
+    assert mortgage.fixed_rate == mortgage.rate_path.start_rate
+    assert mortgage.term_years == mortgage.fixed_years == 25
+    assert mortgage.down_payment_share == 0.20
+
+
 def test_aso_defaults_follow_the_local_market(defaults):
     # Each sampled building's charge is divided by the market rent where it stands; the
     # median ratio times the rent of 00100 (25.14 €/m²) is the default charge here.
@@ -62,6 +70,12 @@ def test_aso_charges_grow_like_the_varke_series(defaults):
     for change in changes:
         product *= 1 + change
     assert defaults.scenario.aso.charge_growth == pytest.approx(product ** (1 / 7) - 1)
+
+
+def test_housing_company_charges_grow_like_aso_charges(defaults):
+    buy = defaults.scenario.buy
+    assert buy.maintenance_charge_growth == defaults.scenario.aso.charge_growth
+    assert "grew" in defaults.sources["maintenance_charge_growth"]
 
 
 def test_savings_default_to_a_deposit_account_at_the_ecb_rate(defaults):

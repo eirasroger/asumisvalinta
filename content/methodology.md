@@ -134,15 +134,17 @@ The what-if table reruns the whole calculation with one assumption changed: inte
 | Rent per m² | Latest free-market rent for new agreements in the rent sub-area, or the municipality, region or country |
 | Price growth | Compound annual growth of the price index over the last 10 years for the nearest area with an index |
 | Rent growth | A common lease clause: inflation over the last 10 years (consumer price index), at least 2 % a year. The alternative is the growth of market rents in the rent area over the last 10 years |
-| Maintenance charge and its growth | Housing company finances for Greater Helsinki or the rest of Finland, latest year and 10-year growth, scaled by construction period |
+| Maintenance charge | Housing company finances for Greater Helsinki or the rest of Finland, latest year, scaled by construction period |
+| Maintenance charge growth | The same yearly growth as right-of-occupancy charges, so both options' charges rise alike. The app also shows the 10-year growth of housing company charges in the area |
 | Renovation charges | Housing company capital charges by construction period, following the building's age |
 | Repairs inside the flat | Owner-occupiers' contracted renovations per m², average of the last five years |
-| Interest rate | Latest average rate on new variable-rate housing loans in Finland (ECB statistics), held level |
+| Interest rate | Latest average rate on new variable-rate housing loans in Finland (ECB statistics), fixed for the whole loan term. A variable rate is a choice in the app |
 | Savings account rate | Latest average rate on new household deposits with a maturity of up to one year in Finland (ECB statistics) |
 | Right-of-occupancy fee and charge | Sampled right-of-occupancy buildings: each building's charge divided by the market rent per m² where it stands, and its fee divided by the market price per m² there. The medians of these ratios, from buildings of a similar age when there are enough, are applied to the rent and price of the chosen area |
 | Right-of-occupancy charge growth | Average yearly change of right-of-occupancy charges in the whole country, 2019 to 2025, from the market reviews of Varke |
 | Fee refund growth | Assumption of 1 % a year for the building cost index that raises the refund, below its growth over the last 10 years, which the app shows; editable |
-| Selling costs, investment return, loan term, down payment | Assumptions in the `assumptions` table, all editable |
+| Selling costs, investment return, loan term, down payment | Assumptions in the `assumptions` table, all editable: 25-year loan, 20 % down payment |
+| Year built | 1980; editable, and clearing it uses the averages for all building ages |
 
 ## Simplifications
 

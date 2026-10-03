@@ -1,9 +1,10 @@
-parameter_code,description,value,unit,is_assumption,rationale,source_url,retrieved_on
-selling_cost_rate,Cost of selling a flat (agent commission and fees) as a share of the selling price,0.04,ratio,true,Default for the calculator; editable in the app,,2026-09-30
-investment_return_rate,Expected nominal annual return on invested money,0.05,ratio,true,Default for the calculator; editable in the app,,2026-09-30
-loan_term_years,Default mortgage term,25,years,true,Default for the calculator; editable in the app,,2026-09-30
-down_payment_share,Default down payment as a share of the debt-free price,0.10,ratio,true,Default for the calculator; editable in the app,,2026-09-30
-rent_growth_floor,Minimum yearly rent increase in the default lease clause (rent follows inflation but rises at least this much),0.02,ratio,true,Common lease indexation clause; editable in the app,,2026-09-30
-invest_surplus_by_default,Whether money not spent on housing is invested by default (1) or kept in a savings account (0),0,flag,true,A savings account is the cautious default; investing is a choice in the app,,2026-09-30
-owner_renovation_cost_years,Number of latest years averaged for owner-occupiers' own renovation costs,5,years,true,Smooths year-to-year variation in the survey,,2026-09-30
-aso_fee_growth,Yearly growth of the building cost index that raises the right-of-occupancy fee refund,0.01,ratio,true,Cautious default below recent index growth; editable in the app,,2026-09-30
+parameter_code,value,unit,description
+selling_cost_rate,0.04,ratio,Cost of selling a flat (agent commission and fees) as a share of the selling price
+investment_return_rate,0.05,ratio,Expected nominal annual return on invested money
+loan_term_years,25,years,Default mortgage term
+down_payment_share,0.20,ratio,Default down payment as a share of the debt-free price
+rent_growth_floor,0.02,ratio,Minimum yearly rent increase in the default lease clause (rent follows inflation but rises at least this much)
+invest_surplus_by_default,0,flag,Whether money not spent on housing is invested by default (1) or kept in a savings account (0)
+owner_renovation_cost_years,5,years,Number of latest years averaged for owner-occupiers' own renovation costs
+aso_fee_growth,0.01,ratio,Yearly growth of the building cost index that raises the right-of-occupancy fee refund
+fixed_rate_by_default,1,flag,Whether the default mortgage has a fixed rate for the whole loan term (1) or a variable rate (0)

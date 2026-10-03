@@ -48,9 +48,13 @@ def apply_overrides(scenario: ScenarioInput, overrides: ScenarioOverrides) -> Sc
             if overrides.rate_change_per_year is not None
             else path.change_per_year,
         )
+    fixed = mortgage.rate_type == "fixed"
+    fixed_for_whole_term = fixed and mortgage.fixed_years == mortgage.term_years
     mortgage = _update(
         mortgage,
         rate_path=path,
+        fixed_rate=overrides.interest_rate if fixed else None,
+        fixed_years=overrides.loan_term_years if fixed_for_whole_term else None,
         down_payment_share=overrides.down_payment_share,
         term_years=overrides.loan_term_years,
         repayment=overrides.repayment,

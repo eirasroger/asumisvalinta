@@ -215,6 +215,8 @@ def _inputs_summary(scenario: Any) -> dict[str, Any]:
         "maintenance_charge_per_m2_month": buy.maintenance_charge_per_m2_month,
         "interest_rate": _round(buy.mortgage.rate_path.start_rate),
         "rate_path": buy.mortgage.rate_path.kind,
+        "rate_type": buy.mortgage.rate_type,
+        "fixed_years": buy.mortgage.fixed_years,
         "down_payment_share": buy.mortgage.down_payment_share,
         "loan_term_years": buy.mortgage.term_years,
         "selling_cost_rate": buy.selling_cost_rate,

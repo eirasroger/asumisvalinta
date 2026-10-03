@@ -77,18 +77,11 @@ seeds:
     config:
       column_types:
         value: double
-        is_assumption: boolean
-        retrieved_on: date
     columns:
       - name: parameter_code
         data_tests: [unique, not_null]
       - name: value
         data_tests: [not_null]
-      - name: is_assumption
-        data_tests:
-          - accepted_values:
-              arguments:
-                values: [true]
 
   - name: asp_major_cities
     description: >

@@ -68,6 +68,7 @@ def test_scenario_with_overrides(client):
     }
     body = client.post("/api/scenario", json=request).json()
     assert body["inputs"]["buy"]["mortgage"]["rate_path"]["start_rate"] == 0.05
+    assert body["inputs"]["buy"]["mortgage"]["fixed_rate"] == 0.05
     assert {option["option"] for option in body["result"]["options"]} == {"buy", "rent", "aso"}
     assert len(body["result"]["years"]) == 30
 

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { InfoLabel, NumberField, Segmented, Sheet, Switch } from "@/components/ui";
 import type { PlannerStart } from "@/lib/api";
 import { formatEuro, formatPercent } from "@/lib/format";
-import { type Assumptions, DEFAULT_ASSUMPTIONS } from "@/lib/planner";
+import { type Assumptions, DEFAULT_ASSUMPTIONS, fixedRate, fixedYears } from "@/lib/planner";
 
 interface Props {
   start: PlannerStart;
@@ -118,7 +118,7 @@ export function AssumptionInputs({ start, assumptions, onChange, price }: Props)
                 <Setting label="Fixed rate" about="Rate during the fixed period.">
                   <NumberField
                     label="Fixed rate"
-                    value={assumptions.fixed_rate ?? mortgage.fixed_rate ?? startRate}
+                    value={fixedRate(assumptions, mortgage.fixed_rate, startRate)}
                     onChange={set("fixed_rate")}
                     suffix="%"
                     scale={100}
@@ -130,7 +130,7 @@ export function AssumptionInputs({ start, assumptions, onChange, price }: Props)
                 <Setting label="Fixed for" about="Length of the fixed period.">
                   <NumberField
                     label="Fixed for"
-                    value={assumptions.fixed_years ?? mortgage.fixed_years ?? 5}
+                    value={fixedYears(assumptions, mortgage)}
                     onChange={(value) => set("fixed_years")(Math.round(value))}
                     suffix="years"
                     min={1}
