@@ -339,7 +339,7 @@ def load_defaults(
         fee_to_price=fee_to_price[1],
     )
     invest = assumptions["invest_surplus_by_default"] == 1
-    fixed = assumptions["fixed_rate_by_default"] == 1
+    fixed = assumptions.get("fixed_rate_by_default") == 1
     loan_term = int(assumptions["loan_term_years"])
 
     scenario = ScenarioInput(
