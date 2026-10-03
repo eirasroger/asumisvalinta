@@ -130,7 +130,7 @@ The what-if table reruns the whole calculation with one assumption changed: inte
 
 | Input | Default |
 |---|---|
-| Price per m² | Latest published average for the postal code and room group, or the nearest larger area with published data (price sub-area, municipality, region, country) |
+| Price per m² | Latest published average for the postal code and room group, or the nearest larger area with published data (price sub-area, municipality, region, country), times a ratio for the year built. The ratio is the price per m² of flats built in the same decade divided by the price of all flats in the same postal code and year, averaged over 2017 to 2021 with the number of sales as weights. Statistics Finland published prices by construction decade until 2021. When a postal code has fewer than 30 sales of that decade, the ratio comes from its price sub-area, municipality, region or the whole country |
 | Rent per m² | Latest free-market rent for new agreements in the rent sub-area, or the municipality, region or country |
 | Price growth | Compound annual growth of the price index over the last 10 years for the nearest area with an index |
 | Rent growth | A common lease clause: inflation over the last 10 years (consumer price index), at least 2 % a year. The alternative is the growth of market rents in the rent area over the last 10 years |

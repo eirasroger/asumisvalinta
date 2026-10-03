@@ -133,6 +133,7 @@ export interface PlannerStart {
       level: string;
       period: string;
       preliminary: boolean;
+      building_age_ratio: number;
       range_per_m2: Range | null;
     };
     rent: {

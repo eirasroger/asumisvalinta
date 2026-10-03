@@ -2,9 +2,9 @@ models:
   - name: stg_statfin__prices_postal
     description: Postal code prices of old flats, quarterly and yearly, with harmonised building and room types.
     data_tests:
-      - unique_combination:
+      - dbt_utils.unique_combination_of_columns:
           arguments:
-            columns: [period_grain, period_start_date, postal_code, building_type, room_type]
+            combination_of_columns: [period_grain, period_start_date, postal_code, building_type, room_type]
     columns:
       - name: period_grain
         data_tests:
@@ -22,16 +22,16 @@ models:
   - name: stg_statfin__prices_municipality
     description: Municipality prices of old dwellings, yearly, all room types together.
     data_tests:
-      - unique_combination:
+      - dbt_utils.unique_combination_of_columns:
           arguments:
-            columns: [period_start_date, municipality_code, building_type]
+            combination_of_columns: [period_start_date, municipality_code, building_type]
 
   - name: stg_statfin__price_index_area
     description: Price index (2025=100), average price per m² and transactions by price area, quarterly.
     data_tests:
-      - unique_combination:
+      - dbt_utils.unique_combination_of_columns:
           arguments:
-            columns: [period_start_date, area_code, building_type, room_type]
+            combination_of_columns: [period_start_date, area_code, building_type, room_type]
     columns:
       - name: area_level
         data_tests:
@@ -42,23 +42,23 @@ models:
   - name: stg_statfin__price_index_area_chained
     description: Chained price indices of old dwellings by price area, quarterly from 1988.
     data_tests:
-      - unique_combination:
+      - dbt_utils.unique_combination_of_columns:
           arguments:
-            columns: [period_start_date, area_code, building_type, room_type]
+            combination_of_columns: [period_start_date, area_code, building_type, room_type]
 
   - name: stg_statfin__rents_postal
     description: Non-subsidised rents per m² by postal code, 2015 to 2025 (2015-base series, discontinued).
     data_tests:
-      - unique_combination:
+      - dbt_utils.unique_combination_of_columns:
           arguments:
-            columns: [period_start_date, postal_code, room_type]
+            combination_of_columns: [period_start_date, postal_code, room_type]
 
   - name: stg_statfin__rents_area
     description: Rents per m² and rent index by rent area from the 2015-base and 2025-base series.
     data_tests:
-      - unique_combination:
+      - dbt_utils.unique_combination_of_columns:
           arguments:
-            columns: [rent_series, period_start_date, area_code, room_type, funding_type]
+            combination_of_columns: [rent_series, period_start_date, area_code, room_type, funding_type]
     columns:
       - name: funding_type
         data_tests:
@@ -74,50 +74,65 @@ models:
   - name: stg_statfin__building_cost_index
     description: Building cost index (total index), monthly, on every published base year.
     data_tests:
-      - unique_combination:
+      - dbt_utils.unique_combination_of_columns:
           arguments:
-            columns: [month_start_date, base_year]
+            combination_of_columns: [month_start_date, base_year]
 
   - name: stg_statfin__housing_company_finances
     description: >
       Profit and loss items of housing companies by area, in euros and cents per m² per month.
       Years covered by the current table replace the same years in the discontinued table.
     data_tests:
-      - unique_combination:
+      - dbt_utils.unique_combination_of_columns:
           arguments:
-            columns: [period_start_date, finance_area_code, building_type, account_item_code]
+            combination_of_columns: [period_start_date, finance_area_code, building_type, account_item_code]
 
   - name: stg_statfin__price_distribution
     description: Quartiles of the price per m² of old dwellings by price area, room type and quarter.
     data_tests:
-      - unique_combination:
+      - dbt_utils.unique_combination_of_columns:
           arguments:
-            columns: [period_start_date, area_code, building_type, room_type]
+            combination_of_columns: [period_start_date, area_code, building_type, room_type]
 
   - name: stg_statfin__rent_distribution
     description: Quartiles of total monthly rents of non-subsidised dwellings by rent area, room type and quarter.
     data_tests:
-      - unique_combination:
+      - dbt_utils.unique_combination_of_columns:
           arguments:
-            columns: [period_start_date, area_code, room_type]
+            combination_of_columns: [period_start_date, area_code, room_type]
+
+  - name: stg_statfin__prices_postal_by_construction
+    description: >
+      Postal code prices of old flats in blocks of flats by construction period, yearly, 2010 to
+      2021. The periods split the total: code 7 is 2000 to 2009 and code 8 is 2010 on.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [period_start_date, postal_code, construction_period_code]
+    columns:
+      - name: construction_period_code
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['0', '1', '2', '3', '4', '5', '6', '7', '8']
 
   - name: stg_statfin__housing_company_finances_by_age
     description: Profit and loss items of housing companies by year of construction, in euros per m² per month.
     data_tests:
-      - unique_combination:
+      - dbt_utils.unique_combination_of_columns:
           arguments:
-            columns: [period_start_date, building_type, construction_period_code, account_item_code]
+            combination_of_columns: [period_start_date, building_type, construction_period_code, account_item_code]
 
   - name: stg_statfin__owner_renovation_costs
     description: Renovation costs that owner-occupiers contract out, per m² of floor area per year.
     data_tests:
-      - unique_combination:
+      - dbt_utils.unique_combination_of_columns:
           arguments:
-            columns: [period_start_date, building_type, structure_element_code]
+            combination_of_columns: [period_start_date, building_type, structure_element_code]
 
   - name: stg_statfin__consumer_price_index
     description: Consumer price index (2015=100), yearly.
     data_tests:
-      - unique_combination:
+      - dbt_utils.unique_combination_of_columns:
           arguments:
-            columns: [period_start_date]
+            combination_of_columns: [period_start_date]

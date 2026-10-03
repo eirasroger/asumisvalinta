@@ -2,9 +2,9 @@ models:
   - name: stg_ecb__mortgage_rates
     description: Interest rates on new housing loans in Finland by rate fixation period, monthly.
     data_tests:
-      - unique_combination:
+      - dbt_utils.unique_combination_of_columns:
           arguments:
-            columns: [month_start_date, fixation_period]
+            combination_of_columns: [month_start_date, fixation_period]
     columns:
       - name: fixation_period
         data_tests:
@@ -16,6 +16,6 @@ models:
   - name: stg_ecb__deposit_rates
     description: Interest rates on new household deposits with an agreed maturity of up to one year in Finland, monthly.
     data_tests:
-      - unique_combination:
+      - dbt_utils.unique_combination_of_columns:
           arguments:
-            columns: [month_start_date]
+            combination_of_columns: [month_start_date]

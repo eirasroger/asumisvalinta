@@ -4,7 +4,7 @@ The postal codes cover every fallback level of the market level mart: postal
 codes with their own prices, cities with price and rent sub-areas, a city
 without sub-areas and sparsely populated areas that fall back to region level.
 
-Usage: uv run python scripts/build_fixture.py [--source PATH]
+Usage: uv run python scripts/build_fixture.py [--source PATH] [--table SCHEMA.TABLE ...]
 """
 
 import argparse
@@ -40,6 +40,9 @@ TABLES: dict[str, str] = {
     "raw_statfin.prices_municipality_yearly": (
         f"municipality_code in {_in(MUNICIPALITIES)} and period >= '2022'"
     ),
+    "raw_statfin.prices_postal_by_construction_yearly_2010": (
+        "period >= '2017' and price_per_m2 is not null"
+    ),
     "raw_statfin.price_index_area_quarterly": _area_filter("price_area"),
     "raw_statfin.price_index_area_chained": (
         f"{_area_filter('price_area')} and period >= '2014Q1'"
@@ -69,9 +72,11 @@ TABLES: dict[str, str] = {
 }
 
 
-def build(source: Path) -> None:
+def build(source: Path, tables: list[str] | None = None) -> None:
     connection = duckdb.connect(str(source), read_only=True)
     for table, condition in TABLES.items():
+        if tables and table not in tables:
+            continue
         schema, name = table.split(".")
         target = FIXTURE_DIR / schema / f"{name}.parquet"
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -95,7 +100,9 @@ def build(source: Path) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--source", type=Path, default=duckdb_path())
-    build(parser.parse_args().source)
+    parser.add_argument("--table", action="append", choices=sorted(TABLES), help="default: all")
+    args = parser.parse_args()
+    build(args.source, args.table)
 
 
 if __name__ == "__main__":

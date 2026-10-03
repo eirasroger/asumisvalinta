@@ -24,6 +24,12 @@ sources:
           freshness:
             warn_after: {count: 400, period: day}
             error_after: {count: 550, period: day}
+      - name: prices_postal_by_construction_yearly_2010
+        description: >
+          Prices per m² and numbers of sales of old flats in blocks of flats by postal code area and
+          construction period, yearly, 2010 to 2021 (discontinued table ashi/112q).
+        config:
+          freshness: null
       - name: price_index_area_quarterly
         description: Price index (2025=100), average price per m² and transactions by area, quarterly (table ashi/15is).
       - name: price_index_area_chained

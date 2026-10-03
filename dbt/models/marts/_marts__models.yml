@@ -214,7 +214,7 @@ models:
       - name: price_per_m2
         description: Average debt-free price per square metre in euros (arithmetic mean of transactions).
         data_tests:
-          - value_between:
+          - dbt_utils.accepted_range:
               arguments:
                 min_value: 100
                 max_value: 30000
@@ -391,14 +391,14 @@ models:
       - name: rent_per_m2
         description: Average rent per m² per month in euros, all tenancy agreements.
         data_tests:
-          - value_between:
+          - dbt_utils.accepted_range:
               arguments:
                 min_value: 2
                 max_value: 80
       - name: rent_per_m2_new_contracts
         description: Average rent per m² per month in euros for new tenancy agreements.
         data_tests:
-          - value_between:
+          - dbt_utils.accepted_range:
               arguments:
                 min_value: 2
                 max_value: 80
@@ -490,7 +490,7 @@ models:
         description: Average rate on all new housing loans, percent per year.
         data_tests:
           - not_null
-          - value_between:
+          - dbt_utils.accepted_range:
               arguments:
                 min_value: -1
                 max_value: 20
@@ -814,7 +814,7 @@ models:
         data_tests: [unique, not_null]
       - name: price_per_m2_median
         data_tests:
-          - value_between:
+          - dbt_utils.accepted_range:
               arguments:
                 min_value: 100
                 max_value: 30000
@@ -828,7 +828,7 @@ models:
         data_tests: [unique, not_null]
       - name: rent_median
         data_tests:
-          - value_between:
+          - dbt_utils.accepted_range:
               arguments:
                 min_value: 100
                 max_value: 10000
@@ -853,6 +853,56 @@ models:
           capital expenditure.
       - name: value_eur_per_m2_month
         description: Value of the item, euros per m² per month.
+
+  - name: mart_price_construction_ratios
+    description: >
+      Price per m² of old flats in blocks of flats by construction period, relative to all flats
+      in the same area, one row per postal code and construction period. Within each postal code
+      and year the price of a period is divided by the price of all periods; the ratios are
+      averaged over the last five years of the discontinued table (2017 to 2021) weighted by
+      sales. The finest level with enough sales wins: postal code, price sub-area, municipality,
+      region, country. Source: Statistics Finland.
+    columns:
+      - name: price_construction_ratio_key
+        description: Unique key of the row.
+        data_tests: [unique, not_null]
+      - name: postal_code
+        description: Postal code.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_postal_area')
+                field: postal_code
+      - name: construction_period_code
+        description: Statistics Finland code of the construction period, 1 (until 1949) to 8 (2010 on).
+        data_tests: [not_null]
+      - name: first_construction_year
+        description: First construction year of the period, empty for the oldest period.
+      - name: last_construction_year
+        description: Last construction year of the period, empty for the newest period.
+      - name: price_ratio
+        description: Price per m² of the period divided by the price per m² of all flats in the same places.
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0.3
+                max_value: 3
+      - name: transaction_count
+        description: Sales of flats of the period behind the ratio.
+      - name: geography_level
+        description: Level the ratio comes from.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [postal_code, price_sub_area, municipality, region, country]
+      - name: geography_code
+        description: Code of the area the ratio comes from.
+      - name: first_period_label
+        description: First year of the sales behind the ratio.
+      - name: last_period_label
+        description: Last year of the sales behind the ratio.
 
   - name: fct_owner_renovation_costs
     description: >

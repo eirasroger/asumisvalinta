@@ -71,10 +71,10 @@ export function YourNumbers({ start, flat, offer, typical, onOffer, assumptions,
           key: "price",
           label: "Debt-free price",
           about: "Price including the flat's share of the housing company loan (velaton hinta).",
-          source: `Sales of old flats, ${formatLevel(market.price.level)}, ${formatPeriodLabel(market.price.period)}. Prices are not published by building age.`,
+          source: `Sales of old flats, ${formatLevel(market.price.level)}, ${formatPeriodLabel(market.price.period)}. ${sources.price_building_age}.`,
           benchmark: {
             band: band(market.price.range_per_m2?.lower_quartile, market.price.range_per_m2?.upper_quartile, size),
-            bandLabel: `Middle half of sales of ${flats}, at ${size} m²`,
+            bandLabel: `Middle half of sales of ${flats}, at ${size} m²${market.price.building_age_ratio !== 1 ? ", adjusted for the year built" : ""}`,
           },
         })}
         {line({

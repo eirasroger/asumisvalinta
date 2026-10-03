@@ -39,6 +39,7 @@ def dbt(*args: str) -> None:
 
 def main() -> None:
     download(os.environ.get("ASUMISVALINTA_SERVING_URL", RELEASE_URL), SERVING)
+    dbt("deps")
     dbt("build", "--select", "resource_type:seed", "--full-refresh")
     dbt("parse")
 

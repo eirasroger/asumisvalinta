@@ -2,20 +2,20 @@ models:
   - name: stg_classifications__items
     description: Municipalities, regions, price areas and rent areas with Finnish and English names.
     data_tests:
-      - unique_combination:
+      - dbt_utils.unique_combination_of_columns:
           arguments:
-            columns: [classification, code]
+            combination_of_columns: [classification, code]
 
   - name: stg_classifications__area_postal_codes
     description: Postal codes included in each price area and rent area.
     data_tests:
-      - unique_combination:
+      - dbt_utils.unique_combination_of_columns:
           arguments:
-            columns: [classification, area_code, postal_code]
+            combination_of_columns: [classification, area_code, postal_code]
 
   - name: stg_classifications__municipality_regions
     description: Region (maakunta) of each municipality, per classification year.
     data_tests:
-      - unique_combination:
+      - dbt_utils.unique_combination_of_columns:
           arguments:
-            columns: [classification_year, municipality_code]
+            combination_of_columns: [classification_year, municipality_code]

@@ -66,6 +66,22 @@ TABLES: tuple[PxTable, ...] = (
         },
     ),
     PxTable(
+        name="prices_postal_by_construction_yearly_2010",
+        database="StatFin_Passiivi",
+        subject="ashi",
+        table_file="statfinpas_ashi_pxt_112q_2021.px",
+        time_dimension="Vuosi",
+        content_dimension="Tiedot",
+        dimensions={
+            "Vuosi": "period",
+            "Postinumero": "postal_code",
+            "Talotyyppi": "building_room_type",
+            "Rakennusvuosi": "construction_period",
+        },
+        contents={"keskihinta_ptno": "price_per_m2", "lkm_julk": "transaction_count"},
+        selection={"Talotyyppi": ["4"]},
+    ),
+    PxTable(
         name="price_index_area_quarterly",
         database="StatFin",
         subject="ashi",

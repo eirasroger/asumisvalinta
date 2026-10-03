@@ -10,9 +10,9 @@ seeds:
         valid_to: date
         retrieved_on: date
     data_tests:
-      - unique_combination:
+      - dbt_utils.unique_combination_of_columns:
           arguments:
-            columns: [parameter_code, valid_from]
+            combination_of_columns: [parameter_code, valid_from]
     columns:
       - name: parameter_code
         data_tests: [not_null]
@@ -39,9 +39,9 @@ seeds:
         right_of_occupancy_fee_avg_eur_per_m2: double
         retrieved_on: date
     data_tests:
-      - unique_combination:
+      - dbt_utils.unique_combination_of_columns:
           arguments:
-            columns: [provider, site_name]
+            combination_of_columns: [provider, site_name]
     columns:
       - name: postal_code
         description: Postal code of the building.
@@ -55,7 +55,7 @@ seeds:
         description: Average monthly charge (käyttövastike) per weighted m² in euros.
         data_tests:
           - not_null
-          - value_between:
+          - dbt_utils.accepted_range:
               arguments:
                 min_value: 5
                 max_value: 40
@@ -63,7 +63,7 @@ seeds:
         description: Average right-of-occupancy fee (asumisoikeusmaksu) per weighted m² in euros.
         data_tests:
           - not_null
-          - value_between:
+          - dbt_utils.accepted_range:
               arguments:
                 min_value: 50
                 max_value: 2000
@@ -112,7 +112,7 @@ seeds:
       - name: annual_change_pct
         data_tests:
           - not_null
-          - value_between:
+          - dbt_utils.accepted_range:
               arguments:
                 min_value: -10
                 max_value: 20

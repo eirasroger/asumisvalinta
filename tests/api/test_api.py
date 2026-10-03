@@ -117,7 +117,10 @@ def test_planner_start_returns_inputs_and_benchmarks(client):
     ).json()
     market = body["market"]
     assert body["scenario"]["size_m2"] == 55
-    assert market["price"]["per_m2"] == 7167
+    # 7167 €/m² for all ages, scaled for a building from the 1990s.
+    assert market["price"]["building_age_ratio"] != 1
+    assert market["price"]["per_m2"] == pytest.approx(7167 * market["price"]["building_age_ratio"])
+    assert body["scenario"]["buy"]["price_per_m2"] == pytest.approx(market["price"]["per_m2"])
     assert market["rent"]["range_monthly"]["area"] == "091_1"
     assert (
         market["rent"]["range_monthly"]["lower_quartile"]

@@ -108,6 +108,46 @@ def test_building_year_adjusts_the_maintenance_charge():
     assert older.scenario.buy.capital_charges_per_m2_month[0] == pytest.approx(0.85)
 
 
+def test_building_year_scales_the_price_by_sales_of_its_decade():
+    # Flats built from 2010 on in 00100, 2017 to 2021: each year's price of the decade divided
+    # by the price of all flats there, averaged with the decade's sales as weights.
+    with connect_read_only(WAREHOUSE) as connection:
+        rows = connection.execute(
+            """
+            select decade.price_per_m2 / total.price_per_m2, decade.transaction_count
+            from raw_statfin.prices_postal_by_construction_yearly_2010 as decade
+            inner join raw_statfin.prices_postal_by_construction_yearly_2010 as total
+                on decade.postal_code = total.postal_code and decade.period = total.period
+            where decade.postal_code = '00100' and decade.construction_period = '8'
+                and total.construction_period = '0' and decade.period >= '2017'
+            """
+        ).fetchall()
+    ratio = sum(r * n for r, n in rows) / sum(n for _, n in rows)
+    newer = load_defaults(
+        "00100",
+        "two_room",
+        50,
+        purchase_date=dt.date(2026, 9, 30),
+        warehouse=WAREHOUSE,
+        building_year=2015,
+    )
+    assert newer.price_age_ratio == pytest.approx(ratio)
+    assert newer.scenario.buy.price_per_m2 == pytest.approx(7167 * ratio)
+    assert "this postal code" in newer.sources["price_building_age"]
+
+
+def test_aso_fee_follows_the_price_for_all_building_ages(defaults):
+    newer = load_defaults(
+        "00100",
+        "two_room",
+        50,
+        purchase_date=dt.date(2026, 9, 30),
+        warehouse=WAREHOUSE,
+        building_year=2015,
+    )
+    assert newer.scenario.aso.fee_per_m2 == pytest.approx(newer.aso_sample.fee_to_price * 7167)
+
+
 def test_asp_loan_cap_is_higher_in_helsinki(defaults):
     assert defaults.scenario.policy.asp_loan_max == 230_000
 

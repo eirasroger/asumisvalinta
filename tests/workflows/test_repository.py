@@ -8,7 +8,7 @@ import pytest
 from asumisvalinta.config import REPO_ROOT
 
 SOURCE_FOLDERS = ["src", "tests", "scripts", "content", "fixtures", "dbt", "web/src", "web/scripts"]
-GENERATED = ("__pycache__", "dbt/target/", "dbt/logs/", "dbt/.user.yml")
+GENERATED = ("__pycache__", "dbt/target/", "dbt/logs/", "dbt/dbt_packages/", "dbt/.user.yml")
 
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="git is not installed")

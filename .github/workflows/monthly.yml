@@ -70,7 +70,9 @@ jobs:
         run: uv run asumisvalinta-ingest
 
       - name: Build and test models
-        run: uv run dbt build
+        run: |
+          uv run dbt deps
+          uv run dbt build
 
       - name: Check source freshness
         continue-on-error: true

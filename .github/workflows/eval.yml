@@ -46,7 +46,9 @@ jobs:
           gh release download ${{ inputs.release }} --pattern asumisvalinta.duckdb --dir data
 
       - name: Parse dbt project
-        run: uv run dbt parse
+        run: |
+          uv run dbt deps
+          uv run dbt parse
 
       - name: Check reference answers
         run: uv run asumisvalinta-eval --check

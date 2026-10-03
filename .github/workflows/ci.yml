@@ -50,6 +50,9 @@ jobs:
       - name: Load fixture warehouse
         run: uv run python scripts/load_fixture.py
 
+      - name: Install dbt packages
+        run: uv run dbt deps
+
       - name: Lint SQL
         run: uv run sqlfluff lint dbt/models dbt/tests
 

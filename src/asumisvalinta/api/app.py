@@ -385,6 +385,7 @@ def planner_start(
         [postal_code, room_type],
     )[0]
     aso = defaults.aso_sample
+    age = defaults.price_age_ratio
     return {
         "scenario": defaults.scenario.model_dump(),
         "sources": defaults.sources,
@@ -397,14 +398,20 @@ def planner_start(
             "postal_area_name": level["postal_area_name"],
             "municipality_name": level["municipality_name"],
             "price": {
-                "per_m2": level["price_per_m2"],
+                "per_m2": level["price_per_m2"] * age,
                 "level": level["price_geography_level"],
                 "period": level["price_period_label"],
                 "preliminary": level["price_is_preliminary"],
+                "building_age_ratio": age,
                 "range_per_m2": _range(
-                    level["price_per_m2_lower_quartile"],
-                    level["price_per_m2_median"],
-                    level["price_per_m2_upper_quartile"],
+                    *(
+                        None if value is None else value * age
+                        for value in (
+                            level["price_per_m2_lower_quartile"],
+                            level["price_per_m2_median"],
+                            level["price_per_m2_upper_quartile"],
+                        )
+                    ),
                     area=level["price_range_area_code"],
                     period=level["price_range_period_label"],
                 ),

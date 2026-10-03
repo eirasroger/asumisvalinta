@@ -25,6 +25,13 @@ from asumisvalinta.scenario.policy import PolicyRow, resolve_policy
 GROWTH_YEARS = 10
 SIMILAR_AGE_YEARS = 10
 MIN_SAMPLE = 3
+PRICE_AGE_SCOPES = {
+    "postal_code": "this postal code",
+    "price_sub_area": "the postal codes of this price area",
+    "municipality": "the postal codes of this municipality",
+    "region": "the postal codes of this region",
+    "country": "all postal codes in Finland",
+}
 # From 2010 on, capital charges mostly repay the construction loan, which the
 # housing company loan share already covers; such buildings get the 2000s level.
 LOAN_DRIVEN_FROM_YEAR = 2010
@@ -69,6 +76,7 @@ class Defaults:
     aso_sample: AsoSample
     rent_growth_market: float
     rent_growth_lease_clause: float
+    price_age_ratio: float = 1.0
 
 
 class DefaultsError(LookupError):
@@ -294,6 +302,20 @@ def load_defaults(
             "select min(year), max(year) from seeds.aso_charge_changes"
         ).fetchone()
 
+        price_age = None
+        if building_year is not None:
+            price_age = one(
+                """
+                select price_ratio, geography_level, first_construction_year,
+                    last_construction_year, first_period_label, last_period_label
+                from marts.mart_price_construction_ratios
+                where postal_code = ?
+                    and coalesce(first_construction_year, ?) <= ?
+                    and ? <= coalesce(last_construction_year, ?)
+                """,
+                [postal_code, *[building_year] * 4],
+            )
+
         asp_major_city = (
             connection.execute(
                 "select count(*) from seeds.asp_major_cities where municipality_code = ?",
@@ -327,6 +349,22 @@ def load_defaults(
         classes, charges_year, purchase_date.year, building_year
     )
 
+    price_age_ratio = 1.0
+    price_age_note = "Prices are not split by building age"
+    if price_age is not None:
+        price_age_ratio, level, first_year, last_year, first_period, last_period = price_age
+        if first_year is None:
+            built = f"before {last_year + 1}"
+        elif last_year is None:
+            built = f"from {first_year} on"
+        else:
+            built = f"from {first_year} to {last_year}"
+        price_age_note = (
+            f"Flats built {built} sold for {price_age_ratio:.2f} times the average price per m² "
+            f"of all flats in the same postal code, {first_period} to {last_period}, "
+            f"averaged over {PRICE_AGE_SCOPES[level]} (Statistics Finland)"
+        )
+
     sample, age_scope = _similar_age(offers, building_year)
     fee_to_price = _quartiles([row[0] for row in sample])
     charge_to_rent = _quartiles([row[1] for row in sample])
@@ -346,7 +384,7 @@ def load_defaults(
         size_m2=size_m2,
         horizon_years=horizon_years,
         buy=BuyInput(
-            price_per_m2=price_per_m2,
+            price_per_m2=price_per_m2 * price_age_ratio,
             price_growth=price_growth,
             maintenance_charge_per_m2_month=maintenance_charge,
             maintenance_charge_growth=aso_charge_growth,
@@ -378,6 +416,7 @@ def load_defaults(
     )
     sources = {
         "price_per_m2": f"Statistics Finland, {price_level} level, {price_period}",
+        "price_building_age": price_age_note,
         "rent_per_m2_month": (
             f"Statistics Finland, non-subsidised, {rent_level} level, {rent_period}"
         ),
@@ -431,4 +470,5 @@ def load_defaults(
         aso_sample=aso_sample,
         rent_growth_market=market_rent_growth,
         rent_growth_lease_clause=lease_clause_growth,
+        price_age_ratio=price_age_ratio,
     )

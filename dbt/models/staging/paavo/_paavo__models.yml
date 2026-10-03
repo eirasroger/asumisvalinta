@@ -2,9 +2,9 @@ models:
   - name: stg_paavo__postal_areas
     description: Postal code areas with Finnish and Swedish names and municipality code.
     data_tests:
-      - unique_combination:
+      - dbt_utils.unique_combination_of_columns:
           arguments:
-            columns: [paavo_year, postal_code]
+            combination_of_columns: [paavo_year, postal_code]
     columns:
       - name: postal_code
         data_tests:
