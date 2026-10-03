@@ -2,7 +2,8 @@ name: Monthly data refresh
 
 on:
   # GitHub delays or drops scheduled runs at busy times, worst at the start of each hour.
-  # Daily runs from the 3rd to the 10th retry until a release for this month exists.
+  # Daily runs from the 3rd to the 10th retry until a scheduled run succeeds this month;
+  # manual runs do not count.
   schedule:
     - cron: "23 5 3-10 * *"
   workflow_dispatch:
@@ -14,6 +15,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 concurrency:
   group: monthly-refresh
@@ -27,13 +29,14 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Skip scheduled runs once this month's release exists
+      - name: Skip once a scheduled run has succeeded this month
         id: check
         run: |
-          month="data-$(date -u +%Y-%m)"
-          latest=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 50             --json tagName --jq '.[].tagName' | grep "^$month-" | sort | tail -n 1 || true)
-          if [ "$GITHUB_EVENT_NAME" = "schedule" ] && [[ "$latest" > "$month-02" ]]; then
-            echo "Release $latest exists, skipping"
+          succeeded=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow monthly.yml \
+            --event schedule --status success --created ">=$(date -u +%Y-%m-01)" \
+            --json databaseId --jq length)
+          if [ "$GITHUB_EVENT_NAME" = "schedule" ] && [ "$succeeded" -gt 0 ]; then
+            echo "A scheduled run succeeded this month, skipping"
             echo "run=false" >> "$GITHUB_OUTPUT"
           else
             echo "run=true" >> "$GITHUB_OUTPUT"
