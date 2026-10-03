@@ -33,10 +33,9 @@ CORRESPONDENCES: tuple[str, ...] = (
 )
 
 
-def _get(path: str, lang: str) -> list[dict[str, Any]]:
-    response = requests.get(
-        f"{BASE_URL}/{path}", params={"content": "data", "meta": "max", "lang": lang}, timeout=60
-    )
+def _get(path: str, lang: str, content: bool = True) -> list[Any]:
+    params = {"meta": "max", "lang": lang} | ({"content": "data"} if content else {})
+    response = requests.get(f"{BASE_URL}/{path}", params=params, timeout=60)
     response.raise_for_status()
     return response.json()
 
@@ -90,12 +89,15 @@ def area_postal_codes() -> Iterator[dict[str, Any]]:
 
 @dlt.resource(name="correspondence_maps", write_disposition="replace")
 def correspondence_maps() -> Iterator[dict[str, Any]]:
+    # The maps endpoint answers 500 to content=data; its links end in /maps/{source}/{target}.
     for table in CORRESPONDENCES:
-        for row in _get(f"correspondenceTables/{quote(table, safe='')}/maps", "fi"):
+        path = f"correspondenceTables/{quote(table, safe='')}/maps"
+        for link in _get(path, "fi", content=False):
+            source_code, target_code = link.rsplit("/", 2)[1:]
             yield {
                 "correspondence_table": table,
-                "source_code": row["sourceLocalId"].rsplit("/", 1)[1],
-                "target_code": row["targetLocalId"].rsplit("/", 1)[1],
+                "source_code": source_code,
+                "target_code": target_code,
             }
 
 
