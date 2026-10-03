@@ -1,7 +1,9 @@
-"""Build step of the API on Vercel: fetch the serving warehouse and parse the dbt project.
+"""Build step of the API on Vercel: fetch the serving warehouse, load the seeds, parse dbt.
 
-The serving warehouse comes from the latest GitHub release. The dbt manifest must be
-generated here because MetricFlow reads it at runtime and the target folder is not in git.
+The serving warehouse comes from the latest GitHub release. The seeds are reloaded from the
+deployed commit, so assumptions and policy rules go live with the code instead of waiting for
+the next data release; no model is built from a seed. The dbt manifest must be generated here
+because MetricFlow reads it at runtime and the target folder is not in git.
 """
 
 import os
@@ -27,17 +29,18 @@ def download(url: str, destination: Path) -> None:
     print(f"Downloaded {destination} ({destination.stat().st_size / 1e6:.1f} MB)")
 
 
-def parse_dbt() -> None:
+def dbt(*args: str) -> None:
     os.environ["ASUMISVALINTA_DUCKDB_PATH"] = str(SERVING)
     dbt_dir = str(REPO_ROOT / "dbt")
-    result = dbtRunner().invoke(["parse", "--project-dir", dbt_dir, "--profiles-dir", dbt_dir])
+    result = dbtRunner().invoke([*args, "--project-dir", dbt_dir, "--profiles-dir", dbt_dir])
     if not result.success:
-        sys.exit("dbt parse failed")
+        sys.exit(f"dbt {args[0]} failed")
 
 
 def main() -> None:
     download(os.environ.get("ASUMISVALINTA_SERVING_URL", RELEASE_URL), SERVING)
-    parse_dbt()
+    dbt("build", "--select", "resource_type:seed", "--full-refresh")
+    dbt("parse")
 
 
 if __name__ == "__main__":
