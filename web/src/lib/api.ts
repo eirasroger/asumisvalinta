@@ -1,22 +1,11 @@
+import type { Locale } from "@/i18n/config";
 import { trackingAllowed, visitId } from "@/lib/analytics";
 
 export type RoomType = "one_room" | "two_room" | "three_room_plus";
 export type Option = "buy" | "rent" | "aso";
 
-export const ROOM_TYPES: { value: RoomType; label: string; short: string; flats: string }[] = [
-  { value: "one_room", label: "Studio (yksiö)", short: "Studio", flats: "studios" },
-  { value: "two_room", label: "1 bedroom (kaksio)", short: "1 bedroom", flats: "one-bedroom flats" },
-  { value: "three_room_plus", label: "2+ bedrooms (kolmio+)", short: "2+ bedrooms", flats: "flats with two or more bedrooms" },
-];
-
-export const ROOM_NOTE =
-  "Finnish listings count rooms without the kitchen: a yksiö is a studio, a kaksio has one bedroom and a living room, and a kolmio or larger has two or more bedrooms. Statistics Finland publishes these three groups only.";
-
-export const OPTION_LABELS: Record<Option, string> = {
-  buy: "Buy",
-  rent: "Rent",
-  aso: "Right of occupancy",
-};
+/** Room groups Statistics Finland publishes; their names are in the messages files. */
+export const ROOM_TYPES: RoomType[] = ["one_room", "two_room", "three_room_plus"];
 
 export const OPTION_COLORS: Record<Option, string> = {
   buy: "var(--series-buy)",
@@ -263,26 +252,28 @@ export const api = {
   rates: () => request<SeriesPoint[]>("/api/rates"),
   plannerStart: (
     params: { postal_code: string; room_type: RoomType; size_m2: number; building_year?: number | null },
+    lang: Locale,
     signal?: AbortSignal,
   ) => {
     const query = new URLSearchParams({
       postal_code: params.postal_code,
       room_type: params.room_type,
       size_m2: String(params.size_m2),
+      lang,
     });
     if (params.building_year) query.set("building_year", String(params.building_year));
     return request<PlannerStart>(`/api/planner/start?${query}`, { signal });
   },
-  plannerRun: (scenario: ScenarioInput, signal?: AbortSignal) =>
-    request<PlannerRun>("/api/planner/run", {
+  plannerRun: (scenario: ScenarioInput, lang: Locale, signal?: AbortSignal) =>
+    request<PlannerRun>(`/api/planner/run?lang=${lang}`, {
       method: "POST",
       body: JSON.stringify(scenario),
       signal,
     }),
   mapValues: (roomType: RoomType) => request<MapValue[]>(`/api/map/values?room_type=${roomType}`),
   mapTrends: (roomType: RoomType) => request<MapTrends>(`/api/map/trends?room_type=${roomType}`),
-  ask: (question: string, sessionId: string) =>
-    request<AskResponse>("/api/ask", {
+  ask: (question: string, sessionId: string, lang: Locale) =>
+    request<AskResponse>(`/api/ask?lang=${lang}`, {
       method: "POST",
       body: JSON.stringify({ question, session_id: sessionId, record: trackingAllowed(), visit: visitId() }),
     }),

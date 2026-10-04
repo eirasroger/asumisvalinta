@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { useI18n } from "@/i18n/I18nProvider";
 import { api, type PostalArea } from "@/lib/api";
 
 const POSTI_TERMS_URL =
@@ -12,7 +13,8 @@ interface Props {
   autoFocus?: boolean;
 }
 
-export function PostalCodeSearch({ onChange, placeholder = "Search address, postal code or area", autoFocus }: Props) {
+export function PostalCodeSearch({ onChange, placeholder, autoFocus }: Props) {
+  const { t } = useI18n();
   const listId = useId();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PostalArea[]>([]);
@@ -67,13 +69,13 @@ export function PostalCodeSearch({ onChange, placeholder = "Search address, post
         <input
           type="text"
           role="combobox"
-          aria-label="Search address, postal code or area"
+          aria-label={t.search.placeholder}
           aria-expanded={expanded}
           aria-controls={listId}
           aria-autocomplete="list"
           aria-activedescendant={expanded ? `${listId}-${active}` : undefined}
           autoFocus={autoFocus}
-          placeholder={placeholder}
+          placeholder={placeholder ?? t.search.placeholder}
           value={query}
           onChange={(event) => search(event.target.value)}
           onFocus={() => setOpen(true)}
@@ -126,7 +128,7 @@ export function PostalCodeSearch({ onChange, placeholder = "Search address, post
           ))}
           {addressesDate && (
             <li role="presentation" className="px-2.5 pt-2 pb-1.5 text-[11px] text-ink-3">
-              Addresses: Posti Basic Address File, downloaded {addressesDate}.{" "}
+              {t.search.addresses(addressesDate)}{" "}
               <a
                 href={POSTI_TERMS_URL}
                 target="_blank"
@@ -134,7 +136,7 @@ export function PostalCodeSearch({ onChange, placeholder = "Search address, post
                 className="underline hover:text-ink"
                 onMouseDown={(event) => event.preventDefault()}
               >
-                Terms of use
+                {t.search.terms}
               </a>
             </li>
           )}

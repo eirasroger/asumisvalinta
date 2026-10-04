@@ -9,7 +9,8 @@ import { YourNumbers } from "@/components/planner/YourNumbers";
 import { PostalCodeSearch } from "@/components/PostalCodeSearch";
 import { type ScenarioEvent, track } from "@/lib/analytics";
 import { Hint, NumberField, Popover, Segmented, Slider } from "@/components/ui";
-import { ApiError, api, type PlannerRun, type PlannerStart, ROOM_NOTE, ROOM_TYPES } from "@/lib/api";
+import { useI18n } from "@/i18n/I18nProvider";
+import { ApiError, api, type PlannerRun, type PlannerStart, ROOM_TYPES } from "@/lib/api";
 import {
   type Assumptions,
   buildScenario,
@@ -30,6 +31,7 @@ function isAbort(error: unknown) {
 }
 
 export function Planner() {
+  const { t, locale, href } = useI18n();
   const router = useRouter();
   const params = useSearchParams();
   const [flat, setFlat] = useState<Flat>(() => flatFromParams(new URLSearchParams(params.toString())));
@@ -63,6 +65,7 @@ export function Planner() {
       api
         .plannerStart(
           { postal_code: flat.postal_code, room_type: flat.room_type, size_m2: flat.size_m2, building_year: flat.building_year },
+          locale,
           controller.signal,
         )
         .then((next) => {
@@ -75,12 +78,12 @@ export function Planner() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [flat.postal_code, flat.room_type, flat.size_m2, flat.building_year, refresh]);
+  }, [flat.postal_code, flat.room_type, flat.size_m2, flat.building_year, refresh, locale]);
 
   useEffect(() => {
-    const timer = setTimeout(() => router.replace(`/compare?${flatToParams(flat)}`, { scroll: false }), 400);
+    const timer = setTimeout(() => router.replace(`${href("/compare")}?${flatToParams(flat)}`, { scroll: false }), 400);
     return () => clearTimeout(timer);
-  }, [flat, router]);
+  }, [flat, router, href]);
 
   const typical = useMemo(() => (start ? typicalValues(start, flat.size_m2, offer) : null), [start, flat.size_m2, offer]);
   const scenario = useMemo(
@@ -94,7 +97,7 @@ export function Planner() {
     const timer = setTimeout(() => {
       setRunning(true);
       api
-        .plannerRun(scenario, controller.signal)
+        .plannerRun(scenario, locale, controller.signal)
         .then((next) => {
           setRun(next);
           setRunError(null);
@@ -111,7 +114,7 @@ export function Planner() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [scenario, refresh]);
+  }, [scenario, refresh, locale]);
 
   // Usage is recorded once per flat looked at: the final configuration and how many times it was
   // recalculated, sent when the visitor leaves the page, switches area or goes elsewhere.
@@ -193,26 +196,26 @@ export function Planner() {
               }}
             />
             <Link
-              href={`/?postal=${flat.postal_code}&rooms=${flat.room_type}`}
+              href={`${href("/")}?postal=${flat.postal_code}&rooms=${flat.room_type}`}
               className="mt-3 block text-center text-[13px] text-ink-2 hover:text-ink hover:underline"
             >
-              Choose on the map
+              {t.planner.chooseOnMap}
             </Link>
           </Popover>
         </div>
-        <Cell full label={<Hint trigger={<button type="button" className="underline decoration-line-strong decoration-dotted underline-offset-4">Home</button>}>{ROOM_NOTE}</Hint>}>
+        <Cell full label={<Hint trigger={<button type="button" className="underline decoration-line-strong decoration-dotted underline-offset-4">{t.planner.home}</button>}>{t.rooms.note}</Hint>}>
           <Segmented
-            label="Home"
+            label={t.planner.home}
             size="sm"
             className="max-lg:w-full"
             value={flat.room_type}
             onChange={(room_type) => update({ room_type })}
-            options={ROOM_TYPES.map((type) => ({ value: type.value, label: type.short.replace("bedrooms", "bed").replace("bedroom", "bed") }))}
+            options={ROOM_TYPES.map((type) => ({ value: type, label: t.rooms.compact[type] }))}
           />
         </Cell>
-        <Cell label="Size">
+        <Cell label={t.planner.size}>
           <NumberField
-            label="Size"
+            label={t.planner.size}
             className="w-24"
             suffix="m²"
             min={10}
@@ -221,19 +224,19 @@ export function Planner() {
             onChange={(size) => update({ size_m2: Math.round(size) })}
           />
         </Cell>
-        <Cell label="Built">
+        <Cell label={t.planner.built}>
           <NumberField
-            label="Year built"
+            label={t.planner.yearBuilt}
             className="w-24"
             grouping={false}
-            placeholder="Year"
+            placeholder={t.planner.yearPlaceholder}
             value={flat.building_year}
             onChange={(year) => update({ building_year: year >= 1800 && year <= 2035 ? Math.round(year) : null })}
             onClear={() => update({ building_year: null })}
           />
         </Cell>
-        <Cell label={`${flat.horizon_years} ${flat.horizon_years === 1 ? "year" : "years"}`} wide full>
-          <Slider label="Years" min={1} max={30} value={flat.horizon_years} onChange={(years) => update({ horizon_years: years })} />
+        <Cell label={t.planner.horizon(flat.horizon_years)} wide full>
+          <Slider label={t.planner.years} min={1} max={30} value={flat.horizon_years} onChange={(years) => update({ horizon_years: years })} />
         </Cell>
       </div>
 

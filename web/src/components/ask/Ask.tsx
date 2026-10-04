@@ -2,21 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useI18n } from "@/i18n/I18nProvider";
 import { type AskResponse, api } from "@/lib/api";
-
-const EXAMPLES = [
-  "What was the average price per m² of flats in postal code 00100 in 2025 Q4?",
-  "How much did prices of old flats in Helsinki change from a year earlier in 2025 Q4?",
-  "What is the average rent per m² in new agreements for two-room flats in Tampere?",
-  "Compare buying and renting a 55 m² two-room flat in 00100 over 5 years.",
-];
-
-const STATUS_LABELS: Record<AskResponse["status"], string> = {
-  answered: "Answer",
-  refused: "Outside what the data covers",
-  needs_clarification: "More detail needed",
-  error: "Something went wrong",
-};
 
 // Kept in memory only: nothing is stored on the device, and a reload starts a new session.
 let currentSession: string | null = null;
@@ -26,7 +13,8 @@ function sessionId() {
   return currentSession;
 }
 
-export default function AskPage() {
+export function Ask() {
+  const { t, locale, href } = useI18n();
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<AskResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -36,9 +24,9 @@ export default function AskPage() {
     setLoading(true);
     setError(null);
     try {
-      setAnswer(await api.ask(text, sessionId()));
+      setAnswer(await api.ask(text, sessionId(), locale));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Something went wrong.");
+      setError(caught instanceof Error ? caught.message : t.ask.failed);
     } finally {
       setLoading(false);
     }
@@ -47,7 +35,7 @@ export default function AskPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 pt-10 pb-16 sm:px-6">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">Ask about the housing market</h1>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">{t.ask.title}</h1>
       </header>
 
       <form
@@ -68,27 +56,27 @@ export default function AskPage() {
           }}
           maxLength={500}
           rows={3}
-          aria-label="Your question"
-          placeholder="For example: what is the average rent per m² for one-room flats in Oulu?"
+          aria-label={t.ask.question}
+          placeholder={t.ask.placeholder}
           className="block w-full resize-none bg-transparent px-5 pt-4 pb-2 text-[15px] outline-none placeholder:text-ink-3"
         />
         <div className="flex flex-wrap items-center gap-3 px-4 pb-4">
           <p className="mr-auto pl-1 text-xs text-ink-3">
-            Leave out personal information.{" "}
-            <Link href="/privacy" className="underline decoration-line-strong underline-offset-2 hover:text-ink">
-              Privacy
+            {t.ask.personal}{" "}
+            <Link href={href("/privacy")} className="underline decoration-line-strong underline-offset-2 hover:text-ink">
+              {t.ask.privacy}
             </Link>
-            {answer ? ` ${answer.remaining_questions} questions left in this session.` : ""}
+            {answer ? t.ask.remaining(answer.remaining_questions) : ""}
           </p>
           <button type="submit" disabled={loading || question.trim().length < 3} className="h-9 rounded-lg bg-ink px-4 text-sm font-medium text-paper transition-opacity hover:opacity-90 disabled:opacity-40">
-            {loading ? "Thinking…" : "Ask"}
+            {loading ? t.ask.thinking : t.ask.submit}
           </button>
         </div>
       </form>
 
       {!answer && !loading && (
         <div className="grid gap-2 sm:grid-cols-2">
-          {EXAMPLES.map((example) => (
+          {t.ask.examples.map((example) => (
             <button
               key={example}
               type="button"
@@ -111,13 +99,13 @@ export default function AskPage() {
 
       {answer && !loading && (
         <article className="space-y-4 rounded-xl border border-line bg-paper p-5">
-          <p className="text-[13px] font-medium text-ink-3">{STATUS_LABELS[answer.status]}</p>
+          <p className="text-[13px] font-medium text-ink-3">{t.ask.status[answer.status]}</p>
           <p className="text-[15px] leading-relaxed whitespace-pre-line">{answer.answer}</p>
           {answer.sources && (
             <div className="space-y-1 border-t border-line pt-3 text-xs text-ink-3">
               {answer.sources && (
                 <p>
-                  <span className="font-medium text-ink-2">Based on </span>
+                  <span className="font-medium text-ink-2">{t.ask.basedOn}</span>
                   {answer.sources}
                 </p>
               )}

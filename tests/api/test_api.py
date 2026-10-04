@@ -242,3 +242,24 @@ def test_typos_and_accents_still_find_the_street(client):
 
 def test_area_names_match_without_accents(client):
     assert "00250" in {r["postal_code"] for r in _search(client, "Toolo")}
+
+
+def test_finnish_text_on_request(client):
+    params = {"postal_code": "00100", "room_type": "two_room", "size_m2": 55, "lang": "fi"}
+    start = client.get("/api/planner/start", params=params).json()
+    assert "Tilastokeskus" in start["sources"]["price_per_m2"]
+    assert "9 §" in start["sources"]["aso_fee"]
+    run = client.post("/api/planner/run", params={"lang": "fi"}, json=start["scenario"]).json()
+    labels = {w["key"]: w["label"] for w in run["what_ifs"]}
+    assert labels["rates_up"] == "Korot 1 prosenttiyksikön korkeammat"
+    missing = client.get("/api/planner/start", params={**params, "postal_code": "99999"})
+    assert missing.status_code == 404
+    assert "99999" in missing.json()["detail"]
+    assert "lukuja" in missing.json()["detail"]
+
+
+def test_english_is_the_default_and_other_languages_are_refused(client):
+    params = {"postal_code": "00100", "room_type": "two_room", "size_m2": 55}
+    start = client.get("/api/planner/start", params=params).json()
+    assert "Statistics Finland" in start["sources"]["price_per_m2"]
+    assert client.get("/api/planner/start", params={**params, "lang": "de"}).status_code == 422

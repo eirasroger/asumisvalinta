@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { EChart, INK_3, LINE } from "@/components/charts/EChart";
 import type { HoverInfo, Padding } from "@/components/map/AreaMap";
 import { PostalCodeSearch } from "@/components/PostalCodeSearch";
+import { useI18n } from "@/i18n/I18nProvider";
 import { track } from "@/lib/analytics";
 import { Segmented } from "@/components/ui";
 import { type MapTrends, type MapValue, ROOM_TYPES, type RoomType } from "@/lib/api";
@@ -22,6 +23,7 @@ import {
   metricValue,
   quantileCuts,
   SCOPES,
+  SHAPES_ERROR,
   preloadMap,
   preloadRest,
   SEQUENTIAL,
@@ -48,6 +50,7 @@ function usePhone() {
 const REVEAL_LIMIT_MS = 10_000;
 
 export function Explore() {
+  const { t, href } = useI18n();
   const router = useRouter();
   const params = useSearchParams();
   const [selected, setSelected] = useState<string | null>(() => {
@@ -110,7 +113,7 @@ export function Explore() {
   function select(code: string | null, source?: "map" | "search") {
     if (code && source) track({ type: "area", postal_code: code, room_type: roomType, source, metric });
     setSelected(code);
-    router.replace(code ? `/?postal=${code}&rooms=${roomType}` : "/", { scroll: false });
+    router.replace(code ? `${href("/")}?postal=${code}&rooms=${roomType}` : href("/"), { scroll: false });
   }
 
   return (
@@ -131,37 +134,37 @@ export function Explore() {
         <div className="pointer-events-auto space-y-2.5 rounded-xl bg-paper p-2.5 shadow-float">
           <PostalCodeSearch onChange={(area) => select(area.postal_code, "search")} />
           <Segmented
-            label="Colour areas by"
+            label={t.map.colourBy}
             size="sm"
             className="w-full"
             value={metric}
             onChange={setMetric}
-            options={METRICS.map((item) => ({ value: item.value, label: item.label }))}
+            options={METRICS.map((item) => ({ value: item.value, label: t.map.metrics[item.value].label }))}
           />
           <Segmented
-            label="Rooms"
+            label={t.map.rooms}
             size="sm"
             className="w-full"
             value={roomType}
             onChange={setRoomType}
-            options={ROOM_TYPES.map((type) => ({ value: type.value, label: type.short }))}
+            options={ROOM_TYPES.map((type) => ({ value: type, label: t.rooms.short[type] }))}
           />
         </div>
-        {loading && shown && <div className="busy relative h-0.5 overflow-hidden rounded-full bg-line" role="status" aria-label="Loading" />}
+        {loading && shown && <div className="busy relative h-0.5 overflow-hidden rounded-full bg-line" role="status" aria-label={t.common.loading} />}
       </div>
 
       {cuts.length > 0 && (
         <div className={`absolute bottom-3 left-3 z-10 rounded-xl bg-paper px-3.5 py-3 shadow-float sm:bottom-4 sm:left-4 ${selected ? "max-sm:hidden" : ""}`}>
           <Segmented
-            label="Map view"
+            label={t.map.view}
             size="sm"
             className="mb-3 w-full"
             value={scope}
             onChange={setScope}
-            options={SCOPES.map((item) => ({ value: item.value, label: item.label }))}
+            options={SCOPES.map((item) => ({ value: item.value, label: t.map.scopes[item.value] }))}
           />
           <p className="mb-2 text-[13px] font-medium">
-            {info.label} <span className="font-normal text-ink-3">{info.unit}</span>
+            {t.map.metrics[metric].label} <span className="font-normal text-ink-3">{t.map.metrics[metric].unit}</span>
           </p>
           <div className="flex pr-3">
             {SEQUENTIAL.map((color, index) => (
@@ -176,9 +179,9 @@ export function Explore() {
           </div>
           <p className="mt-2 flex items-center gap-1.5 text-[11px] text-ink-3">
             <span className="inline-block h-2.5 w-3.5 rounded-sm bg-[repeating-linear-gradient(45deg,#3987e5_0_2px,#b9d4f5_2px_4px)]" />
-            Hatched: figure from a larger area
+            {t.map.hatched}
           </p>
-          <p className="mt-1 text-[11px] text-ink-3">Source: Statistics Finland (CC BY 4.0)</p>
+          <p className="mt-1 text-[11px] text-ink-3">{t.map.source}</p>
         </div>
       )}
 
@@ -190,7 +193,7 @@ export function Explore() {
           <p className="text-[13px]">
             <span className="font-medium">{hover.name}</span> <span className="num text-ink-3">{hover.postal_code}</span>
           </p>
-          <p className="num text-[15px] font-semibold">{hover.value !== null ? info.exact(hover.value) : "No data"}</p>
+          <p className="num text-[15px] font-semibold">{hover.value === null ? t.map.noData : metric === "ratio" ? t.map.years(info.exact(hover.value)) : info.exact(hover.value)}</p>
         </div>
       )}
 
@@ -198,18 +201,20 @@ export function Explore() {
         <AreaPanel postalCode={selected} row={row} roomType={roomType} trends={trends} onClose={() => select(null)} />
       )}
 
-      <MapLoader steps={[shapes, rows !== null, shown]} error={error ?? shapesError} />
+      <MapLoader
+        steps={[shapes, rows !== null, shown]}
+        error={shapesError === SHAPES_ERROR ? t.map.shapesError : (error ?? shapesError)}
+      />
     </div>
   );
 }
 
-const LOADER_STEPS = ["3,018 postal code areas", "Prices and rents", "Drawing the map"];
-
 function MapLoader({ steps: status, error }: { steps: boolean[]; error: string | null }) {
+  const { t } = useI18n();
   const [gone, setGone] = useState(false);
   if (gone) return null;
   const done = status[status.length - 1];
-  const steps = LOADER_STEPS.map((label, index) => ({ label, done: status[index] }));
+  const steps = t.map.loaderSteps.map((label, index) => ({ label, done: status[index] }));
   const progress = (status.filter(Boolean).length + 0.5) / (status.length + 0.5);
   return (
     <div
@@ -219,8 +224,8 @@ function MapLoader({ steps: status, error }: { steps: boolean[]; error: string |
       aria-live="polite"
     >
       <div className="w-[min(320px,calc(100%-48px))]">
-        <p className="text-[13px] font-medium tracking-wide text-ink-3 uppercase">Housing market, Finland</p>
-        <p className="mt-1 text-[22px] leading-tight font-semibold tracking-tight">Preparing the map</p>
+        <p className="text-[13px] font-medium tracking-wide text-ink-3 uppercase">{t.map.loaderKicker}</p>
+        <p className="mt-1 text-[22px] leading-tight font-semibold tracking-tight">{t.map.loaderTitle}</p>
         <div className="mt-5 h-1 overflow-hidden rounded-full bg-line">
           <div className="h-full rounded-full bg-ink transition-[width] duration-700 ease-out" style={{ width: `${progress * 100}%` }} />
         </div>
@@ -228,7 +233,7 @@ function MapLoader({ steps: status, error }: { steps: boolean[]; error: string |
           <div className="mt-5 text-sm">
             <p className="text-bad">{error}</p>
             <button type="button" onClick={() => window.location.reload()} className="mt-3 rounded-lg bg-ink px-4 py-2 font-medium text-paper">
-              Try again
+              {t.common.tryAgain}
             </button>
           </div>
         ) : (
@@ -268,7 +273,7 @@ function AreaPanel({
   trends: MapTrends | null;
   onClose: () => void;
 }) {
-  const room = ROOM_TYPES.find((type) => type.value === roomType)!;
+  const { t, href } = useI18n();
   const series = trends?.prices[postalCode];
   const points = useMemo(
     () =>
@@ -294,7 +299,7 @@ function AreaPanel({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t.common.close}
             className="-mt-1.5 -mr-2.5 grid size-10 shrink-0 place-items-center rounded-md text-ink-3 hover:bg-well hover:text-ink"
           >
             <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
@@ -305,12 +310,12 @@ function AreaPanel({
 
         {row ? (
           <dl className="mt-4 divide-y divide-line border-y border-line sm:mt-5">
-            <Figure label={`Price, ${room.short}`} value={row.price_per_m2} digits={0} suffix=" / m²" estimated={isEstimated(row, "price")} />
-            <Figure label="Rent" value={row.rent_per_m2} digits={2} suffix=" / m²" estimated={isEstimated(row, "rent")} />
-            <Figure label="Price-to-rent" value={row.price_to_rent_ratio} digits={1} suffix=" years" currency={false} />
+            <Figure label={t.map.priceRoom(t.rooms.short[roomType])} value={row.price_per_m2} digits={0} suffix=" / m²" estimated={isEstimated(row, "price")} />
+            <Figure label={t.map.rent} value={row.rent_per_m2} digits={2} suffix=" / m²" estimated={isEstimated(row, "rent")} />
+            <Figure label={t.map.priceToRent} value={row.price_to_rent_ratio} digits={1} suffix={t.map.yearsSuffix} currency={false} />
           </dl>
         ) : (
-          <p className="px-5 pt-4 text-sm text-ink-3">No published figures for this area.</p>
+          <p className="px-5 pt-4 text-sm text-ink-3">{t.map.noFigures}</p>
         )}
 
         <div className="max-sm:hidden">
@@ -323,10 +328,10 @@ function AreaPanel({
 
         <div className="p-4 sm:p-5">
           <Link
-            href={`/compare?postal=${postalCode}&rooms=${roomType}`}
+            href={`${href("/compare")}?postal=${postalCode}&rooms=${roomType}`}
             className="flex h-11 w-full items-center justify-center rounded-lg bg-ink text-[15px] font-medium text-paper transition-opacity hover:opacity-90"
           >
-            Compare options here
+            {t.map.compareHere}
           </Link>
         </div>
       </div>
@@ -349,6 +354,7 @@ function Figure({
   estimated?: boolean;
   currency?: boolean;
 }) {
+  const { t } = useI18n();
   return (
     <div className="flex items-baseline justify-between px-5 py-3">
       <dt className="text-sm text-ink-2">{label}</dt>
@@ -370,7 +376,7 @@ function Figure({
           </>
         )}
         {estimated && value !== null && (
-          <span className="ml-1 align-top text-[11px] font-normal text-ink-3" title="Figure from a larger area">
+          <span className="ml-1 align-top text-[11px] font-normal text-ink-3" title={t.map.estimated}>
             ≈
           </span>
         )}
@@ -380,6 +386,7 @@ function Figure({
 }
 
 function PriceTrend({ points }: { points: { year: number; value: number }[] }) {
+  const { t } = useI18n();
   const years = useMemo(() => points.map((point) => String(point.year)), [points]);
   const values = useMemo(() => points.map((point) => point.value), [points]);
   const change = values[values.length - 1] / values[0] - 1;
@@ -431,13 +438,13 @@ function PriceTrend({ points }: { points: { year: number; value: number }[] }) {
   return (
     <div className="px-5 pt-4">
       <div className="flex items-baseline justify-between text-sm">
-        <span className="text-ink-2">Price per m² since {years[0]}</span>
+        <span className="text-ink-2">{t.map.priceSince(years[0])}</span>
         <span className={`num font-medium ${change >= 0 ? "text-good" : "text-bad"}`}>
           {change >= 0 ? "+" : "−"}
           {Math.round(Math.abs(change) * 100)}%
         </span>
       </div>
-      <EChart option={option} height={96} label={`Price per m² from ${years[0]} to ${years[years.length - 1]}`} />
+      <EChart option={option} height={96} label={t.map.priceTrend(years[0], years[years.length - 1])} />
     </div>
   );
 }

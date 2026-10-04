@@ -1,6 +1,6 @@
 # asumisvalinta
 
-Rent, right of occupancy (asumisoikeus) or buy a flat in Finland? Asumisvalinta compares the three over the years you plan to stay, using official open data for every area of the country and the numbers of the flats you are looking at.
+Rent, right of occupancy (asumisoikeus) or buy a flat in Finland? Asumisvalinta compares the three over the years you plan to stay, using official open data for every area of the country and the numbers of the flats you are looking at. The site is in Finnish, with an English version at `/en`.
 
 - **Explore** a map of all 3,018 postal code areas, coloured by price, rent or price-to-rent ratio.
 - **Compare** the three options for one flat. Each input starts at the market value for the area, size and building age, and shows how your own figure differs from the market.

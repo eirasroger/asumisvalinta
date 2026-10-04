@@ -51,15 +51,3 @@ export function parseNumber(text: string): number | null {
   const value = Number(cleaned);
   return Number.isFinite(value) ? value : null;
 }
-
-const LEVEL_LABELS: Record<string, string> = {
-  postal_code: "postal code",
-  price_sub_area: "price sub-area",
-  rent_sub_area: "rent sub-area",
-  municipality: "municipality",
-  municipality_all_rooms: "municipality, all room types",
-  region: "region",
-  country: "whole country",
-};
-
-export const formatLevel = (level: string) => LEVEL_LABELS[level] ?? level;

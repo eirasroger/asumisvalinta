@@ -1,8 +1,9 @@
 "use client";
 
 import { Dot, InfoLabel, NumberField, Switch } from "@/components/ui";
-import { OPTION_COLORS, type Option, type PlannerStart, ROOM_TYPES } from "@/lib/api";
-import { formatEuro, formatLevel, formatPeriodLabel } from "@/lib/format";
+import { useI18n } from "@/i18n/I18nProvider";
+import { OPTION_COLORS, type Option, type PlannerStart } from "@/lib/api";
+import { formatEuro, formatPeriodLabel } from "@/lib/format";
 import { type Assumptions, type Flat, type Offer, offerValue, type Typical } from "@/lib/planner";
 
 interface Props {
@@ -31,10 +32,13 @@ interface Field {
 }
 
 export function YourNumbers({ start, flat, offer, typical, onOffer, assumptions, onAssumptions }: Props) {
+  const { t } = useI18n();
+  const n = t.numbers;
+  const level = (code: string) => t.levels[code] ?? code;
   const size = flat.size_m2;
   const market = start.market;
   const sources = start.sources;
-  const flats = ROOM_TYPES.find((type) => type.value === flat.room_type)!.flats;
+  const flats = t.rooms.flats[flat.room_type];
   const band = (low: number | null | undefined, high: number | null | undefined, scale = 1): [number, number] | null =>
     low != null && high != null ? [low * scale, high * scale] : null;
 
@@ -52,69 +56,69 @@ export function YourNumbers({ start, flat, offer, typical, onOffer, assumptions,
 
   return (
     <div className="rounded-xl border border-line bg-paper">
-      <Section option="rent" title="Rent">
+      <Section option="rent" title={n.rent.title}>
         {line({
           key: "rent",
-          label: "Monthly rent",
-          suffix: "/ mo",
-          about: "Rises with inflation, at least 2% a year.",
-          source: `Rents, ${formatLevel(market.rent.level)}, ${formatPeriodLabel(market.rent.period)}.`,
+          label: n.rent.label,
+          suffix: n.perMonth,
+          about: n.rent.about,
+          source: n.rent.source(level(market.rent.level), formatPeriodLabel(market.rent.period)),
           benchmark: {
             band: band(market.rent.range_monthly?.lower_quartile, market.rent.range_monthly?.upper_quartile),
-            bandLabel: `Middle half of rents for ${flats} here`,
+            bandLabel: n.rent.band(flats),
           },
         })}
       </Section>
 
-      <Section option="buy" title="Buy">
+      <Section option="buy" title={n.buy.title}>
         {line({
           key: "price",
-          label: "Debt-free price",
-          about: "Price including the flat's share of the housing company loan (velaton hinta).",
-          source: `Sales of old flats, ${formatLevel(market.price.level)}, ${formatPeriodLabel(market.price.period)}. ${sources.price_building_age}.`,
+          label: n.buy.price,
+          about: n.buy.priceAbout,
+          source: n.buy.priceSource(level(market.price.level), formatPeriodLabel(market.price.period), sources.price_building_age),
           benchmark: {
             band: band(market.price.range_per_m2?.lower_quartile, market.price.range_per_m2?.upper_quartile, size),
-            bandLabel: `Middle half of sales of ${flats}, at ${size} m²${market.price.building_age_ratio !== 1 ? ", adjusted for the year built" : ""}`,
+            bandLabel: n.buy.priceBand(flats, size, market.price.building_age_ratio !== 1),
           },
         })}
         {line({
           key: "maintenance",
-          label: "Maintenance charge",
-          suffix: "/ mo",
-          about: "Monthly charge for running the building (hoitovastike).",
+          label: n.buy.maintenance,
+          suffix: n.perMonth,
+          about: n.buy.maintenanceAbout,
           source: sources.maintenance_charge,
           benchmark: {},
         })}
         {line({
           key: "capital_charges",
-          label: "Renovation charges",
-          suffix: "/ mo",
-          about: "Charge for pipes, facades and roofs (rahoitusvastike). Rises as the building ages.",
+          label: n.buy.capital,
+          suffix: n.perMonth,
+          about: n.buy.capitalAbout,
           source: sources.capital_charges,
           benchmark: {},
         })}
         {line({
           key: "own_repairs",
-          label: "Repairs inside the flat",
-          suffix: "/ yr",
-          about: "Kitchen, bathroom and other repairs inside the flat. Only owners pay these.",
+          label: n.buy.repairs,
+          suffix: n.perYear,
+          about: n.buy.repairsAbout,
           source: sources.own_repairs,
           benchmark: {},
         })}
         {line({
           key: "company_loan",
-          label: "Housing company loan",
-          about: "The flat's share of the housing company loan.",
-          source: "From the sales listing.",
+          label: n.buy.companyLoan,
+          about: n.buy.companyLoanAbout,
+          source: n.buy.companyLoanSource,
         })}
       </Section>
 
       <Section
         option="aso"
-        title="Right of occupancy"
+        title={n.aso.title}
         aside={
           <Switch
-            label="Include right of occupancy"
+            label={n.aso.include}
             checked={assumptions.include_aso}
             onChange={(checked) => onAssumptions({ ...assumptions, include_aso: checked })}
           />
@@ -123,15 +127,15 @@ export function YourNumbers({ start, flat, offer, typical, onOffer, assumptions,
       >
         {line({
           key: "aso_fee",
-          label: "Occupancy fee",
-          about: "Paid when you move in, refunded with the building cost index when you leave (asumisoikeusmaksu).",
+          label: n.aso.fee,
+          about: n.aso.feeAbout,
           source: `${sources.aso_fee}.`,
         })}
         {line({
           key: "aso_charge",
-          label: "Monthly charge",
-          suffix: "/ mo",
-          about: "Covers the building's costs, so it rises with them (käyttövastike).",
+          label: n.aso.charge,
+          suffix: n.perMonth,
+          about: n.aso.chargeAbout,
           source: `${sources.aso_charge}.`,
         })}
       </Section>
@@ -179,6 +183,7 @@ function Line({
   onChange: (value: number) => void;
   onReset: () => void;
 }) {
+  const { t } = useI18n();
   const benchmark = field.benchmark;
   const difference = benchmark && typical > 0 ? value / typical - 1 : 0;
   const near = Math.abs(difference) < 0.05;
@@ -197,11 +202,11 @@ function Line({
         <div className="col-start-2 flex justify-end gap-2 text-xs">
           {benchmark && (
             <span className={tone}>
-              {near ? "In line with market" : `${difference > 0 ? "▲" : "▼"} ${Math.round(Math.abs(difference) * 100)}% vs market`}
+              {near ? t.numbers.inLine : t.numbers.versusMarket(difference > 0 ? "▲" : "▼", Math.round(Math.abs(difference) * 100))}
             </span>
           )}
           <button type="button" onClick={onReset} className="text-ink-3 hover:text-ink">
-            Reset
+            {t.common.reset}
           </button>
         </div>
       )}
@@ -210,6 +215,7 @@ function Line({
 }
 
 function Comparison({ value, typical, benchmark }: { value: number; typical: number; benchmark: Benchmark }) {
+  const { t } = useI18n();
   const points = [value, typical, ...(benchmark.band ?? [])].filter((point) => point > 0);
   const low = Math.min(...points) * 0.9;
   const high = Math.max(...points) * 1.1;
@@ -217,7 +223,7 @@ function Comparison({ value, typical, benchmark }: { value: number; typical: num
   return (
     <div className="mt-4 border-t border-line pt-3">
       <div className="flex items-baseline justify-between text-[13px]">
-        <span className="text-ink-2">Market for this flat</span>
+        <span className="text-ink-2">{t.numbers.market}</span>
         <span className="font-semibold">{formatEuro(typical)}</span>
       </div>
       {benchmark.band && (
@@ -235,11 +241,11 @@ function Comparison({ value, typical, benchmark }: { value: number; typical: num
             />
           </div>
           <p className="mt-2 text-xs text-ink-3">
-            {benchmark.bandLabel}: {formatEuro(benchmark.band[0])} to {formatEuro(benchmark.band[1])}
+            {t.numbers.bandRange(benchmark.bandLabel ?? "", formatEuro(benchmark.band[0]), formatEuro(benchmark.band[1]))}
           </p>
         </>
       )}
-      {Math.abs(value - typical) >= 1 && <p className="mt-1 text-xs text-ink-3">Your number: {formatEuro(value)}</p>}
+      {Math.abs(value - typical) >= 1 && <p className="mt-1 text-xs text-ink-3">{t.numbers.yours(formatEuro(value))}</p>}
     </div>
   );
 }

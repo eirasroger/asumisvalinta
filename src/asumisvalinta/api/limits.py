@@ -11,7 +11,11 @@ from dataclasses import dataclass, field
 
 
 class LimitReached(Exception):
-    pass
+    """A question limit is reached; `kind` is "daily_limit" or "session_limit"."""
+
+    def __init__(self, kind: str) -> None:
+        super().__init__(kind)
+        self.kind = kind
 
 
 @dataclass
@@ -30,9 +34,9 @@ class QuestionLimits:
             if today != self._day:
                 self._day, self._today, self._sessions = today, 0, {}
             if self._today >= self.per_day:
-                raise LimitReached("The daily question limit is reached. Try again tomorrow.")
+                raise LimitReached("daily_limit")
             if self._sessions.get(session_id, 0) >= self.per_session:
-                raise LimitReached("This session has used all its questions.")
+                raise LimitReached("session_limit")
             self._today += 1
             self._sessions[session_id] = self._sessions.get(session_id, 0) + 1
 

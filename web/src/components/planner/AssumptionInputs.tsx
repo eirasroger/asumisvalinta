@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { InfoLabel, NumberField, Segmented, Sheet, Switch } from "@/components/ui";
+import { useI18n } from "@/i18n/I18nProvider";
 import type { PlannerStart } from "@/lib/api";
 import { formatEuro, formatPercent } from "@/lib/format";
 import { type Assumptions, DEFAULT_ASSUMPTIONS, fixedRate, fixedYears } from "@/lib/planner";
@@ -14,6 +15,8 @@ interface Props {
 }
 
 export function AssumptionInputs({ start, assumptions, onChange, price }: Props) {
+  const { t } = useI18n();
+  const a = t.assumptions;
   const [open, setOpen] = useState(false);
   const base = start.scenario;
   const mortgage = base.buy.mortgage;
@@ -46,78 +49,78 @@ export function AssumptionInputs({ start, assumptions, onChange, price }: Props)
         onClick={() => setOpen(true)}
         className="flex w-full items-center gap-3 rounded-xl border border-line bg-paper px-5 py-3.5 text-left transition-colors hover:border-line-strong"
       >
-        <span className="text-[15px] font-semibold">Assumptions</span>
+        <span className="text-[15px] font-semibold">{a.title}</span>
         <span className="ml-auto flex flex-wrap justify-end gap-1.5 text-[13px] text-ink-2">
           <Chip>
             {strategy === "invest"
-              ? `Funds ${formatPercent(investmentReturn)}`
+              ? a.chipFunds(formatPercent(investmentReturn))
               : strategy === "park"
-                ? `Savings ${formatPercent(savingsRate, 2)}`
-                : "Not invested"}
+                ? a.chipSavings(formatPercent(savingsRate, 2))
+                : a.chipNotInvested}
           </Chip>
-          <Chip>Loan {formatPercent(startRate, 2)}</Chip>
-          <Chip>{formatPercent(downPayment, 0)} down</Chip>
+          <Chip>{a.chipLoan(formatPercent(startRate, 2))}</Chip>
+          <Chip>{a.chipDown(formatPercent(downPayment, 0))}</Chip>
         </span>
         <svg className="shrink-0 text-ink-3" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
           <path d="m4.5 3 3 3-3 3" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
         </svg>
       </button>
 
-      <Sheet open={open} onOpenChange={setOpen} title="Assumptions">
+      <Sheet open={open} onOpenChange={setOpen} title={a.title}>
         <div className="space-y-8">
-          <Group title="Money not spent on housing">
+          <Group title={a.surplus}>
             <div className="grid gap-2">
               <Choice
                 selected={strategy === "park"}
                 onSelect={() => set("surplus_strategy")("park")}
-                title="Savings account"
-                detail={`Interest before tax; ${taxRate} tax on interest each year`}
+                title={a.savings}
+                detail={a.savingsDetail(taxRate)}
               >
-                <NumberField label="Savings interest" className="w-28" value={savingsRate} onChange={set("parked_cash_return")} {...percent} digits={2} />
+                <NumberField label={a.savingsRate} className="w-28" value={savingsRate} onChange={set("parked_cash_return")} {...percent} digits={2} />
               </Choice>
               <Choice
                 selected={strategy === "invest"}
                 onSelect={() => set("surplus_strategy")("invest")}
-                title="Index funds"
-                detail={`Return before tax; ${taxRate} tax on gains when sold`}
+                title={a.funds}
+                detail={a.fundsDetail(taxRate)}
               >
-                <NumberField label="Expected return" className="w-28" value={investmentReturn} onChange={set("investment_return")} {...percent} />
+                <NumberField label={a.fundsReturn} className="w-28" value={investmentReturn} onChange={set("investment_return")} {...percent} />
               </Choice>
               <Choice
                 selected={strategy === "keep"}
                 onSelect={() => set("surplus_strategy")("keep")}
-                title="Not invested"
-                detail="Kept as cash, without interest"
+                title={a.keep}
+                detail={a.keepDetail}
               >
                 <span />
               </Choice>
             </div>
           </Group>
 
-          <Group title="Mortgage">
-            <Setting label="Down payment" about={`${formatEuro(price * downPayment)} of your own money.`}>
-              <NumberField label="Down payment" value={downPayment} onChange={set("down_payment_share")} suffix="%" scale={100} digits={1} min={0} max={1} />
+          <Group title={a.mortgage}>
+            <Setting label={a.downPayment} about={a.downPaymentAbout(formatEuro(price * downPayment))}>
+              <NumberField label={a.downPayment} value={downPayment} onChange={set("down_payment_share")} suffix="%" scale={100} digits={1} min={0} max={1} />
             </Setting>
-            <Setting label="Interest rate" about={sources.mortgage_rate}>
-              <NumberField label="Interest rate" value={startRate} onChange={set("start_rate")} suffix="%" scale={100} digits={2} min={-0.05} max={0.3} />
+            <Setting label={a.interestRate} about={sources.mortgage_rate}>
+              <NumberField label={a.interestRate} value={startRate} onChange={set("start_rate")} suffix="%" scale={100} digits={2} min={-0.05} max={0.3} />
             </Setting>
-            <Setting label="Rate type" about="A fixed rate turns variable after the fixed period.">
+            <Setting label={a.rateType} about={a.rateTypeAbout}>
               <Segmented
-                label="Rate type"
+                label={a.rateType}
                 size="sm"
                 value={rateType}
                 onChange={set("rate_type")}
                 options={[
-                  { value: "variable", label: "Variable" },
-                  { value: "fixed", label: "Fixed" },
+                  { value: "variable", label: a.variable },
+                  { value: "fixed", label: a.fixed },
                 ]}
               />
             </Setting>
             {rateType === "fixed" && (
               <>
-                <Setting label="Fixed rate" about="Rate during the fixed period.">
+                <Setting label={a.fixedRate} about={a.fixedRateAbout}>
                   <NumberField
-                    label="Fixed rate"
+                    label={a.fixedRate}
                     value={fixedRate(assumptions, mortgage.fixed_rate, startRate)}
                     onChange={set("fixed_rate")}
                     suffix="%"
@@ -127,38 +130,38 @@ export function AssumptionInputs({ start, assumptions, onChange, price }: Props)
                     max={0.3}
                   />
                 </Setting>
-                <Setting label="Fixed for" about="Length of the fixed period.">
+                <Setting label={a.fixedFor} about={a.fixedForAbout}>
                   <NumberField
-                    label="Fixed for"
+                    label={a.fixedFor}
                     value={fixedYears(assumptions, mortgage)}
                     onChange={(value) => set("fixed_years")(Math.round(value))}
-                    suffix="years"
+                    suffix={a.yearsSuffix}
                     min={1}
                     max={40}
                   />
                 </Setting>
               </>
             )}
-            <Setting label="Rate outlook" about="How the variable rate moves each year.">
+            <Setting label={a.outlook} about={a.outlookAbout}>
               <Segmented
-                label="Rate outlook"
+                label={a.outlook}
                 size="sm"
                 value={rateKind}
                 onChange={set("rate_kind")}
                 options={[
-                  { value: "flat", label: "Level" },
-                  { value: "rising", label: "Rising" },
-                  { value: "falling", label: "Falling" },
+                  { value: "flat", label: a.level },
+                  { value: "rising", label: a.rising },
+                  { value: "falling", label: a.falling },
                 ]}
               />
             </Setting>
             {rateKind !== "flat" && (
-              <Setting label="Change per year" about="Percentage points a year.">
+              <Setting label={a.changePerYear} about={a.changePerYearAbout}>
                 <NumberField
-                  label="Change per year"
+                  label={a.changePerYear}
                   value={assumptions.change_per_year ?? (mortgage.rate_path.change_per_year || 0.0025)}
                   onChange={set("change_per_year")}
-                  suffix="pts"
+                  suffix={a.pointsSuffix}
                   scale={100}
                   digits={2}
                   min={0}
@@ -166,56 +169,62 @@ export function AssumptionInputs({ start, assumptions, onChange, price }: Props)
                 />
               </Setting>
             )}
-            <Setting label="Loan term" about="Years to repay.">
+            <Setting label={a.term} about={a.termAbout}>
               <NumberField
-                label="Loan term"
+                label={a.term}
                 value={assumptions.term_years ?? mortgage.term_years}
                 onChange={(value) => set("term_years")(Math.round(value))}
-                suffix="years"
+                suffix={a.yearsSuffix}
                 min={1}
                 max={40}
               />
             </Setting>
-            <Setting label="Repayment" about="Annuity keeps the payment level. Equal principal starts higher and falls.">
+            <Setting label={a.repayment} about={a.repaymentAbout}>
               <Segmented
-                label="Repayment"
+                label={a.repayment}
                 size="sm"
                 value={assumptions.repayment ?? mortgage.repayment}
                 onChange={set("repayment")}
                 options={[
-                  { value: "annuity", label: "Annuity" },
-                  { value: "equal_principal", label: "Equal principal" },
+                  { value: "annuity", label: a.annuity },
+                  { value: "equal_principal", label: a.equalPrincipal },
                 ]}
               />
             </Setting>
           </Group>
 
-          <Group title="First home">
+          <Group title={a.firstHome}>
             <Setting
-              label="ASP loan"
-              about={`First home with ${formatPercent(policy.asp_min_savings_share, 0)} saved in an ASP account: the state pays ${formatPercent(policy.asp_interest_subsidy_share, 0)} of interest above ${formatPercent(policy.asp_interest_subsidy_threshold_rate, 1)} for ${policy.asp_interest_subsidy_max_years} years, on up to ${formatEuro(policy.asp_loan_max)}.`}
+              label={a.asp}
+              about={a.aspAbout(
+                formatPercent(policy.asp_min_savings_share, 0),
+                formatPercent(policy.asp_interest_subsidy_share, 0),
+                formatPercent(policy.asp_interest_subsidy_threshold_rate, 1),
+                policy.asp_interest_subsidy_max_years,
+                formatEuro(policy.asp_loan_max),
+              )}
             >
-              <Switch label="ASP loan" checked={assumptions.asp_loan ?? false} onChange={set("asp_loan")} />
+              <Switch label={a.asp} checked={assumptions.asp_loan ?? false} onChange={set("asp_loan")} />
             </Setting>
           </Group>
 
-          <Group title="Growth per year">
-            <Setting label="Flat prices" about={`${sources.price_growth} in this area.`}>
-              <NumberField label="Flat price growth" value={assumptions.price_growth ?? base.buy.price_growth} onChange={set("price_growth")} {...percent} />
+          <Group title={a.growth}>
+            <Setting label={a.prices} about={`${sources.price_growth}.`}>
+              <NumberField label={a.priceGrowth} value={assumptions.price_growth ?? base.buy.price_growth} onChange={set("price_growth")} {...percent} />
             </Setting>
             <div className="py-2.5">
               <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-                <InfoLabel label="Rents">
+                <InfoLabel label={a.rents}>
                   <p className="leading-relaxed">
-                    {sources.rent_growth}. Market trend: {sources.rent_growth_market.toLowerCase()}.
+                    {a.rentsAbout(sources.rent_growth, sources.rent_growth_market.toLowerCase())}
                   </p>
                 </InfoLabel>
                 <div className="flex justify-end [&>div:has(input)]:w-36 sm:[&>div:has(input)]:w-40">
-                  <NumberField label="Rent growth" value={rentGrowth} onChange={set("rent_growth")} {...percent} />
+                  <NumberField label={a.rentGrowth} value={rentGrowth} onChange={set("rent_growth")} {...percent} />
                 </div>
               </div>
               <Segmented
-                label="Rent growth rule"
+                label={a.rentRule}
                 size="sm"
                 className="mt-2 w-full"
                 value={rentRule}
@@ -223,30 +232,30 @@ export function AssumptionInputs({ start, assumptions, onChange, price }: Props)
                   set("rent_growth")(rule === "lease" ? start.rent_growth.lease_clause : start.rent_growth.market)
                 }
                 options={[
-                  { value: "lease", label: `Lease clause ${formatPercent(start.rent_growth.lease_clause)}` },
-                  { value: "market", label: `Market trend ${formatPercent(start.rent_growth.market)}` },
+                  { value: "lease", label: a.leaseClause(formatPercent(start.rent_growth.lease_clause)) },
+                  { value: "market", label: a.marketTrend(formatPercent(start.rent_growth.market)) },
                 ]}
               />
             </div>
-            <Setting label="Housing company charges" about={`${sources.maintenance_charge_growth}.`}>
+            <Setting label={a.companyCharges} about={`${sources.maintenance_charge_growth}.`}>
               <NumberField
-                label="Housing company charge growth"
+                label={a.companyChargeGrowth}
                 value={assumptions.charge_growth ?? base.buy.maintenance_charge_growth}
                 onChange={set("charge_growth")}
                 {...percent}
               />
             </Setting>
-            <Setting label="Right-of-occupancy charges" about={`${sources.aso_charge_growth}.`}>
+            <Setting label={a.asoCharges} about={`${sources.aso_charge_growth}.`}>
               <NumberField
-                label="Right-of-occupancy charge growth"
+                label={a.asoChargeGrowth}
                 value={assumptions.aso_charge_growth ?? base.aso?.charge_growth ?? 0}
                 onChange={set("aso_charge_growth")}
                 {...percent}
               />
             </Setting>
-            <Setting label="Right-of-occupancy fee refund" about={`${sources.building_cost_index_growth}.`}>
+            <Setting label={a.feeRefund} about={`${sources.building_cost_index_growth}.`}>
               <NumberField
-                label="Fee refund growth"
+                label={a.feeRefundGrowth}
                 value={assumptions.fee_growth ?? base.aso?.building_cost_index_growth ?? 0}
                 onChange={set("fee_growth")}
                 {...percent}
@@ -254,10 +263,10 @@ export function AssumptionInputs({ start, assumptions, onChange, price }: Props)
             </Setting>
           </Group>
 
-          <Group title="Selling">
-            <Setting label="Selling costs" about="Agent fee when you sell.">
+          <Group title={a.selling}>
+            <Setting label={a.sellingCosts} about={a.sellingCostsAbout}>
               <NumberField
-                label="Selling costs"
+                label={a.sellingCosts}
                 value={assumptions.selling_cost_rate ?? base.buy.selling_cost_rate}
                 onChange={set("selling_cost_rate")}
                 suffix="%"
@@ -275,7 +284,7 @@ export function AssumptionInputs({ start, assumptions, onChange, price }: Props)
               className="h-9 w-full rounded-lg border border-line text-sm font-medium hover:bg-well"
               onClick={() => onChange({ ...DEFAULT_ASSUMPTIONS, include_aso: assumptions.include_aso })}
             >
-              Reset assumptions
+              {a.resetAll}
             </button>
           )}
         </div>

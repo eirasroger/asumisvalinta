@@ -21,15 +21,9 @@ from asumisvalinta.scenario.models import (
     ScenarioInput,
 )
 from asumisvalinta.scenario.policy import PolicyRow, resolve_policy
+from asumisvalinta.texts import GEOGRAPHY_LEVELS, PRICE_AGE_SCOPES, SOURCES, text
 
 GROWTH_YEARS = 10
-PRICE_AGE_SCOPES = {
-    "postal_code": "this postal code",
-    "price_sub_area": "the postal codes of this price area",
-    "municipality": "the postal codes of this municipality",
-    "region": "the postal codes of this region",
-    "country": "all postal codes in Finland",
-}
 # From 2010 on, capital charges mostly repay the construction loan, which the
 # housing company loan share already covers; such buildings get the 2000s level.
 LOAN_DRIVEN_FROM_YEAR = 2010
@@ -107,8 +101,17 @@ def load_defaults(
     buyer_age: int | None = None,
     warehouse: Path | None = None,
     building_year: int | None = None,
+    language: str = "en",
 ) -> Defaults:
+    """Default scenario for a flat; `language` sets the language of the source notes."""
     purchase_date = purchase_date or dt.date.today()
+
+    def note(key: str, **values: object) -> str:
+        return text(SOURCES, language, key, **values)
+
+    def level_name(level: str) -> str:
+        return text(GEOGRAPHY_LEVELS, language, level)
+
     with connect_read_only(warehouse) as connection:
 
         def one(sql: str, params: list | None = None) -> tuple:
@@ -289,29 +292,32 @@ def load_defaults(
     lease_clause_growth = max(assumptions["rent_growth_floor"], inflation)
     aso_charge_growth = statistics.geometric_mean(1 + change for change in aso_changes) - 1
 
-    age_note = "all building ages"
+    age_note = note("all_building_ages")
     if building_year is not None:
         own_class = _class_for(classes, building_year)
         maintenance_charge *= own_class.maintenance_charge / all_ages[4]
-        age_note = f"buildings from {building_year}"
+        age_note = note("building_year", year=building_year)
     capital_charges = capital_charge_schedule(
         classes, charges_year, purchase_date.year, building_year
     )
 
     price_age_ratio = 1.0
-    price_age_note = "Prices are not split by building age"
+    price_age_note = note("price_building_age_none")
     if price_age is not None:
         price_age_ratio, level, first_year, last_year, first_period, last_period = price_age
         if first_year is None:
-            built = f"before {last_year + 1}"
+            built = note("built_before", year=last_year + 1)
         elif last_year is None:
-            built = f"from {first_year} on"
+            built = note("built_from", year=first_year)
         else:
-            built = f"from {first_year} to {last_year}"
-        price_age_note = (
-            f"Flats built {built} sold for {price_age_ratio:.2f} times the average price per m² "
-            f"of all flats in the same postal code, {first_period} to {last_period}, "
-            f"averaged over {PRICE_AGE_SCOPES[level]} (Statistics Finland)"
+            built = note("built_between", first=first_year, last=last_year)
+        price_age_note = note(
+            "price_building_age",
+            built=built,
+            ratio=price_age_ratio,
+            first=first_period,
+            last=last_period,
+            scope=text(PRICE_AGE_SCOPES, language, level),
         )
 
     buy_price_per_m2 = price_per_m2 * price_age_ratio
@@ -356,58 +362,49 @@ def load_defaults(
         policy=policy,
     )
     sources = {
-        "price_per_m2": f"Statistics Finland, {price_level} level, {price_period}",
+        "price_per_m2": note("price_per_m2", level=level_name(price_level), period=price_period),
         "price_building_age": price_age_note,
-        "rent_per_m2_month": (
-            f"Statistics Finland, non-subsidised, {rent_level} level, {rent_period}"
+        "rent_per_m2_month": note(
+            "rent_per_m2_month", level=level_name(rent_level), period=rent_period
         ),
-        "price_growth": f"Price index, average growth over {GROWTH_YEARS} years",
-        "rent_growth": (
-            f"Lease clause: inflation {inflation:.1%} a year over {GROWTH_YEARS} years to "
-            f"{cpi_year}, at least {assumptions['rent_growth_floor']:.0%}"
+        "price_growth": note("price_growth", years=GROWTH_YEARS),
+        "rent_growth": note(
+            "rent_growth",
+            inflation=inflation,
+            years=GROWTH_YEARS,
+            year=cpi_year,
+            floor=assumptions["rent_growth_floor"],
         ),
-        "rent_growth_market": f"Market rents here, average growth over {GROWTH_YEARS} years",
-        "maintenance_charge": (
-            f"Housing company finances, area {charge_area}, {charge_end_year}, {age_note}"
+        "rent_growth_market": note("rent_growth_market", years=GROWTH_YEARS),
+        "maintenance_charge": note(
+            "maintenance_charge", area=charge_area, year=charge_end_year, age=age_note
         ),
-        "maintenance_charge_growth": (
-            f"Same as right-of-occupancy charges, {aso_change_years[0]} to "
-            f"{aso_change_years[1]} (Varke). Housing company charges in this region "
-            f"grew {maintenance_growth:.1%} a year over {GROWTH_YEARS} years"
+        "maintenance_charge_growth": note(
+            "maintenance_charge_growth",
+            first=aso_change_years[0],
+            last=aso_change_years[1],
+            growth=maintenance_growth,
+            years=GROWTH_YEARS,
         ),
-        "capital_charges": (
-            f"Housing company capital charges by building age, {charges_year}, {age_note}"
+        "capital_charges": note("capital_charges", year=charges_year, age=age_note),
+        "own_repairs": note("own_repairs", first=repairs_first, last=repairs_last),
+        "mortgage_rate": note(
+            "mortgage_rate_fixed" if fixed else "mortgage_rate", month=f"{rate_month:%Y-%m}"
         ),
-        "own_repairs": (
-            f"Renovations owner-occupiers of flats pay themselves, "
-            f"average of {repairs_first} to {repairs_last}"
+        "savings_rate": note("savings_rate", month=f"{deposit_month:%Y-%m}"),
+        "aso_fee": note("aso_fee", share=aso_fee_share),
+        "aso_charge": note("aso_charge", share=aso_charge_share),
+        "aso_charge_growth": note(
+            "aso_charge_growth", first=aso_change_years[0], last=aso_change_years[1]
         ),
-        "mortgage_rate": (
-            f"ECB, average variable rate on new housing loans in Finland, {rate_month:%Y-%m}"
-            + (", fixed for the whole loan term" if fixed else "")
+        "building_cost_index_growth": note(
+            "building_cost_index_growth",
+            growth=index_growth,
+            years=GROWTH_YEARS,
+            month=f"{index_month:%Y-%m}",
         ),
-        "savings_rate": (
-            f"ECB, new household deposits up to one year in Finland, {deposit_month:%Y-%m}"
-        ),
-        "aso_fee": (
-            f"Assumption: {aso_fee_share:.0%} of the buy price. The Act on right-of-occupancy "
-            "dwellings (393/2021, section 9) caps fees at 15% of the building's acquisition "
-            "cost in state-subsidised buildings; the buy price stands in for that cost"
-        ),
-        "aso_charge": (
-            f"Assumption: {aso_charge_share:.0%} of the market rent here. The Act "
-            "(section 33) requires charges below the rent of comparable rental flats"
-        ),
-        "aso_charge_growth": (
-            f"Right-of-occupancy charges in Finland, average change "
-            f"{aso_change_years[0]} to {aso_change_years[1]} (Varke)"
-        ),
-        "building_cost_index_growth": (
-            f"Assumption. The building cost index grew {index_growth:.1%} a year over "
-            f"{GROWTH_YEARS} years to {index_month:%Y-%m}"
-        ),
-        "policy": f"Tax and lending rules valid on {purchase_date:%Y-%m-%d}",
-        "assumptions": "Calculator assumptions (editable)",
+        "policy": note("policy", date=f"{purchase_date:%Y-%m-%d}"),
+        "assumptions": note("assumptions"),
     }
     return Defaults(
         scenario=scenario,

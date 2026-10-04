@@ -2,15 +2,16 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { DEFAULT_LOCALE, type Locale } from "@/i18n/config";
 
-export const metadata = { title: "Methodology · Asumisvalinta" };
-
-async function methodology() {
-  return readFile(path.join(process.cwd(), "..", "content", "methodology.md"), "utf-8");
+/** content/methodology.md is English; other languages add their code, as in methodology.fi.md. */
+async function methodology(locale: Locale) {
+  const name = locale === "en" ? "methodology.md" : `methodology.${locale}.md`;
+  return readFile(path.join(process.cwd(), "..", "content", name), "utf-8");
 }
 
-export default async function MethodologyPage() {
-  const text = await methodology();
+export async function MethodologyView({ locale = DEFAULT_LOCALE }: { locale?: Locale }) {
+  const text = await methodology(locale);
   return (
     <article className="mx-auto max-w-3xl px-4 pt-10 pb-16 sm:px-6">
       <ReactMarkdown

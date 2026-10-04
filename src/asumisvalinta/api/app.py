@@ -15,9 +15,10 @@ from asumisvalinta.api import addresses, analytics, throttle, usage
 from asumisvalinta.api.limits import LimitReached, QuestionLimits
 from asumisvalinta.config import connect_read_only, duckdb_path, load_dotenv
 from asumisvalinta.scenario import ScenarioInput, ScenarioResult, simulate
-from asumisvalinta.scenario.defaults import load_defaults
+from asumisvalinta.scenario.defaults import DefaultsError, load_defaults
 from asumisvalinta.scenario.overrides import ScenarioOverrides, apply_overrides
 from asumisvalinta.semantic import Filter, MetricQuery, SemanticLayer
+from asumisvalinta.texts import ERRORS, WHAT_IFS, Language, text
 
 RoomType = Literal["one_room", "two_room", "three_room_plus"]
 POSTAL_CODE = r"^\d{5}$"
@@ -227,7 +228,7 @@ def scenario(request: ScenarioRequest) -> dict[str, Any]:
         )
         inputs = apply_overrides(defaults.scenario, request.overrides)
         result = simulate(inputs)
-    except LookupError as error:
+    except DefaultsError as error:
         raise HTTPException(404, str(error)) from error
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
@@ -253,33 +254,36 @@ def _agent():
 
 
 @app.post("/api/ask")
-def ask(request: AskRequest, http: Request, background: BackgroundTasks) -> dict[str, Any]:
+def ask(
+    request: AskRequest, http: Request, background: BackgroundTasks, lang: Language = "en"
+) -> dict[str, Any]:
+    def error_text(key: str, **values: object) -> str:
+        return text(ERRORS, lang, key, **values)
+
     try:
         agent = _agent()
     except RuntimeError as error:
-        raise HTTPException(503, "The question service is not configured.") from error
+        raise HTTPException(503, error_text("not_configured")) from error
     try:
         allowed = throttle.allow(throttle.client_ip(http), "ask", throttle.ASK_INTERVAL_SECONDS)
     except throttle.Unavailable as error:
-        raise HTTPException(503, "The assistant is not available right now.") from error
+        raise HTTPException(503, error_text("unavailable")) from error
     if not allowed:
         raise HTTPException(
             429,
-            f"Please wait {throttle.ASK_INTERVAL_SECONDS} seconds between questions.",
+            error_text("wait", seconds=throttle.ASK_INTERVAL_SECONDS),
             headers={"Retry-After": str(throttle.ASK_INTERVAL_SECONDS)},
         )
     try:
         usage.check()
     except usage.BudgetExhausted as error:
-        raise HTTPException(
-            429, "The assistant has reached today's limit. Try again tomorrow."
-        ) from error
+        raise HTTPException(429, error_text("budget")) from error
     except usage.BudgetUnavailable as error:
-        raise HTTPException(503, "The assistant is not available right now.") from error
+        raise HTTPException(503, error_text("unavailable")) from error
     try:
         limits.take(request.session_id)
     except LimitReached as error:
-        raise HTTPException(429, str(error)) from error
+        raise HTTPException(429, error_text(error.kind)) from error
     run = agent.run(request.question)
     usage.add(run.prompt_tokens + run.completion_tokens)
     status = run.status if not run.error else "error"
@@ -372,6 +376,7 @@ def planner_start(
     size_m2: Annotated[float, Query(gt=0, le=500)],
     horizon_years: Annotated[int, Query(ge=1, le=30)] = 5,
     building_year: Annotated[int | None, Query(ge=1800, le=2035)] = None,
+    lang: Language = "en",
 ) -> dict[str, Any]:
     """Default inputs for a flat and the market benchmarks for each of them."""
     try:
@@ -382,9 +387,10 @@ def planner_start(
             horizon_years,
             warehouse=warehouse(),
             building_year=building_year,
+            language=lang,
         )
-    except LookupError as error:
-        raise HTTPException(404, str(error)) from error
+    except DefaultsError as error:
+        raise HTTPException(404, text(ERRORS, lang, "no_data", postal_code=postal_code)) from error
     level = _rows(
         "select levels.*, postal.postal_area_name, postal.municipality_name "
         "from marts.mart_market_levels as levels "
@@ -445,17 +451,7 @@ def planner_start(
     }
 
 
-WHAT_IFS: dict[str, str] = {
-    "rates_down": "Interest rates 1 point lower",
-    "rates_up": "Interest rates 1 point higher",
-    "prices_slower": "Flat prices grow 2 points slower",
-    "prices_faster": "Flat prices grow 2 points faster",
-    "rents_slower": "Rents grow 1 point slower",
-    "rents_faster": "Rents grow 2 points faster",
-    "charges_faster": "Charges rise 2 points faster",
-    "savings_lower": "Savings earn 2 points less",
-    "savings_higher": "Savings earn 2 points more",
-}
+WHAT_IF_KEYS = tuple(WHAT_IFS["en"])
 
 
 def _shift_rates(mortgage: dict[str, Any], change: float) -> None:
@@ -494,17 +490,17 @@ def _variant(scenario: ScenarioInput, key: str) -> ScenarioInput:
 
 
 @app.post("/api/planner/run")
-def planner_run(scenario: ScenarioInput) -> dict[str, Any]:
+def planner_run(scenario: ScenarioInput, lang: Language = "en") -> dict[str, Any]:
     """Run the scenario as given, plus what-if variants of it."""
     try:
         result = simulate(scenario)
         what_ifs = []
-        for key, label in WHAT_IFS.items():
+        for key in WHAT_IF_KEYS:
             variant = simulate(_variant(scenario, key))
             what_ifs.append(
                 {
                     "key": key,
-                    "label": label,
+                    "label": text(WHAT_IFS, lang, key),
                     "end_wealth": {o.option: o.end_wealth for o in variant.options},
                     "break_even_years_buy_vs_rent": variant.break_even_years_buy_vs_rent,
                 }

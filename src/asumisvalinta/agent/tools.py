@@ -95,7 +95,10 @@ def answer_tool() -> Tool:
                     "type": "string",
                     "enum": ["answered", "refused", "needs_clarification"],
                 },
-                "answer": {"type": "string", "description": "Answer for the user in English."},
+                "answer": {
+                    "type": "string",
+                    "description": "Answer for the user, in the language of the question.",
+                },
                 "value": {"type": ["number", "null"], "description": "Main number, if any."},
                 "unit": {"type": ["string", "null"]},
                 "sources": {

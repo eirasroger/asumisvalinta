@@ -12,24 +12,27 @@ export const HELSINKI_METRO = ["091", "049", "092", "235"];
 export type MapScope = "metro" | "finland";
 export type MapMetric = "price" | "rent" | "ratio";
 
-export const SCOPES: { value: MapScope; label: string; bounds: [[number, number], [number, number]] }[] = [
-  { value: "metro", label: "Helsinki area", bounds: [[24.5, 60.1], [25.3, 60.4]] },
-  { value: "finland", label: "Finland", bounds: [[19.3, 59.7], [31.6, 70.1]] },
+/** Map views and metrics; their names are in the messages files (map.scopes, map.metrics). */
+export const SCOPES: { value: MapScope; bounds: [[number, number], [number, number]] }[] = [
+  { value: "metro", bounds: [[24.5, 60.1], [25.3, 60.4]] },
+  { value: "finland", bounds: [[19.3, 59.7], [31.6, 70.1]] },
 ];
 
 export const METRICS: {
   value: MapMetric;
-  label: string;
-  unit: string;
   short: (value: number) => string;
+  /** The exact value; the price-to-rent ratio still needs the word for years. */
   exact: (value: number) => string;
 }[] = [
-  { value: "price", label: "Price", unit: "per m²", short: formatCompactEuro, exact: (value) => `${formatEuro(value)} / m²` },
-  { value: "rent", label: "Rent", unit: "per m² a month", short: formatEuroCents, exact: (value) => `${formatEuroCents(value)} / m²` },
-  { value: "ratio", label: "Price-to-rent", unit: "years of rent", short: (value) => formatNumber(value), exact: (value) => `${formatNumber(value)} years` },
+  { value: "price", short: formatCompactEuro, exact: (value) => `${formatEuro(value)} / m²` },
+  { value: "rent", short: formatEuroCents, exact: (value) => `${formatEuroCents(value)} / m²` },
+  { value: "ratio", short: (value) => formatNumber(value), exact: (value) => formatNumber(value) },
 ];
 
 export const SEQUENTIAL = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"];
+
+/** Shown as the translated map.shapesError message. */
+export const SHAPES_ERROR = "shapes";
 
 export type Shape = Feature<Geometry, { postal_code: string; municipality_code: string }>;
 
@@ -62,7 +65,7 @@ function cached<K, V>(load: (key: K) => Promise<V>) {
 
 const shapeCache = cached(async () => {
   const response = await fetch("/geo/postal-areas.topo.json");
-  if (!response.ok) throw new Error("The postal area map could not be loaded.");
+  if (!response.ok) throw new Error(SHAPES_ERROR);
   const topology = (await response.json()) as Topology<{ postal_areas: GeometryCollection<Shape["properties"]> }>;
   return (feature(topology, topology.objects.postal_areas) as FeatureCollection<Geometry, Shape["properties"]>).features;
 });
@@ -80,7 +83,7 @@ export function preloadMap(roomType: RoomType) {
 /** Download what the other controls need, once the map is on screen. */
 export function preloadRest(roomType: RoomType) {
   trendCache.get(roomType).catch(() => undefined);
-  for (const type of ROOM_TYPES) valueCache.get(type.value).catch(() => undefined);
+  for (const type of ROOM_TYPES) valueCache.get(type).catch(() => undefined);
 }
 
 /** Values for the map; the previous room type's values stay until the new ones arrive. */

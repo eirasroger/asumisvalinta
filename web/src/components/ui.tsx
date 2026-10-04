@@ -3,6 +3,7 @@
 import NumberFlow from "@number-flow/react";
 import { Dialog, Popover as RadixPopover, Slider as RadixSlider, Switch as RadixSwitch, ToggleGroup } from "radix-ui";
 import { useId, useRef, useState } from "react";
+import { useI18n } from "@/i18n/I18nProvider";
 import { formatNumber, parseNumber } from "@/lib/format";
 
 export function Segmented<T extends string>({
@@ -209,6 +210,7 @@ export function Sheet({
   title: string;
   children: React.ReactNode;
 }) {
+  const { t } = useI18n();
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
@@ -216,7 +218,7 @@ export function Sheet({
         <Dialog.Content className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-paper shadow-float outline-none">
           <div className="flex h-14 shrink-0 items-center justify-between border-b border-line px-6">
             <Dialog.Title className="text-[17px] font-semibold tracking-tight">{title}</Dialog.Title>
-            <Dialog.Close className="-mr-2 grid size-10 place-items-center rounded-md text-ink-3 hover:bg-well hover:text-ink" aria-label="Close">
+            <Dialog.Close className="-mr-2 grid size-10 place-items-center rounded-md text-ink-3 hover:bg-well hover:text-ink" aria-label={t.common.close}>
               <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
                 <path d="m4 4 8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               </svg>

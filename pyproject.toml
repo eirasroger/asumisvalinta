@@ -50,6 +50,8 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+# The en dash writes ranges in Finnish text, for example "vuosina 1980–1989".
+allowed-confusables = ["–"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

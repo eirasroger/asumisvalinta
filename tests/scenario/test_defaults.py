@@ -153,7 +153,7 @@ def test_asp_loan_cap_is_higher_in_helsinki(defaults):
 
 
 def test_every_default_has_a_source(defaults):
-    assert "postal_code level" in defaults.sources["price_per_m2"]
+    assert "postal code level" in defaults.sources["price_per_m2"]
     assert all(defaults.sources.values())
 
 
