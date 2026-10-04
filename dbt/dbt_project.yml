@@ -30,6 +30,8 @@ models:
 seeds:
   asumisvalinta:
     +schema: seeds
+    # Recreate seed tables on every run, so a changed CSV header loads into a restored warehouse.
+    +full_refresh: true
 
 snapshots:
   asumisvalinta:
