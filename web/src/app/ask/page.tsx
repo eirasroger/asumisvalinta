@@ -18,16 +18,12 @@ const STATUS_LABELS: Record<AskResponse["status"], string> = {
   error: "Something went wrong",
 };
 
+// Kept in memory only: nothing is stored on the device, and a reload starts a new session.
+let currentSession: string | null = null;
+
 function sessionId() {
-  try {
-    const stored = sessionStorage.getItem("asumisvalinta-session");
-    if (stored) return stored;
-    const created = crypto.randomUUID();
-    sessionStorage.setItem("asumisvalinta-session", created);
-    return created;
-  } catch {
-    return crypto.randomUUID();
-  }
+  currentSession ??= crypto.randomUUID();
+  return currentSession;
 }
 
 export default function AskPage() {
