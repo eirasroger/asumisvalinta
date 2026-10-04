@@ -29,6 +29,9 @@ export interface PostalArea {
   postal_area_name: string;
   municipality_name: string;
   is_helsinki_metro: boolean;
+  /** Street and building numbers when the match is a street address. */
+  street?: string;
+  addresses_downloaded_on?: string;
 }
 
 export interface MarketLevel {

@@ -11,7 +11,7 @@ from fastapi import BackgroundTasks, Body, FastAPI, HTTPException, Query, Reques
 from fastapi import Path as PathParam
 from pydantic import BaseModel, ConfigDict, Field
 
-from asumisvalinta.api import analytics, throttle, usage
+from asumisvalinta.api import addresses, analytics, throttle, usage
 from asumisvalinta.api.limits import LimitReached, QuestionLimits
 from asumisvalinta.config import connect_read_only, duckdb_path, load_dotenv
 from asumisvalinta.scenario import ScenarioInput, ScenarioResult, simulate
@@ -89,13 +89,21 @@ def health() -> dict[str, Any]:
 
 @app.get("/api/postal-areas")
 def postal_areas(q: str = Query(min_length=2, max_length=60)) -> list[dict[str, Any]]:
+    """Postal code areas matching a postal code, area or municipality name, or a street address."""
     pattern = f"%{q.strip().lower()}%"
-    return _rows(
+    areas = _rows(
         "select postal_code, postal_area_name, municipality_name, is_helsinki_metro "
-        "from marts.dim_postal_area where postal_code like ? or lower(postal_area_name) like ? "
-        "or lower(municipality_name) like ? order by postal_code limit 20",
+        "from marts.dim_postal_area where postal_code like ? "
+        "or strip_accents(lower(postal_area_name)) like strip_accents(?) "
+        "or strip_accents(lower(municipality_name)) like strip_accents(?) "
+        "order by postal_code limit 20",
         [pattern, pattern, pattern],
     )
+    streets = addresses.search(q, _rows)
+    query = addresses.parse(q)
+    if query is not None and query.number is not None:
+        return streets + areas[:5]
+    return areas[:10] + streets
 
 
 @app.get("/api/market/{postal_code}")

@@ -3,13 +3,16 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { api, type PostalArea } from "@/lib/api";
 
+const POSTI_TERMS_URL =
+  "https://www.posti.fi/mzj3zpe8qb7p/1eKbwM2WAEY5AuGi5TrSZ7/c76a865cf5feb2c527a114b8615e9580/posti-postal-code-services-service-description-and-terms-of-use-20150101.pdf";
+
 interface Props {
   onChange: (area: PostalArea) => void;
   placeholder?: string;
   autoFocus?: boolean;
 }
 
-export function PostalCodeSearch({ onChange, placeholder = "Search postal code or area", autoFocus }: Props) {
+export function PostalCodeSearch({ onChange, placeholder = "Search address, postal code or area", autoFocus }: Props) {
   const listId = useId();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PostalArea[]>([]);
@@ -52,6 +55,7 @@ export function PostalCodeSearch({ onChange, placeholder = "Search postal code o
   }
 
   const expanded = open && results.length > 0;
+  const addressesDate = results.find((area) => area.addresses_downloaded_on)?.addresses_downloaded_on;
 
   return (
     <div className="relative">
@@ -63,7 +67,7 @@ export function PostalCodeSearch({ onChange, placeholder = "Search postal code o
         <input
           type="text"
           role="combobox"
-          aria-label="Search postal code or area"
+          aria-label="Search address, postal code or area"
           aria-expanded={expanded}
           aria-controls={listId}
           aria-autocomplete="list"
@@ -100,7 +104,7 @@ export function PostalCodeSearch({ onChange, placeholder = "Search postal code o
         >
           {results.map((area, index) => (
             <li
-              key={area.postal_code}
+              key={`${area.postal_code}-${area.street ?? ""}-${area.municipality_name}`}
               id={`${listId}-${index}`}
               role="option"
               aria-selected={index === active}
@@ -109,10 +113,31 @@ export function PostalCodeSearch({ onChange, placeholder = "Search postal code o
               className={`flex cursor-pointer items-baseline gap-2.5 rounded-lg px-2.5 py-2 ${index === active ? "bg-well" : ""}`}
             >
               <span className="num text-ink-3">{area.postal_code}</span>
-              <span className="font-medium">{area.postal_area_name}</span>
-              <span className="ml-auto text-[13px] text-ink-3">{area.municipality_name}</span>
+              {area.street ? (
+                <span className="min-w-0">
+                  <span className="font-medium">{area.street}</span>
+                  <span className="block text-[13px] text-ink-3">{area.postal_area_name}</span>
+                </span>
+              ) : (
+                <span className="font-medium">{area.postal_area_name}</span>
+              )}
+              <span className="ml-auto shrink-0 text-[13px] text-ink-3">{area.municipality_name}</span>
             </li>
           ))}
+          {addressesDate && (
+            <li role="presentation" className="px-2.5 pt-2 pb-1.5 text-[11px] text-ink-3">
+              Addresses: Posti Basic Address File, downloaded {addressesDate}.{" "}
+              <a
+                href={POSTI_TERMS_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="underline hover:text-ink"
+                onMouseDown={(event) => event.preventDefault()}
+              >
+                Terms of use
+              </a>
+            </li>
+          )}
         </ul>
       )}
     </div>

@@ -69,6 +69,10 @@ TABLES: dict[str, str] = {
     "raw_statfin_classifications.area_postal_codes": "true",
     "raw_paavo.postal_areas": "true",
     "raw_ecb.mir_interest_rates": "time_period >= '2020-01'",
+    "raw_posti.street_addresses": (
+        "street_name_fi in "
+        "('Mannerheimintie', 'Annankatu', 'Koulukatu', 'Tikkurilantie', 'Hämeentie')"
+    ),
 }
 
 

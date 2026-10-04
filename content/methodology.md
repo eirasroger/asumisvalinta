@@ -165,3 +165,4 @@ The what-if table reruns the whole calculation with one assumption changed, in b
 - Finlex: Act on right-of-occupancy dwellings 393/2021.
 - Financial Supervisory Authority (FIN-FSA): maximum loan-to-collateral ratio.
 - Asuntosäätiö: public listings of right-of-occupancy buildings, used as a sample for fees and charges.
+- Posti: Basic Address File, the streets and building number ranges of each postal code in mainland Finland, used to find the postal code of an address. Free of charge under Posti's [terms of use](https://www.posti.fi/mzj3zpe8qb7p/1eKbwM2WAEY5AuGi5TrSZ7/c76a865cf5feb2c527a114b8615e9580/posti-postal-code-services-service-description-and-terms-of-use-20150101.pdf); the search shows the date the file was downloaded. It is refreshed with every monthly data update.

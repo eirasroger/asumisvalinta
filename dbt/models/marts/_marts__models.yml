@@ -854,6 +854,60 @@ models:
       - name: value_eur_per_m2_month
         description: Value of the item, euros per m² per month.
 
+  - name: dim_street_address_range
+    description: >
+      Streets of mainland Finland with building number ranges and the postal code area of each
+      range, used to find the postal code of an address. A range covers the odd or even building
+      numbers from the lowest to the highest, or the whole street when the numbers are empty.
+      P.O. box codes are left out. Source: Posti Basic Address File.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - municipality_code
+              - street_name_fi
+              - postal_code
+              - building_numbers
+              - lowest_building_number
+              - highest_building_number
+    columns:
+      - name: street_name_fi
+        description: Street name in Finnish.
+        data_tests: [not_null]
+      - name: street_name_sv
+        description: Street name in Swedish, where the street has one.
+      - name: municipality_code
+        description: Three-digit municipality code of the street range.
+        data_tests: [not_null]
+      - name: municipality_name
+        description: Municipality name of the postal code area.
+      - name: postal_code
+        description: Postal code of the range.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_postal_area')
+                field: postal_code
+      - name: postal_area_name
+        description: Name of the postal code area in Finnish.
+      - name: is_helsinki_metro
+        description: Whether the postal code is in Helsinki, Espoo, Vantaa or Kauniainen.
+      - name: building_numbers
+        description: odd, even or all building numbers of the street.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [odd, even, all]
+      - name: lowest_building_number
+        description: Lowest building number of the range, empty for the whole street.
+      - name: highest_building_number
+        description: Highest building number of the range, empty for the whole street.
+      - name: extracted_on
+        description: Date Posti extracted the file.
+      - name: downloaded_on
+        description: Date the file was downloaded, which Posti's terms of use require to be shown with the data.
+
   - name: mart_price_construction_ratios
     description: >
       Price per m² of old flats in blocks of flats by construction period, relative to all flats

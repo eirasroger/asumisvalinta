@@ -1,0 +1,16 @@
+sources:
+  - name: posti
+    description: >
+      Posti postal code services, loaded with dlt. Free to download and use; recipients of the data
+      must be told the terms of use and the download date.
+    schema: raw_posti
+    tables:
+      - name: street_addresses
+        description: >
+          Basic Address File: streets of mainland Finland with building number ranges, postal codes
+          and municipalities. Replaced in full on every load.
+        config:
+          loaded_at_field: downloaded_at
+          freshness:
+            warn_after: {count: 45, period: day}
+            error_after: {count: 90, period: day}

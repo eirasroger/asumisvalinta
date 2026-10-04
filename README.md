@@ -4,13 +4,14 @@ Rent, right of occupancy (asumisoikeus) or buy a flat in Finland? Asumisvalinta 
 
 - **Explore** a map of all 3,018 postal code areas, coloured by price, rent or price-to-rent ratio.
 - **Compare** the three options for one flat. Each input starts at the market value for the area, size and building age, and shows how your own figure differs from the market.
+- **Search by address.** Type a street and building number, such as "Mannerheimintie 40", to find its postal code area. Accents and small typos are tolerated, and a municipality name narrows a street name that exists in several towns.
 - **Ask** questions about the housing market in plain language. An assistant answers only with governed metrics and says which data it used.
 
 ## Stack
 
 | Layer | Tools | What it does |
 |---|---|---|
-| Ingestion | dlt, Python | Loads Statistics Finland (PxWeb API), the ECB (SDMX API) and Paavo postal areas into DuckDB. Tables reload only when the source publishes an update, and ECB series load incrementally. |
+| Ingestion | dlt, Python | Loads Statistics Finland (PxWeb API), the ECB (SDMX API), Paavo postal areas and Posti's street address file into DuckDB. Tables reload only when the source publishes an update, and ECB series load incrementally. |
 | Warehouse | DuckDB, Snowflake | DuckDB for development, CI and serving. The same dbt project also runs on Snowflake as a second target. |
 | Transformation | dbt | 42 staging, intermediate and mart models with 125 data tests, seeds for tax rules and assumptions, and a snapshot that keeps revised figures. SQL stays portable through dbt cross-database macros. |
 | Semantic layer | MetricFlow | 22 governed metrics, such as price per m², rent per m², price change and interest rates, queried with dimensions and filters instead of raw SQL. At runtime MetricFlow reads the compiled semantic manifest through a read-only DuckDB client, without dbt. |
@@ -26,6 +27,7 @@ Rent, right of occupancy (asumisoikeus) or buy a flat in Finland? Asumisvalinta 
 flowchart LR
     SF[Statistics Finland] --> DLT[dlt]
     ECB[ECB] --> DLT
+    POSTI[Posti addresses] --> DLT
     DLT --> RAW[(DuckDB raw)]
     RAW --> DBT[dbt models and tests]
     SEEDS[Tax rules and assumptions] --> DBT
@@ -92,6 +94,6 @@ content/             methodology shown in the app
 
 ## Data and licence
 
-Source: Statistics Finland (licence CC BY 4.0), including Paavo postal code areas. Source: ECB statistics. Tax and lending rules from the Finnish Tax Administration, the Ministry of Finance, the State Treasury, Finlex and the Financial Supervisory Authority. Right-of-occupancy sample from public Asuntosäätiö listings. Map tiles by OpenFreeMap, data from OpenStreetMap.
+Source: Statistics Finland (licence CC BY 4.0), including Paavo postal code areas. Source: ECB statistics. Tax and lending rules from the Finnish Tax Administration, the Ministry of Finance, the State Treasury, Finlex and the Financial Supervisory Authority. Right-of-occupancy sample from public Asuntosäätiö listings. Street addresses from the Posti Basic Address File, used under Posti's [terms of use](https://www.posti.fi/mzj3zpe8qb7p/1eKbwM2WAEY5AuGi5TrSZ7/c76a865cf5feb2c527a114b8615e9580/posti-postal-code-services-service-description-and-terms-of-use-20150101.pdf); the app shows the download date. Map tiles by OpenFreeMap, data from OpenStreetMap.
 
 The code is licensed under the PolyForm Noncommercial License 1.0.0. See [LICENSE](LICENSE).

@@ -11,6 +11,7 @@ from asumisvalinta.config import duckdb_path
 from asumisvalinta.ingestion.classifications import classifications_source
 from asumisvalinta.ingestion.ecb import ecb_source
 from asumisvalinta.ingestion.paavo import paavo_source
+from asumisvalinta.ingestion.posti import posti_source
 from asumisvalinta.ingestion.statfin import TABLES, statfin_source
 
 log = logging.getLogger(__name__)
@@ -20,6 +21,7 @@ SOURCES: dict[str, tuple[str, Callable[[bool], Any]]] = {
     "classifications": ("raw_statfin_classifications", lambda force: classifications_source()),
     "paavo": ("raw_paavo", lambda force: paavo_source()),
     "ecb": ("raw_ecb", lambda force: ecb_source()),
+    "posti": ("raw_posti", lambda force: posti_source()),
 }
 
 

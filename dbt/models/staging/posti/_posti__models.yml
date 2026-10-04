@@ -1,0 +1,18 @@
+models:
+  - name: stg_posti__street_addresses
+    description: >
+      Street ranges of the Posti Basic Address File. A range covers the odd or even building numbers
+      from the lowest to the highest, or the whole street; a range with one number covers that
+      building only.
+    columns:
+      - name: postal_code
+        data_tests: [not_null]
+      - name: street_name_fi
+        data_tests: [not_null]
+      - name: building_numbers
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [odd, even, all]
+      - name: municipality_code
+        data_tests: [not_null]

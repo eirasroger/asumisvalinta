@@ -195,3 +195,50 @@ def test_map_trends_match_the_area_history(client):
     series = dict(zip(trends["years"], trends["prices"]["00100"], strict=True))
     assert published
     assert {year: series[year] for year in published} == published
+
+
+def _search(client, q):
+    return client.get("/api/postal-areas", params={"q": q}).json()
+
+
+def test_address_with_number_finds_its_postal_code(client):
+    # Mannerheimintie, Helsinki: odd 1-13 and even 2-40 are 00100, odd 17-69 is 00250.
+    first = _search(client, "Mannerheimintie 40")[0]
+    assert (first["postal_code"], first["municipality_name"]) == ("00100", "Helsinki")
+    assert first["street"] == "Mannerheimintie 40"
+    assert first["addresses_downloaded_on"]
+    assert _search(client, "Mannerheimintie 69")[0]["postal_code"] == "00250"
+
+
+def test_swedish_names_and_missing_accents_match(client):
+    first = _search(client, "mannerheimvagen 40")[0]
+    assert (first["postal_code"], first["street"]) == ("00100", "Mannerheimvägen 40")
+    assert _search(client, "Hameentie 15")[0]["postal_code"] == "00500"
+
+
+def test_a_municipality_narrows_a_common_street_name(client):
+    everywhere = {r["municipality_name"] for r in _search(client, "Koulukatu") if r.get("street")}
+    assert len(everywhere) > 1
+    tampere = [r for r in _search(client, "Koulukatu 5 Tampere") if r.get("street")]
+    assert tampere and {r["municipality_name"] for r in tampere} == {"Tampere"}
+
+
+def test_a_number_outside_every_range_lists_the_street_ranges(client):
+    results = [r for r in _search(client, "Tikkurilantie 2") if r.get("street")]
+    assert "01300" in {r["postal_code"] for r in results}
+    assert all(not r["street"].endswith(" 2") for r in results)
+
+
+def test_postal_code_search_still_returns_areas(client):
+    first = _search(client, "00100")[0]
+    assert first["postal_code"] == "00100"
+    assert "street" not in first
+
+
+def test_typos_and_accents_still_find_the_street(client):
+    assert _search(client, "Hamentie 15")[0]["street"] == "Hämeentie 15"
+    assert _search(client, "manerheimintie 40")[0]["postal_code"] == "00100"
+
+
+def test_area_names_match_without_accents(client):
+    assert "00250" in {r["postal_code"] for r in _search(client, "Toolo")}
