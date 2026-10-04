@@ -6,10 +6,24 @@ const GERUND: Record<Option, string> = { buy: "buying", rent: "renting", aso: "r
 export const en = {
   meta: {
     description: "Rent, right of occupancy or buy? Compare all three for any flat in Finland.",
+    explore: "Map",
     compare: "Compare",
     ask: "Ask",
     methodology: "Methodology",
     privacy: "Privacy notice",
+  },
+  home: {
+    tagline: "Rent, right of occupancy or buy? Compare all three for any flat in Finland, using official open data.",
+    cta: "Explore the map",
+    secondary: "Compare a flat",
+  },
+  preview: {
+    explore: "Prices, rents and price-to-rent ratios for all 3,018 postal code areas.",
+    compare: "Renting, right of occupancy and buying side by side for one flat, year by year.",
+    ask: "Questions about the housing market, answered from official statistics.",
+    askQuestion: "Rent in Tampere?",
+    askAnswer: "Two-room flats",
+    askValue: "€16.74 / m²",
   },
   nav: {
     explore: "Explore",

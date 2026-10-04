@@ -196,7 +196,7 @@ export function Planner() {
               }}
             />
             <Link
-              href={`${href("/")}?postal=${flat.postal_code}&rooms=${flat.room_type}`}
+              href={`${href("/explore")}?postal=${flat.postal_code}&rooms=${flat.room_type}`}
               className="mt-3 block text-center text-[13px] text-ink-2 hover:text-ink hover:underline"
             >
               {t.planner.chooseOnMap}

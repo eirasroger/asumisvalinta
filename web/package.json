@@ -9,7 +9,8 @@
     "lint": "eslint",
     "predev": "node scripts/copy-map-worker.mjs",
     "prebuild": "node scripts/copy-map-worker.mjs && node scripts/fetch-release-assets.mjs",
-    "build:map": "node scripts/build-postal-map.mjs"
+    "build:map": "node scripts/build-postal-map.mjs",
+    "build:home-map": "node scripts/build-home-map.mjs"
   },
   "dependencies": {
     "@number-flow/react": "^0.6.2",

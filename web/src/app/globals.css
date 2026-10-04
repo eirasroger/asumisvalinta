@@ -134,3 +134,94 @@ body {
     font-size: 16px !important;
   }
 }
+
+/* Front page and section previews. Every animation ends in the final state, so reduced motion shows it at once. */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.fade-up {
+  animation: fade-up 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes grow-bar {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.grow-bar {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: grow-bar 650ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes preview-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.preview-pop {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: preview-pop 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes preview-draw {
+  from {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+  }
+}
+
+.preview-draw {
+  animation: preview-draw 900ms ease-out both;
+}
+
+@keyframes preview-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.preview-fade {
+  animation: preview-fade 500ms ease-out both;
+}
+
+@keyframes map-reveal {
+  from {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.map-reveal {
+  animation: map-reveal 1800ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}

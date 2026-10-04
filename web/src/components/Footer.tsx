@@ -7,7 +7,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 
 export function Footer({ dataDocs }: { dataDocs: boolean }) {
   const { t, href } = useI18n();
-  if (splitLocale(usePathname()).path === "/") return null;
+  if (splitLocale(usePathname()).path === "/explore") return null;
   return (
     <footer className="border-t border-line">
       <div className="mx-auto flex max-w-[1240px] flex-col gap-2 px-4 py-6 text-xs text-ink-3 sm:flex-row sm:justify-between sm:px-6">

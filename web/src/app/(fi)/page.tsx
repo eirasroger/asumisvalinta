@@ -1,5 +1,5 @@
-import { ExploreView } from "@/views/ExploreView";
+import { Home } from "@/components/home/Home";
 
 export default function Page() {
-  return <ExploreView />;
+  return <Home />;
 }

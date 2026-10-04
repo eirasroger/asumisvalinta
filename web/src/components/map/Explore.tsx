@@ -113,7 +113,7 @@ export function Explore() {
   function select(code: string | null, source?: "map" | "search") {
     if (code && source) track({ type: "area", postal_code: code, room_type: roomType, source, metric });
     setSelected(code);
-    router.replace(code ? `${href("/")}?postal=${code}&rooms=${roomType}` : href("/"), { scroll: false });
+    router.replace(code ? `${href("/explore")}?postal=${code}&rooms=${roomType}` : href("/explore"), { scroll: false });
   }
 
   return (

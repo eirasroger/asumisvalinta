@@ -7,10 +7,25 @@ const GENITIVE: Record<Option, string> = { buy: "ostamisen", rent: "vuokraamisen
 export const fi: Messages = {
   meta: {
     description: "Vuokra-asunto, asumisoikeus vai omistusasunto? Vertaa kaikkia kolmea mille tahansa asunnolle Suomessa.",
+    explore: "Kartta",
     compare: "Vertaa",
     ask: "Kysy",
     methodology: "Menetelmät",
     privacy: "Tietosuojaseloste",
+  },
+  home: {
+    tagline:
+      "Vuokra-asunto, asumisoikeus vai omistusasunto? Vertaa kaikkia kolmea mille tahansa asunnolle Suomessa virallisen avoimen datan avulla.",
+    cta: "Avaa kartta",
+    secondary: "Vertaa asuntoa",
+  },
+  preview: {
+    explore: "Hinnat, vuokrat ja hinta–vuokra-suhteet kaikille 3 018 postinumeroalueelle.",
+    compare: "Vuokra, asumisoikeus ja omistus rinnakkain yhdelle asunnolle vuosi vuodelta.",
+    ask: "Kysymyksiä asuntomarkkinoista, vastaukset virallisista tilastoista.",
+    askQuestion: "Vuokra Tampereella?",
+    askAnswer: "Kaksioiden vuokra",
+    askValue: "16,74 €/m²",
   },
   nav: {
     explore: "Kartta",

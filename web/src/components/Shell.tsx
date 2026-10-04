@@ -36,7 +36,7 @@ export function Shell({ locale, children }: { locale: Locale; children: React.Re
       <body className="min-h-dvh antialiased">
         <I18nProvider locale={locale}>
           <header className="sticky top-0 z-40 border-b border-line bg-paper">
-            <div className="flex h-14 items-center gap-6 px-4 sm:gap-8 sm:px-6">
+            <div className="flex h-14 items-center gap-6 px-4 max-[380px]:gap-4 sm:gap-8 sm:px-6">
               <Link href={localePath(locale, "/")} className="flex items-center gap-2 text-[17px] font-semibold tracking-tight">
                 <LogoMark size={24} className="-ml-0.5" />
                 <span className="max-sm:sr-only">Asumisvalinta</span>
