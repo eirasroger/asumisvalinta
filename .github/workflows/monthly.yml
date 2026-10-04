@@ -133,3 +133,19 @@ jobs:
         if: ${{ env.DEPLOY_HOOK != '' }}
         run: curl -fsS -X POST "$DEPLOY_HOOK" > /dev/null
 
+      # Keeps the latest release, the newest 12 releases, every release from the last
+      # 12 months and every release whose tag appears in the repository.
+      - name: Delete data releases older than 12 months
+        run: |
+          cutoff="data-$(date -u -d '12 months ago' +%Y-%m-%d)"
+          gh release list --repo "$GITHUB_REPOSITORY" --limit 1000 \
+            --json tagName,isLatest --jq '.[] | select(.isLatest | not) | .tagName' \
+            | { grep -E '^data-[0-9]{4}-[0-9]{2}-[0-9]{2}$' || true; } \
+            | sort -r | tail -n +12 \
+            | while read -r tag; do
+                if [[ "$tag" < "$cutoff" ]] && ! git grep -q -F "$tag"; then
+                  echo "Deleting $tag"
+                  gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag
+                fi
+              done
+
