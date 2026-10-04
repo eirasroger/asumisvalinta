@@ -443,24 +443,38 @@ def planner_start(
 
 
 WHAT_IFS: dict[str, str] = {
+    "rates_down": "Interest rates 1 point lower",
     "rates_up": "Interest rates 1 point higher",
-    "prices_flat": "Flat prices do not grow",
+    "prices_slower": "Flat prices grow 2 points slower",
+    "prices_faster": "Flat prices grow 2 points faster",
+    "rents_slower": "Rents grow 1 point slower",
     "rents_faster": "Rents grow 2 points faster",
     "charges_faster": "Charges rise 2 points faster",
     "savings_lower": "Savings earn 2 points less",
+    "savings_higher": "Savings earn 2 points more",
 }
+
+
+def _shift_rates(mortgage: dict[str, Any], change: float) -> None:
+    mortgage["rate_path"]["start_rate"] += change
+    custom = mortgage["rate_path"].get("custom_rates") or ()
+    mortgage["rate_path"]["custom_rates"] = [rate + change for rate in custom]
+    if mortgage.get("fixed_rate") is not None:
+        mortgage["fixed_rate"] += change
 
 
 def _variant(scenario: ScenarioInput, key: str) -> ScenarioInput:
     data = scenario.model_dump()
-    if key == "rates_up":
-        data["buy"]["mortgage"]["rate_path"]["start_rate"] += 0.01
-        custom = data["buy"]["mortgage"]["rate_path"].get("custom_rates") or ()
-        data["buy"]["mortgage"]["rate_path"]["custom_rates"] = [rate + 0.01 for rate in custom]
-        if data["buy"]["mortgage"].get("fixed_rate") is not None:
-            data["buy"]["mortgage"]["fixed_rate"] += 0.01
-    elif key == "prices_flat":
-        data["buy"]["price_growth"] = 0.0
+    if key == "rates_down":
+        _shift_rates(data["buy"]["mortgage"], -0.01)
+    elif key == "rates_up":
+        _shift_rates(data["buy"]["mortgage"], 0.01)
+    elif key == "prices_slower":
+        data["buy"]["price_growth"] -= 0.02
+    elif key == "prices_faster":
+        data["buy"]["price_growth"] += 0.02
+    elif key == "rents_slower":
+        data["rent"]["rent_growth"] -= 0.01
     elif key == "rents_faster":
         data["rent"]["rent_growth"] += 0.02
     elif key == "charges_faster":
@@ -470,6 +484,9 @@ def _variant(scenario: ScenarioInput, key: str) -> ScenarioInput:
     elif key == "savings_lower":
         data["investment"]["investment_return"] -= 0.02
         data["investment"]["parked_cash_return"] -= 0.02
+    elif key == "savings_higher":
+        data["investment"]["investment_return"] += 0.02
+        data["investment"]["parked_cash_return"] += 0.02
     return ScenarioInput.model_validate(data)
 
 

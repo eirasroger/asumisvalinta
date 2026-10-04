@@ -144,11 +144,23 @@ def test_planner_run_returns_result_and_what_ifs(client):
     ).json()
     body = client.post("/api/planner/run", json=start["scenario"]).json()
     assert {o["option"] for o in body["result"]["options"]} == {"buy", "rent", "aso"}
-    keys = {w["key"] for w in body["what_ifs"]}
-    assert keys == {"rates_up", "prices_flat", "rents_faster", "charges_faster", "savings_lower"}
+    what_ifs = {w["key"]: w["end_wealth"] for w in body["what_ifs"]}
+    assert set(what_ifs) == {
+        "rates_down",
+        "rates_up",
+        "prices_slower",
+        "prices_faster",
+        "rents_slower",
+        "rents_faster",
+        "charges_faster",
+        "savings_lower",
+        "savings_higher",
+    }
     base = {o["option"]: o["end_wealth"] for o in body["result"]["options"]}
-    rates_up = next(w for w in body["what_ifs"] if w["key"] == "rates_up")
-    assert rates_up["end_wealth"]["buy"] < base["buy"]
+    assert what_ifs["rates_up"]["buy"] < base["buy"] < what_ifs["rates_down"]["buy"]
+    assert what_ifs["prices_slower"]["buy"] < base["buy"] < what_ifs["prices_faster"]["buy"]
+    assert what_ifs["savings_lower"]["rent"] < base["rent"] < what_ifs["savings_higher"]["rent"]
+    assert what_ifs["rents_faster"]["rent"] < base["rent"] < what_ifs["rents_slower"]["rent"]
     costs = body["monthly_costs"]
     assert [row["year"] for row in costs] == list(range(1, start["scenario"]["horizon_years"] + 1))
     rent = start["scenario"]["rent"]["rent_per_m2_month"] * start["scenario"]["size_m2"]

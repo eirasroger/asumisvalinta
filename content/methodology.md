@@ -124,7 +124,7 @@ The break-even horizon is the first whole year, up to 30, at the end of which bu
 
 ## What if
 
-The what-if table reruns the whole calculation with one assumption changed: interest rates one point higher, flat prices without growth, rents rising two points faster, charges rising two points faster, and savings earning two points less. It shows whether the best option changes.
+The what-if table reruns the whole calculation with one assumption changed, in both directions where both are plausible: interest rates one point lower or higher, flat prices growing two points slower or faster, rents growing one point slower or two points faster, charges rising two points faster, and savings earning two points less or more. Each change is applied to the assumption in your plan. It shows whether the best option changes.
 
 ## Where the defaults come from
 
