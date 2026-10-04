@@ -52,11 +52,27 @@ const NOTICES: Record<Locale, Notice> = {
       },
       {
         title: "Purpose and legal basis",
-        body: "Maintaining and improving the service and protecting it against misuse, on the basis of legitimate interest (Article 6(1)(f) GDPR). Questions submitted to the assistant are also processed on the basis of your consent (Article 6(1)(a) GDPR), which you give before your first question: the AI service provider may use them to train its models. The assistant is available only with this consent; the rest of the service is not.",
+        body: (
+          <ul className="list-disc space-y-1.5 pl-5">
+            <li>Operating, developing and securing the service: legitimate interest (Article 6(1)(f) GDPR).</li>
+            <li>
+              Answering questions submitted to the assistant and their use for training AI models: consent (Article
+              6(1)(a) GDPR).
+            </li>
+          </ul>
+        ),
       },
       {
         title: "Recipients and transfers",
-        body: "Questions are processed by an AI service provider, currently OpenAI, which may use them to train its models and may process them outside the EU/EEA under appropriate safeguards (Chapter V GDPR). The service is hosted by Vercel and data is stored in a database located in the EU.",
+        body: (
+          <ul className="list-disc space-y-1.5 pl-5">
+            <li>
+              AI service providers: questions submitted to the assistant, including for the training of AI models.
+              Data may be transferred outside the EU/EEA subject to appropriate safeguards (Chapter V GDPR).
+            </li>
+            <li>Hosting provider (Vercel). Stored data are located in the EU.</li>
+          </ul>
+        ),
       },
       {
         title: "Retention",
@@ -75,9 +91,8 @@ const NOTICES: Record<Locale, Notice> = {
             <a className={LINK} href="https://tietosuoja.fi/en">
               tietosuoja.fi
             </a>
-            ). You can withdraw your consent to the processing of questions at any time by no longer using the
-            assistant. Withdrawal does not affect processing before it, and questions already passed to the AI service
-            provider cannot be recalled.
+            ). Where processing is based on consent, you may withdraw it at any time. Withdrawal does not affect the
+            lawfulness of processing based on consent before its withdrawal.
             <p className="mt-3">
               The controller does not link usage data or questions to an identified person and is not required to
               obtain additional information for that purpose (Article 11(1) GDPR). Where the controller is unable to
@@ -126,11 +141,31 @@ const NOTICES: Record<Locale, Notice> = {
       },
       {
         title: "Käsittelyn tarkoitus ja oikeusperuste",
-        body: "Palvelun ylläpito ja kehittäminen sekä sen suojaaminen väärinkäytöltä. Oikeusperuste on rekisterinpitäjän oikeutettu etu (tietosuoja-asetuksen 6 artiklan 1 kohdan f alakohta). Avustajalle lähetettyjä kysymyksiä käsitellään lisäksi suostumuksesi perusteella (6 artiklan 1 kohdan a alakohta), jonka annat ennen ensimmäistä kysymystä: tekoälypalvelun tarjoaja voi käyttää kysymyksiä mallien kouluttamiseen. Avustaja on käytettävissä vain tällä suostumuksella; muu palvelu ei edellytä sitä.",
+        body: (
+          <ul className="list-disc space-y-1.5 pl-5">
+            <li>
+              Palvelun ylläpito, kehittäminen ja suojaaminen: rekisterinpitäjän oikeutettu etu (tietosuoja-asetuksen 6
+              artiklan 1 kohdan f alakohta).
+            </li>
+            <li>
+              Avustajalle lähetettyihin kysymyksiin vastaaminen ja niiden käyttö tekoälymallien kouluttamiseen:
+              suostumus (6 artiklan 1 kohdan a alakohta).
+            </li>
+          </ul>
+        ),
       },
       {
         title: "Vastaanottajat ja siirrot",
-        body: "Kysymykset käsittelee tekoälypalvelun tarjoaja, tällä hetkellä OpenAI, joka voi käyttää niitä mallien kouluttamiseen ja käsitellä niitä EU:n tai ETA:n ulkopuolella asianmukaisin suojatoimin (tietosuoja-asetuksen V luku). Palvelun ylläpitäjä on Vercel, ja tiedot tallennetaan EU:ssa sijaitsevaan tietokantaan.",
+        body: (
+          <ul className="list-disc space-y-1.5 pl-5">
+            <li>
+              Tekoälypalvelujen tarjoajat: avustajalle lähetetyt kysymykset, myös tekoälymallien kouluttamista varten.
+              Tietoja voidaan siirtää EU:n tai ETA:n ulkopuolelle asianmukaisin suojatoimin (tietosuoja-asetuksen V
+              luku).
+            </li>
+            <li>Ylläpitopalvelun tarjoaja (Vercel). Tallennetut tiedot sijaitsevat EU:ssa.</li>
+          </ul>
+        ),
       },
       {
         title: "Säilytysaika",
@@ -149,9 +184,8 @@ const NOTICES: Record<Locale, Notice> = {
             <a className={LINK} href="https://tietosuoja.fi">
               tietosuoja.fi
             </a>
-            ). Voit peruuttaa kysymysten käsittelyä koskevan suostumuksesi milloin tahansa lopettamalla avustajan
-            käytön. Peruutus ei vaikuta sitä ennen tapahtuneeseen käsittelyyn, eikä tekoälypalvelun tarjoajalle jo
-            välitettyjä kysymyksiä voida palauttaa.
+            ). Kun käsittely perustuu suostumukseen, voit peruuttaa sen milloin tahansa. Suostumuksen peruuttaminen
+            ei vaikuta suostumuksen perusteella ennen sen peruuttamista suoritetun käsittelyn lainmukaisuuteen.
             <p className="mt-3">
               Rekisterinpitäjä ei yhdistä käyttötietoja tai kysymyksiä tunnistettuun henkilöön, eikä sen ole
               velvollinen hankkimaan lisätietoja tätä varten (tietosuoja-asetuksen 11 artiklan 1 kohta). Jos
