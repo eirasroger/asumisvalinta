@@ -23,8 +23,6 @@ from asumisvalinta.scenario.models import (
 from asumisvalinta.scenario.policy import PolicyRow, resolve_policy
 
 GROWTH_YEARS = 10
-SIMILAR_AGE_YEARS = 10
-MIN_SAMPLE = 3
 PRICE_AGE_SCOPES = {
     "postal_code": "this postal code",
     "price_sub_area": "the postal codes of this price area",
@@ -35,23 +33,6 @@ PRICE_AGE_SCOPES = {
 # From 2010 on, capital charges mostly repay the construction loan, which the
 # housing company loan share already covers; such buildings get the 2000s level.
 LOAN_DRIVEN_FROM_YEAR = 2010
-
-
-@dataclass(frozen=True)
-class AsoSample:
-    """Sampled right-of-occupancy buildings, scaled to the market of the chosen area.
-
-    `fee_per_m2` and `charge_per_m2` are quartiles for this area: each sampled building's
-    fee relative to the price per m² and charge relative to the rent per m² where it
-    stands, applied to the price and rent of the chosen area.
-    """
-
-    scope: str
-    buildings: int
-    fee_per_m2: tuple[float, float, float]
-    charge_per_m2: tuple[float, float, float]
-    charge_to_rent: float
-    fee_to_price: float
 
 
 @dataclass(frozen=True)
@@ -73,36 +54,19 @@ class Defaults:
 
     scenario: ScenarioInput
     sources: dict[str, str]
-    aso_sample: AsoSample
     rent_growth_market: float
     rent_growth_lease_clause: float
     price_age_ratio: float = 1.0
+    aso_fee_share: float = 0.0
+    aso_charge_share: float = 0.0
 
 
 class DefaultsError(LookupError):
     pass
 
 
-def _quartiles(values: list[float]) -> tuple[float, float, float]:
-    """Lower quartile, median and upper quartile."""
-    if len(values) == 1:
-        return (values[0], values[0], values[0])
-    lower, median, upper = statistics.quantiles(values, n=4, method="inclusive")
-    return (lower, median, upper)
-
-
 def _cagr(start: float, end: float, years: int) -> float:
     return (end / start) ** (1 / years) - 1
-
-
-def _similar_age(
-    offers: list[tuple[float, float, int]], building_year: int | None
-) -> tuple[list[tuple[float, float, int]], str]:
-    if building_year is not None:
-        similar = [o for o in offers if abs(o[2] - building_year) <= SIMILAR_AGE_YEARS]
-        if len(similar) >= MIN_SAMPLE:
-            return similar, f"built within {SIMILAR_AGE_YEARS} years of {building_year}"
-    return offers, "all building ages"
 
 
 def _class_for(classes: list[AgeClass], construction_year: int) -> AgeClass:
@@ -277,21 +241,6 @@ def load_defaults(
             """
         )
 
-        offers = connection.execute(
-            """
-            select offers.right_of_occupancy_fee_avg_eur_per_m2 / levels.price_per_m2,
-                offers.monthly_charge_eur_per_m2 / levels.rent_per_m2,
-                offers.building_year
-            from seeds.aso_offers as offers
-            inner join marts.mart_market_levels as levels
-                on offers.postal_code = levels.postal_code and levels.room_type = ?
-            where levels.price_per_m2 > 0 and levels.rent_per_m2 > 0
-            """,
-            [room_type],
-        ).fetchall()
-        if not offers:
-            raise DefaultsError("No right-of-occupancy sample")
-
         aso_changes = [
             row[0]
             for row in connection.execute(
@@ -365,17 +314,9 @@ def load_defaults(
             f"averaged over {PRICE_AGE_SCOPES[level]} (Statistics Finland)"
         )
 
-    sample, age_scope = _similar_age(offers, building_year)
-    fee_to_price = _quartiles([row[0] for row in sample])
-    charge_to_rent = _quartiles([row[1] for row in sample])
-    aso_sample = AsoSample(
-        scope=age_scope,
-        buildings=len(sample),
-        fee_per_m2=tuple(ratio * price_per_m2 for ratio in fee_to_price),
-        charge_per_m2=tuple(ratio * rent_per_m2 for ratio in charge_to_rent),
-        charge_to_rent=charge_to_rent[1],
-        fee_to_price=fee_to_price[1],
-    )
+    buy_price_per_m2 = price_per_m2 * price_age_ratio
+    aso_fee_share = assumptions["aso_fee_share_of_price"]
+    aso_charge_share = assumptions["aso_charge_share_of_rent"]
     invest = assumptions["invest_surplus_by_default"] == 1
     fixed = assumptions["fixed_rate_by_default"] == 1
     loan_term = int(assumptions["loan_term_years"])
@@ -384,7 +325,7 @@ def load_defaults(
         size_m2=size_m2,
         horizon_years=horizon_years,
         buy=BuyInput(
-            price_per_m2=price_per_m2 * price_age_ratio,
+            price_per_m2=buy_price_per_m2,
             price_growth=price_growth,
             maintenance_charge_per_m2_month=maintenance_charge,
             maintenance_charge_growth=aso_charge_growth,
@@ -402,8 +343,8 @@ def load_defaults(
         ),
         rent=RentInput(rent_per_m2_month=rent_per_m2, rent_growth=lease_clause_growth),
         aso=AsoInput(
-            fee_per_m2=aso_sample.fee_per_m2[1],
-            charge_per_m2_month=aso_sample.charge_per_m2[1],
+            fee_per_m2=aso_fee_share * buy_price_per_m2,
+            charge_per_m2_month=aso_charge_share * rent_per_m2,
             charge_growth=aso_charge_growth,
             building_cost_index_growth=assumptions["aso_fee_growth"],
         ),
@@ -448,10 +389,14 @@ def load_defaults(
         "savings_rate": (
             f"ECB, new household deposits up to one year in Finland, {deposit_month:%Y-%m}"
         ),
-        "aso_fee_and_charge": (
-            f"{aso_sample.buildings} Asuntosäätiö buildings ({age_scope}): charges "
-            f"{aso_sample.charge_to_rent:.0%} of the market rent and fees "
-            f"{aso_sample.fee_to_price:.0%} of the price per m² where each building stands"
+        "aso_fee": (
+            f"Assumption: {aso_fee_share:.0%} of the buy price. The Act on right-of-occupancy "
+            "dwellings (393/2021, section 9) caps fees at 15% of the building's acquisition "
+            "cost in state-subsidised buildings; the buy price stands in for that cost"
+        ),
+        "aso_charge": (
+            f"Assumption: {aso_charge_share:.0%} of the market rent here. The Act "
+            "(section 33) requires charges below the rent of comparable rental flats"
         ),
         "aso_charge_growth": (
             f"Right-of-occupancy charges in Finland, average change "
@@ -467,8 +412,9 @@ def load_defaults(
     return Defaults(
         scenario=scenario,
         sources=sources,
-        aso_sample=aso_sample,
         rent_growth_market=market_rent_growth,
         rent_growth_lease_clause=lease_clause_growth,
         price_age_ratio=price_age_ratio,
+        aso_fee_share=aso_fee_share,
+        aso_charge_share=aso_charge_share,
     )

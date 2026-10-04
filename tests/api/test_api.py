@@ -126,7 +126,7 @@ def test_planner_start_returns_inputs_and_benchmarks(client):
         market["rent"]["range_monthly"]["lower_quartile"]
         <= market["rent"]["range_monthly"]["median"]
     )
-    assert "1995" in market["aso"]["scope"]
+    assert market["aso"] == {"fee_share_of_price": 0.15, "charge_share_of_rent": 0.85}
 
 
 def test_planner_start_without_ranges_outside_large_cities(client):

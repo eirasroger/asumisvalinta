@@ -82,7 +82,7 @@ export function Planner() {
     return () => clearTimeout(timer);
   }, [flat, router]);
 
-  const typical = useMemo(() => (start ? typicalValues(start, flat.size_m2) : null), [start, flat.size_m2]);
+  const typical = useMemo(() => (start ? typicalValues(start, flat.size_m2, offer) : null), [start, flat.size_m2, offer]);
   const scenario = useMemo(
     () => (start ? buildScenario(start, flat, offer, assumptions) : null),
     [start, flat, offer, assumptions],

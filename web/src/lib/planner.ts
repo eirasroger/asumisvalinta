@@ -58,9 +58,13 @@ export const DEFAULT_ASSUMPTIONS: Assumptions = { include_aso: true };
 
 export type Typical = Record<keyof Offer, number>;
 
-/** Market values for the flat, converted from per-m² figures to euro amounts. */
-export function typicalValues(start: PlannerStart, size: number): Typical {
-  const { buy, rent, aso } = start.scenario;
+/**
+ * Market values for the flat, converted from per-m² figures to euro amounts. The occupancy fee
+ * is a share of the buy price, so it follows the price the user enters.
+ */
+export function typicalValues(start: PlannerStart, size: number, offer: Offer = MARKET_OFFER): Typical {
+  const { buy, rent } = start.scenario;
+  const price = offer.price ?? buy.price_per_m2 * size;
   return {
     rent: rent.rent_per_m2_month * size,
     price: buy.price_per_m2 * size,
@@ -68,8 +72,8 @@ export function typicalValues(start: PlannerStart, size: number): Typical {
     maintenance: buy.maintenance_charge_per_m2_month * size,
     capital_charges: (buy.capital_charges_per_m2_month[0] ?? 0) * size,
     own_repairs: buy.own_repairs_per_m2_year * size,
-    aso_fee: (aso?.fee_per_m2 ?? start.market.aso.fee_per_m2.median) * size,
-    aso_charge: (aso?.charge_per_m2_month ?? start.market.aso.charge_per_m2.median) * size,
+    aso_fee: start.market.aso.fee_share_of_price * price,
+    aso_charge: start.market.aso.charge_share_of_rent * rent.rent_per_m2_month * size,
   };
 }
 
@@ -80,7 +84,7 @@ export function offerValue(offer: Offer, typical: Typical, key: keyof Offer) {
 export function buildScenario(start: PlannerStart, flat: Flat, offer: Offer, assumptions: Assumptions): ScenarioInput {
   const base = start.scenario;
   const size = flat.size_m2;
-  const typical = typicalValues(start, size);
+  const typical = typicalValues(start, size, offer);
   const value = (key: keyof Offer) => offerValue(offer, typical, key);
   const mortgage = base.buy.mortgage;
   const rateType = assumptions.rate_type ?? mortgage.rate_type;

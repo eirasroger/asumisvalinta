@@ -47,7 +47,7 @@ flowchart LR
 - **Official data first, with the level shown.** When a postal code has no published figure, the value comes from the nearest larger area that has one, and the app marks it.
 - **Assumptions are visible and editable.** Tax rules and default assumptions live in dbt seeds with a source URL and a retrieval date.
 - **The model computes, the language model does not.** The agent reaches data only through the semantic layer and the scenario engine, and an answer is rejected when its number is not in a tool result.
-- **Right of occupancy is compared locally.** Charges and fees of sampled right-of-occupancy buildings are expressed relative to the market rent and price where each building stands, and applied to the chosen area.
+- **Right of occupancy follows the law, not listings.** The default fee is 15% of the buy price, the most the Act on right-of-occupancy dwellings allows in state-subsidised buildings, and the default monthly charge is 85% of the market rent, below comparable rents as the Act requires. Both are editable.
 - **A locked-down public API.** Queries reach the warehouse on a read-only connection with file and network access disabled, filter names are validated before they reach the query, and each client waits a few seconds between questions within a daily token budget.
 - **One data release a month.** The monthly workflow restores the previous warehouse, loads new data, runs dbt and the evaluation checks, and publishes the warehouse, dbt documentation and map as a GitHub release that the website builds from.
 
@@ -94,6 +94,6 @@ content/             methodology shown in the app
 
 ## Data and licence
 
-Source: Statistics Finland (licence CC BY 4.0), including Paavo postal code areas. Source: ECB statistics. Tax and lending rules from the Finnish Tax Administration, the Ministry of Finance, the State Treasury, Finlex and the Financial Supervisory Authority. Right-of-occupancy sample from public Asuntosäätiö listings. Street addresses from the Posti Basic Address File, used under Posti's [terms of use](https://www.posti.fi/mzj3zpe8qb7p/1eKbwM2WAEY5AuGi5TrSZ7/c76a865cf5feb2c527a114b8615e9580/posti-postal-code-services-service-description-and-terms-of-use-20150101.pdf); the app shows the download date. Map tiles by OpenFreeMap, data from OpenStreetMap.
+Source: Statistics Finland (licence CC BY 4.0), including Paavo postal code areas. Source: ECB statistics. Tax and lending rules from the Finnish Tax Administration, the Ministry of Finance, the State Treasury, Finlex and the Financial Supervisory Authority. Street addresses from the Posti Basic Address File, used under Posti's [terms of use](https://www.posti.fi/mzj3zpe8qb7p/1eKbwM2WAEY5AuGi5TrSZ7/c76a865cf5feb2c527a114b8615e9580/posti-postal-code-services-service-description-and-terms-of-use-20150101.pdf); the app shows the download date. Map tiles by OpenFreeMap, data from OpenStreetMap.
 
 The code is licensed under the PolyForm Noncommercial License 1.0.0. See [LICENSE](LICENSE).

@@ -115,7 +115,6 @@ jobs:
       - name: Publish release
         run: |
           tag="data-$(date -u +%Y-%m-%d)"
-          cp data/asumisvalinta.duckdb dist/asumisvalinta.duckdb
           gh release create "$tag" \
             dist/asumisvalinta.duckdb \
             dist/asumisvalinta-serving.duckdb \

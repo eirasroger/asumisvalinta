@@ -1,5 +1,7 @@
 """Build the release files from the warehouse.
 
+- asumisvalinta.duckdb: the whole warehouse, rewritten into a new file so dropped tables leave
+  nothing behind; the next monthly refresh restores it.
 - asumisvalinta-serving.duckdb: the marts and seeds only, read by the API. The file is
   created as asumisvalinta.duckdb so its catalog name matches the dbt manifest.
 - raw-parquet.zip: every raw table as Parquet, enough to rebuild the history.
@@ -18,6 +20,20 @@ import duckdb
 from asumisvalinta.config import REPO_ROOT, duckdb_path
 
 SERVING_SCHEMAS = ("marts", "seeds")
+
+
+def build_warehouse(source: Path, output: Path) -> Path:
+    with tempfile.TemporaryDirectory() as workdir:
+        target = Path(workdir) / "asumisvalinta.duckdb"
+        connection = duckdb.connect(str(target))
+        connection.execute(f"attach '{source.as_posix()}' as source (read_only)")
+        connection.execute("copy from database source to asumisvalinta")
+        connection.execute("detach source")
+        connection.execute("checkpoint")
+        connection.close()
+        destination = output / "asumisvalinta.duckdb"
+        shutil.copyfile(target, destination)
+    return destination
 
 
 def build_serving(source: Path, output: Path) -> Path:
@@ -69,7 +85,8 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=REPO_ROOT / "dist")
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
-    for path in (build_serving(args.source, args.output), export_raw(args.source, args.output)):
+    builders = (build_warehouse, build_serving, export_raw)
+    for path in (build(args.source, args.output) for build in builders):
         print(f"{path}: {path.stat().st_size / 1e6:.1f} MB")
 
 

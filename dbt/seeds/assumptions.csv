@@ -8,3 +8,5 @@ invest_surplus_by_default,0,flag,Whether money not spent on housing is invested 
 owner_renovation_cost_years,5,years,Number of latest years averaged for owner-occupiers' own renovation costs
 aso_fee_growth,0.01,ratio,Yearly growth of the building cost index that raises the right-of-occupancy fee refund
 fixed_rate_by_default,1,flag,Whether the default mortgage has a fixed rate for the whole loan term (1) or a variable rate (0)
+aso_fee_share_of_price,0.15,ratio,Default right-of-occupancy fee as a share of the buy price; the Act on right-of-occupancy dwellings caps fees at 15% of the acquisition value in state-subsidised buildings
+aso_charge_share_of_rent,0.85,ratio,Default right-of-occupancy monthly charge as a share of the market rent; the Act requires charges below comparable rents

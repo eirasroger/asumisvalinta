@@ -15,6 +15,9 @@ analysis-paths: ["analyses"]
 target-path: "target"
 clean-targets: ["target", "dbt_packages"]
 
+on-run-start:
+  - "{{ drop_orphaned_seeds() }}"
+
 models:
   asumisvalinta:
     staging:

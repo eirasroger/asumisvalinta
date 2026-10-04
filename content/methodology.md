@@ -140,7 +140,8 @@ The what-if table reruns the whole calculation with one assumption changed, in b
 | Repairs inside the flat | Owner-occupiers' contracted renovations per m², average of the last five years |
 | Interest rate | Latest average rate on new variable-rate housing loans in Finland (ECB statistics), fixed for the whole loan term. A variable rate is a choice in the app |
 | Savings account rate | Latest average rate on new household deposits with a maturity of up to one year in Finland (ECB statistics) |
-| Right-of-occupancy fee and charge | Sampled right-of-occupancy buildings: each building's charge divided by the market rent per m² where it stands, and its fee divided by the market price per m² there. The medians of these ratios, from buildings of a similar age when there are enough, are applied to the rent and price of the chosen area |
+| Right-of-occupancy fee | 15% of the buy price. The Act on right-of-occupancy dwellings (393/2021, section 9) caps fees at 15% of the building's acquisition cost in state-subsidised buildings and 30% in privately financed ones; the buy price, which follows the year built, stands in for that cost. Editable |
+| Right-of-occupancy charge | Assumption: 85% of the market rent of the area. Section 33 of the Act requires charges in state-subsidised buildings to be lower than the rent of comparable rental dwellings. Editable |
 | Right-of-occupancy charge growth | Average yearly change of right-of-occupancy charges in the whole country, 2019 to 2025, from the market reviews of Varke |
 | Fee refund growth | Assumption of 1 % a year for the building cost index that raises the refund, below its growth over the last 10 years, which the app shows; editable |
 | Selling costs, investment return, loan term, down payment | Assumptions in the `assumptions` table, all editable: 25-year loan, 20 % down payment |
@@ -162,7 +163,6 @@ The what-if table reruns the whole calculation with one assumption changed, in b
 - Ministry of Finance (vm.fi): tax at source on deposit interest.
 - State Treasury (Valtiokonttori): the ASP scheme.
 - Varke (Housing Finance and Development Centre of Finland): market reviews of right-of-occupancy dwellings, 2019 to 2025.
-- Finlex: Act on right-of-occupancy dwellings 393/2021.
+- Finlex: Act on right-of-occupancy dwellings 393/2021, including the cap on fees (section 9) and the rule that charges stay below comparable rents (section 33).
 - Financial Supervisory Authority (FIN-FSA): maximum loan-to-collateral ratio.
-- Asuntosäätiö: public listings of right-of-occupancy buildings, used as a sample for fees and charges.
 - Posti: Basic Address File, the streets and building number ranges of each postal code in mainland Finland, used to find the postal code of an address. Free of charge under Posti's [terms of use](https://www.posti.fi/mzj3zpe8qb7p/1eKbwM2WAEY5AuGi5TrSZ7/c76a865cf5feb2c527a114b8615e9580/posti-postal-code-services-service-description-and-terms-of-use-20150101.pdf); the search shows the date the file was downloaded. It is refreshed with every monthly data update.

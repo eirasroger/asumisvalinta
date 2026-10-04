@@ -2,7 +2,7 @@
 
 import { Dot, InfoLabel, NumberField, Switch } from "@/components/ui";
 import { OPTION_COLORS, type Option, type PlannerStart, ROOM_TYPES } from "@/lib/api";
-import { formatEuro, formatLevel, formatPercent, formatPeriodLabel } from "@/lib/format";
+import { formatEuro, formatLevel, formatPeriodLabel } from "@/lib/format";
 import { type Assumptions, type Flat, type Offer, offerValue, type Typical } from "@/lib/planner";
 
 interface Props {
@@ -125,23 +125,14 @@ export function YourNumbers({ start, flat, offer, typical, onOffer, assumptions,
           key: "aso_fee",
           label: "Occupancy fee",
           about: "Paid when you move in, refunded with the building cost index when you leave (asumisoikeusmaksu).",
-          source: `${market.aso.buildings} Asuntosäätiö buildings, ${market.aso.scope}: fees ${formatPercent(market.aso.fee_to_price, 0)} of the local price per m².`,
-          benchmark: {
-            band: band(market.aso.fee_per_m2.lower_quartile, market.aso.fee_per_m2.upper_quartile, size),
-            bandLabel: `Middle half of the sample, at ${size} m²`,
-            higherIsWorse: false,
-          },
+          source: `${sources.aso_fee}.`,
         })}
         {line({
           key: "aso_charge",
           label: "Monthly charge",
           suffix: "/ mo",
           about: "Covers the building's costs, so it rises with them (käyttövastike).",
-          source: `${market.aso.buildings} Asuntosäätiö buildings, ${market.aso.scope}: charges ${formatPercent(market.aso.charge_to_rent, 0)} of the local rent.`,
-          benchmark: {
-            band: band(market.aso.charge_per_m2.lower_quartile, market.aso.charge_per_m2.upper_quartile, size),
-            bandLabel: `Middle half of the sample, at ${size} m²`,
-          },
+          source: `${sources.aso_charge}.`,
         })}
       </Section>
     </div>

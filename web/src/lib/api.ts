@@ -148,12 +148,8 @@ export interface PlannerStart {
     };
     maintenance_charge_per_m2: number;
     aso: {
-      scope: string;
-      buildings: number;
-      fee_per_m2: Range;
-      charge_per_m2: Range;
-      charge_to_rent: number;
-      fee_to_price: number;
+      fee_share_of_price: number;
+      charge_share_of_rent: number;
     };
   };
 }

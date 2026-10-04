@@ -39,13 +39,12 @@ def test_mortgage_is_fixed_for_the_whole_term_with_a_fifth_down(defaults):
     assert mortgage.down_payment_share == 0.20
 
 
-def test_aso_defaults_follow_the_local_market(defaults):
-    # Each sampled building's charge is divided by the market rent where it stands; the
-    # median ratio times the rent of 00100 (25.14 €/m²) is the default charge here.
-    sample = defaults.aso_sample
-    assert 0.7 < sample.charge_to_rent < 1.0
-    assert defaults.scenario.aso.charge_per_m2_month == pytest.approx(sample.charge_to_rent * 25.14)
-    assert defaults.scenario.aso.fee_per_m2 == pytest.approx(sample.fee_to_price * 7167)
+def test_aso_fee_is_a_share_of_the_price_and_the_charge_a_share_of_the_rent(defaults):
+    # 15% of 7167 €/m², the cap on fees in state-subsidised buildings; 85% of 25.14 €/m².
+    assert defaults.scenario.aso.fee_per_m2 == pytest.approx(0.15 * 7167)
+    assert defaults.scenario.aso.charge_per_m2_month == pytest.approx(0.85 * 25.14)
+    assert "section 9" in defaults.sources["aso_fee"]
+    assert "section 33" in defaults.sources["aso_charge"]
 
 
 def test_market_rent_growth_is_offered(defaults):
@@ -136,7 +135,7 @@ def test_building_year_scales_the_price_by_sales_of_its_decade():
     assert "this postal code" in newer.sources["price_building_age"]
 
 
-def test_aso_fee_follows_the_price_for_all_building_ages(defaults):
+def test_aso_fee_follows_the_price_of_the_building_age(defaults):
     newer = load_defaults(
         "00100",
         "two_room",
@@ -145,7 +144,8 @@ def test_aso_fee_follows_the_price_for_all_building_ages(defaults):
         warehouse=WAREHOUSE,
         building_year=2015,
     )
-    assert newer.scenario.aso.fee_per_m2 == pytest.approx(newer.aso_sample.fee_to_price * 7167)
+    assert newer.scenario.aso.fee_per_m2 == pytest.approx(0.15 * newer.scenario.buy.price_per_m2)
+    assert newer.scenario.aso.fee_per_m2 != pytest.approx(defaults.scenario.aso.fee_per_m2)
 
 
 def test_asp_loan_cap_is_higher_in_helsinki(defaults):

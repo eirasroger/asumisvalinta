@@ -392,7 +392,6 @@ def planner_start(
         "where levels.postal_code = ? and levels.room_type = ?",
         [postal_code, room_type],
     )[0]
-    aso = defaults.aso_sample
     age = defaults.price_age_ratio
     return {
         "scenario": defaults.scenario.model_dump(),
@@ -439,12 +438,8 @@ def planner_start(
             },
             "maintenance_charge_per_m2": level["maintenance_charge_per_m2"],
             "aso": {
-                "scope": aso.scope,
-                "buildings": aso.buildings,
-                "fee_per_m2": _range(*aso.fee_per_m2),
-                "charge_per_m2": _range(*aso.charge_per_m2),
-                "charge_to_rent": aso.charge_to_rent,
-                "fee_to_price": aso.fee_to_price,
+                "fee_share_of_price": defaults.aso_fee_share,
+                "charge_share_of_rent": defaults.aso_charge_share,
             },
         },
     }
