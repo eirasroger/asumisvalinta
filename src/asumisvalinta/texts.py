@@ -209,6 +209,7 @@ ERRORS: Table = {
         "budget": "The assistant has reached today's limit. Try again tomorrow.",
         "daily_limit": "The daily question limit is reached. Try again tomorrow.",
         "session_limit": "This session has used all its questions.",
+        "consent_required": "Accept the terms of the assistant before asking.",
     },
     "fi": {
         "no_data": "Postinumeroalueelle {postal_code} ei ole julkaistuja lukuja.",
@@ -218,5 +219,6 @@ ERRORS: Table = {
         "budget": "Avustajan päiväraja on täynnä. Yritä huomenna uudelleen.",
         "daily_limit": "Päivän kysymysraja on täynnä. Yritä huomenna uudelleen.",
         "session_limit": "Tämän istunnon kysymykset on käytetty.",
+        "consent_required": "Hyväksy avustajan käyttöehdot ennen kysymistä.",
     },
 }

@@ -195,14 +195,25 @@ class Agent:
         return record
 
 
+def metric_catalogue(semantic_layer: SemanticLayer) -> str:
+    """One line per governed metric: its name, label and the first sentence of its definition."""
+    lines = []
+    for metric in semantic_layer.list_metrics():
+        first_sentence = metric.description.strip().split(". ")[0].rstrip(".")
+        lines.append(f"- {metric.name} ({metric.label}): {first_sentence}.")
+    return "\n".join(lines)
+
+
 def semantic_agent(model: ChatModel, warehouse: Path | None = None) -> Agent:
     warehouse = warehouse or duckdb_path()
+    semantic_layer = SemanticLayer(warehouse=warehouse)
     tools = [
-        *semantic_tools(SemanticLayer(warehouse=warehouse), warehouse),
+        *semantic_tools(semantic_layer, warehouse),
         *scenario_tools(warehouse),
         answer_tool(),
     ]
-    return Agent("semantic", prompts.SEMANTIC_AGENT, tools, model)
+    prompt = prompts.semantic_agent_prompt(metric_catalogue(semantic_layer))
+    return Agent("semantic", prompt, tools, model)
 
 
 def baseline_agent(model: ChatModel, warehouse: Path | None = None) -> Agent:

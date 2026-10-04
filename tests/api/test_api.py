@@ -86,9 +86,18 @@ def test_scenario_rejects_unknown_overrides(client):
 
 def test_ask_without_a_configured_model_is_unavailable(client):
     response = client.post(
-        "/api/ask", json={"question": "Price in 00100?", "session_id": "session-1"}
+        "/api/ask",
+        json={"question": "Price in 00100?", "session_id": "session-1", "consent": True},
     )
     assert response.status_code == 503
+
+
+def test_ask_requires_consent(client):
+    question = {"question": "Price in 00100?", "session_id": "session-1"}
+    response = client.post("/api/ask", json=question)
+    assert response.status_code == 403
+    finnish = client.post("/api/ask", params={"lang": "fi"}, json={**question, "consent": False})
+    assert "Hyväksy" in finnish.json()["detail"]
 
 
 def test_question_limits():

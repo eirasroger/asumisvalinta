@@ -7,6 +7,7 @@ import { type AskResponse, api } from "@/lib/api";
 
 // Kept in memory only: nothing is stored on the device, and a reload starts a new session.
 let currentSession: string | null = null;
+let consentGiven = false;
 
 function sessionId() {
   currentSession ??= crypto.randomUUID();
@@ -19,12 +20,13 @@ export function Ask() {
   const [answer, setAnswer] = useState<AskResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [consent, setConsent] = useState(consentGiven);
 
   async function submit(text: string) {
     setLoading(true);
     setError(null);
     try {
-      setAnswer(await api.ask(text, sessionId(), locale));
+      setAnswer(await api.ask(text, sessionId(), locale, consent));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : t.ask.failed);
     } finally {
@@ -38,24 +40,46 @@ export function Ask() {
         <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">{t.ask.title}</h1>
       </header>
 
+      {!consent && (
+        <section className="space-y-3 rounded-xl border border-line bg-paper p-5 text-sm leading-relaxed">
+          <p>{t.ask.consent}</p>
+          <div className="flex flex-wrap items-center gap-4">
+            <button
+              type="button"
+              onClick={() => {
+                consentGiven = true;
+                setConsent(true);
+              }}
+              className="h-9 rounded-lg bg-ink px-4 font-medium text-paper transition-opacity hover:opacity-90"
+            >
+              {t.ask.agree}
+            </button>
+            <Link href={href("/privacy")} className="text-ink-2 underline decoration-line-strong underline-offset-2 hover:text-ink">
+              {t.ask.privacy}
+            </Link>
+          </div>
+        </section>
+      )}
+
       <form
-        className="overflow-hidden rounded-xl border border-line bg-paper focus-within:border-line-strong"
+        className={`overflow-hidden rounded-xl border border-line bg-paper focus-within:border-line-strong ${consent ? "" : "opacity-50"}`}
         onSubmit={(event) => {
           event.preventDefault();
-          if (question.trim().length >= 3) submit(question.trim());
+          if (consent && question.trim().length >= 3) submit(question.trim());
         }}
       >
         <textarea
           value={question}
           onChange={(event) => setQuestion(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey && question.trim().length >= 3) {
+            if (event.key === "Enter" && !event.shiftKey && consent && question.trim().length >= 3) {
               event.preventDefault();
               submit(question.trim());
             }
           }}
           maxLength={500}
           rows={3}
+          disabled={!consent}
           aria-label={t.ask.question}
           placeholder={t.ask.placeholder}
           className="block w-full resize-none bg-transparent px-5 pt-4 pb-2 text-[15px] outline-none placeholder:text-ink-3"
@@ -68,7 +92,7 @@ export function Ask() {
             </Link>
             {answer ? t.ask.remaining(answer.remaining_questions) : ""}
           </p>
-          <button type="submit" disabled={loading || question.trim().length < 3} className="h-9 rounded-lg bg-ink px-4 text-sm font-medium text-paper transition-opacity hover:opacity-90 disabled:opacity-40">
+          <button type="submit" disabled={!consent || loading || question.trim().length < 3} className="h-9 rounded-lg bg-ink px-4 text-sm font-medium text-paper transition-opacity hover:opacity-90 disabled:opacity-40">
             {loading ? t.ask.thinking : t.ask.submit}
           </button>
         </div>
@@ -81,6 +105,7 @@ export function Ask() {
               key={example}
               type="button"
               className="rounded-xl border border-line bg-paper px-4 py-3 text-left text-sm text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
+              disabled={!consent}
               onClick={() => setQuestion(example)}
             >
               {example}

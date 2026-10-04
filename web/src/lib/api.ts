@@ -272,9 +272,9 @@ export const api = {
     }),
   mapValues: (roomType: RoomType) => request<MapValue[]>(`/api/map/values?room_type=${roomType}`),
   mapTrends: (roomType: RoomType) => request<MapTrends>(`/api/map/trends?room_type=${roomType}`),
-  ask: (question: string, sessionId: string, lang: Locale) =>
+  ask: (question: string, sessionId: string, lang: Locale, consent: boolean) =>
     request<AskResponse>(`/api/ask?lang=${lang}`, {
       method: "POST",
-      body: JSON.stringify({ question, session_id: sessionId, record: trackingAllowed(), visit: visitId() }),
+      body: JSON.stringify({ question, session_id: sessionId, record: trackingAllowed(), visit: visitId(), consent }),
     }),
 };

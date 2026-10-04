@@ -143,7 +143,11 @@ def test_questions_are_recorded_redacted_unless_the_browser_opts_out(monkeypatch
 
     monkeypatch.setattr(app_module, "_agent", lambda: _FakeAgent())
     client = TestClient(app)
-    question = {"question": "Rent in 00100? Reply to a@b.fi", "session_id": "session-123"}
+    question = {
+        "question": "Rent in 00100? Reply to a@b.fi",
+        "session_id": "session-123",
+        "consent": True,
+    }
     assert client.post("/api/ask", json=question).status_code == 200
     assert recorded == [
         (
@@ -185,7 +189,7 @@ def test_questions_are_refused_once_the_daily_tokens_are_used(monkeypatch, recor
     monkeypatch.setattr(usage, "check", exhausted)
     client = TestClient(app)
     response = client.post(
-        "/api/ask", json={"question": "Rent in 00100?", "session_id": "session-9"}
+        "/api/ask", json={"question": "Rent in 00100?", "session_id": "session-9", "consent": True}
     )
     assert response.status_code == 429
     assert asked == []
@@ -239,7 +243,12 @@ def test_questions_keep_the_visit_number(monkeypatch, recorded):
 
     monkeypatch.setattr(app_module, "_agent", lambda: _FakeAgent())
     client = TestClient(app)
-    question = {"question": "Rent in 00100?", "session_id": "session-77", "visit": VISIT}
+    question = {
+        "question": "Rent in 00100?",
+        "session_id": "session-77",
+        "visit": VISIT,
+        "consent": True,
+    }
     assert client.post("/api/ask", json=question).status_code == 200
     assert recorded[0][1]["visit"] == VISIT
 
@@ -254,7 +263,7 @@ def test_questions_must_wait_between_calls(monkeypatch, recorded):
     client = TestClient(app)
     response = client.post(
         "/api/ask",
-        json={"question": "Rent in 00100?", "session_id": "session-5"},
+        json={"question": "Rent in 00100?", "session_id": "session-5", "consent": True},
         headers={"x-vercel-forwarded-for": "203.0.113.7, 10.0.0.1"},
     )
     assert response.status_code == 429
@@ -280,7 +289,7 @@ def test_unreachable_database_pauses_questions(monkeypatch, recorded):
         "ASUMISVALINTA_ANALYTICS_DATABASE_URL", "postgresql://nobody@127.0.0.1:1/none"
     )
     response = TestClient(app).post(
-        "/api/ask", json={"question": "Rent in 00100?", "session_id": "session-6"}
+        "/api/ask", json={"question": "Rent in 00100?", "session_id": "session-6", "consent": True}
     )
     assert response.status_code == 503
 

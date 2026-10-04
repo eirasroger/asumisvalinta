@@ -156,6 +156,13 @@ class TestWithWarehouse:
         query_result = json.loads(run.tool_calls[1].result)
         assert query_result["rows"][0][1] == pytest.approx(7341.55)
 
+    def test_system_prompt_lists_every_governed_metric(self):
+        from asumisvalinta.semantic import SemanticLayer
+
+        names = [metric.name for metric in SemanticLayer(warehouse=WAREHOUSE).list_metrics()]
+        prompt = semantic_agent(ScriptedModel([]), WAREHOUSE).system_prompt
+        assert all(f"- {name} (" in prompt for name in names)
+
     def test_unknown_metric_is_reported_to_the_model(self):
         model = ScriptedModel(
             [call("query_metrics", {"metrics": ["euribor_12m"]}), submit("refused", None)]

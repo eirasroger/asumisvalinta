@@ -244,6 +244,8 @@ class AskRequest(BaseModel):
     session_id: str = Field(min_length=8, max_length=64)
     record: bool = True
     visit: str | None = Field(default=None, pattern=VISIT_ID)
+    # Questions may be used to train the AI provider's models, so asking requires consent.
+    consent: bool = False
 
 
 @lru_cache(maxsize=1)
@@ -260,6 +262,8 @@ def ask(
     def error_text(key: str, **values: object) -> str:
         return text(ERRORS, lang, key, **values)
 
+    if not request.consent:
+        raise HTTPException(403, error_text("consent_required"))
     try:
         agent = _agent()
     except RuntimeError as error:
