@@ -46,7 +46,7 @@ export function Home() {
           <h1 className="fade-up mt-6 text-[44px] leading-none font-semibold tracking-[-0.035em] sm:text-[64px]" style={{ animationDelay: "150ms" }}>
             Asumisvalinta
           </h1>
-          <p className="fade-up mt-5 max-w-xl text-[17px] leading-relaxed text-balance text-ink-2 sm:text-lg" style={{ animationDelay: "280ms" }}>
+          <p className="fade-up mt-5 max-w-xl text-[17px] leading-relaxed text-balance text-ink [text-shadow:0_0_6px_var(--frost),0_0_14px_var(--frost)] sm:text-lg" style={{ animationDelay: "280ms" }}>
             {t.home.tagline}
           </p>
           <div className="fade-up mt-8 flex flex-wrap justify-center gap-3" style={{ animationDelay: "420ms" }}>
