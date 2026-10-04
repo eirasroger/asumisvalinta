@@ -260,6 +260,9 @@ export const fi: Messages = {
   },
   ask: {
     title: "Kysy asuntomarkkinoista",
+    beta: "Beta",
+    betaNotice:
+      "Vastaukset perustuvat virallisiin tilastoihin. Beta-vaiheessa avustaja voi toisinaan tulkita kysymyksen väärin.",
     examples: [
       "Mikä oli asuntojen keskimääräinen neliöhinta postinumeroalueella 00100 vuoden 2025 viimeisellä neljänneksellä?",
       "Paljonko vanhojen asuntojen hinnat muuttuivat Helsingissä vuoden takaisesta vuoden 2025 viimeisellä neljänneksellä?",

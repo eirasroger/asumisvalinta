@@ -447,6 +447,120 @@ def semantic_tools(semantic_layer: SemanticLayer, warehouse: Path) -> list[Tool]
             ],
         }
 
+    def latest_quarter(
+        metrics: tuple[str, ...], area: str, *filters: Filter
+    ) -> tuple[str, list[dict[str, Any]]] | None:
+        result = semantic_layer.query(
+            MetricQuery(
+                metrics=metrics,
+                group_by=("metric_time__quarter", "room_type"),
+                filters=(Filter("area", "=", area), *filters),
+            )
+        )
+        rows = [dict(zip(result.columns, row, strict=True)) for row in result.rows]
+        rows = [row for row in rows if row[metrics[-1]] is not None]
+        if not rows:
+            return None
+        latest = max(row["metric_time__quarter"] for row in rows)
+        label = f"{latest.year}Q{(latest.month - 1) // 3 + 1}"
+        return label, [row for row in rows if row["metric_time__quarter"] == latest]
+
+    def price_spread(area: str) -> dict[str, Any]:
+        scheme, _, code = area.strip().partition(":")
+        if not code:
+            raise ToolError("Give an area key from search_areas, for example price_area:091.")
+        municipal = scheme == "municipality_2015" or (len(code) == 3 and code.isdigit())
+        price_area = f"price_area:{code}" if municipal or scheme == "price_area" else None
+        rent_area = f"rent_area:{code}" if municipal or scheme == "rent_area" else None
+        spread: dict[str, Any] = {"area": area.strip()}
+
+        quartiles = ("price_per_m2_lower_quartile", "price_per_m2_upper_quartile")
+        prices = price_area and latest_quarter(
+            (*quartiles, "price_per_m2_median"),
+            price_area,
+            Filter("price_distribution__building_type", "=", "block_of_flats"),
+        )
+        if prices:
+            period, rows = prices
+            averages = latest_quarter(
+                ("avg_price_per_m2",),
+                price_area,
+                Filter("dwelling_price__building_type", "=", "block_of_flats"),
+                Filter("metric_time__quarter", "=", period),
+            )
+            average = (
+                {row["room_type"]: row["avg_price_per_m2"] for row in averages[1]}
+                if averages
+                else {}
+            )
+            spread["prices_per_m2"] = {
+                "area": price_area,
+                "period": period,
+                "dwellings": "flats in blocks of flats",
+                "by_flat": [
+                    {
+                        "flat": FLAT_LABELS.get(row["room_type"], row["room_type"]),
+                        "average": None
+                        if average.get(row["room_type"]) is None
+                        else round(average[row["room_type"]]),
+                        "lower_quartile": round(row["price_per_m2_lower_quartile"]),
+                        "median": round(row["price_per_m2_median"]),
+                        "upper_quartile": round(row["price_per_m2_upper_quartile"]),
+                    }
+                    for row in sorted(rows, key=lambda row: str(row["room_type"]))
+                ],
+            }
+        if prices and municipal:
+            with connect_read_only(warehouse) as connection:
+                found = connection.execute(
+                    "select area_name from marts.dim_area where area_key = ?",
+                    [f"municipality_2015:{code}"],
+                ).fetchone()
+            if found:
+                ends = {}
+                for order in ("lowest", "highest"):
+                    ranked = rank_areas("price", "postal_code", order, within=found[0], limit=1)
+                    row = ranked["rows"][0]
+                    ends[order] = {
+                        "postal_code": row["postal_code"],
+                        "name": row["postal_area_name"],
+                        "average_price_per_m2": row["value"],
+                        "period": ranked["period"],
+                    }
+                spread["prices_per_m2"]["cheapest_postal_area"] = ends["lowest"]
+                spread["prices_per_m2"]["most_expensive_postal_area"] = ends["highest"]
+        rents = rent_area and latest_quarter(
+            ("rent_lower_quartile", "rent_upper_quartile", "rent_median"), rent_area
+        )
+        if rents:
+            period, rows = rents
+            spread["monthly_rents"] = {
+                "area": rent_area,
+                "period": period,
+                "dwellings": "non-subsidised rental flats, total rent of the flat",
+                "by_flat": [
+                    {
+                        "flat": FLAT_LABELS.get(row["room_type"], row["room_type"]),
+                        "lower_quartile": round(row["rent_lower_quartile"]),
+                        "median": round(row["rent_median"]),
+                        "upper_quartile": round(row["rent_upper_quartile"]),
+                    }
+                    for row in sorted(rows, key=lambda row: str(row["room_type"]))
+                ],
+            }
+        if len(spread) == 1:
+            raise ToolError(
+                f"No published quartiles for {area}. They exist for the large cities and their "
+                "sub-areas."
+            )
+        spread["note"] = (
+            "A quarter of sales or agreements fall below the lower quartile and a quarter above "
+            "the upper quartile. No other percentiles and no single-sale minimum or maximum are "
+            "published; for a minimum or maximum, report the cheapest and most expensive postal "
+            "code areas."
+        )
+        return spread
+
     def rank_areas(
         measure: str,
         level: str,
@@ -631,6 +745,25 @@ def semantic_tools(semantic_layer: SemanticLayer, warehouse: Path) -> list[Tool]
                 "required": ["postal_code"],
             },
             handler=area_prices,
+        ),
+        Tool(
+            name="price_spread",
+            description=(
+                "Latest spread of prices per m² and monthly rents in a large city or one of its "
+                "price or rent sub-areas: the average, lower quartile, median and upper quartile "
+                "by flat type, and for a city its cheapest and most expensive postal code areas."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "area": {
+                        "type": "string",
+                        "description": "Area key from search_areas, for example price_area:091.",
+                    }
+                },
+                "required": ["area"],
+            },
+            handler=price_spread,
         ),
         Tool(
             name="rank_areas",

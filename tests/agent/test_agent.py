@@ -44,25 +44,20 @@ def submit(status: str = "answered", value: float | None = None) -> ChatResponse
 
 
 def test_submit_answer_ends_the_run_and_sums_tokens():
-    model = ScriptedModel(
-        [
-            call(
-                "submit_answer",
-                {
-                    "status": "refused",
-                    "answer": "no",
-                    "value": None,
-                    "unit": None,
-                    "sources": "none",
-                },
-            )
-        ]
-    )
+    model = ScriptedModel([call("no_such_tool", {}), submit(value=None)])
     run = Agent("test", "system", [answer_tool()], model).run("question")
-    assert run.status == "refused"
-    assert run.value is None
-    assert (run.prompt_tokens, run.completion_tokens) == (100, 10)
-    assert [c.tool for c in run.tool_calls] == ["submit_answer"]
+    assert run.status == "answered"
+    assert (run.prompt_tokens, run.completion_tokens) == (200, 20)
+    assert [c.tool for c in run.tool_calls] == ["no_such_tool", "submit_answer"]
+
+
+@pytest.mark.parametrize("status", ["refused", "needs_clarification"])
+def test_refusal_before_any_tool_is_sent_back_once(status):
+    model = ScriptedModel([submit(status), submit(status)])
+    run = Agent("test", "system", [answer_tool()], model).run("question")
+    assert run.status == status
+    assert [c.ok for c in run.tool_calls] == [False, True]
+    assert "Look the question up" in run.tool_calls[0].result
 
 
 def test_tool_errors_go_back_to_the_model():
@@ -111,7 +106,8 @@ def test_grading_within_tolerance():
 
 
 def test_grading_refusals_and_status_mismatch():
-    refused = Agent("a", "s", [answer_tool()], ScriptedModel([submit("refused", None)])).run("?")
+    model = ScriptedModel([submit("refused", None), submit("refused", None)])
+    refused = Agent("a", "s", [answer_tool()], model).run("?")
     assert grade(_question("refusal"), refused, None, Tolerance()).correct
     wrong = grade(_question("metric"), refused, 100.0, Tolerance(relative=0.01))
     assert not wrong.correct
@@ -268,6 +264,19 @@ class TestLookupsWithWarehouse:
         )
         assert "note" in result
 
+    def test_price_spread_gives_quartiles_and_the_cheapest_and_dearest_areas(self, tools):
+        spread = tools["price_spread"](area="municipality_2015:091")
+        prices = spread["prices_per_m2"]
+        all_flats = next(row for row in prices["by_flat"] if row["flat"] == "all flats")
+        assert all_flats["lower_quartile"] < all_flats["median"] < all_flats["upper_quartile"]
+        cheapest = prices["cheapest_postal_area"]["average_price_per_m2"]
+        assert cheapest <= prices["most_expensive_postal_area"]["average_price_per_m2"]
+        assert spread["monthly_rents"]["area"] == "rent_area:091"
+
+    def test_price_spread_reports_areas_without_quartiles(self, tools):
+        with pytest.raises(ToolError, match="No published quartiles"):
+            tools["price_spread"](area="municipality_2015:020")
+
     def test_room_type_values_are_listed_without_a_query(self, tools):
         values = tools["list_dimension_values"](metrics=["avg_price_per_m2"], dimension="room_type")
         assert values == ["one_room", "two_room", "three_room_plus", "all"]
@@ -414,5 +423,5 @@ def test_numeric_answer_must_come_from_a_tool_result():
 
 
 def test_answer_without_a_number_needs_no_tool_result():
-    model = ScriptedModel([submit("refused", None)])
-    assert Agent("test", "system", [answer_tool()], model).run("?").status == "refused"
+    model = ScriptedModel([submit("answered", None)])
+    assert Agent("test", "system", [answer_tool()], model).run("?").status == "answered"

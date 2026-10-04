@@ -33,6 +33,10 @@ UNGROUNDED_VALUE = (
     "returned it; to get a total, average or change, query the metric at the grain the "
     "question asks for."
 )
+UNCHECKED_REFUSAL = (
+    "Look the question up with the tools before refusing or asking for clarification; the data "
+    "often covers it. Submit again if it still cannot be answered."
+)
 
 
 def numbers_in(result: str) -> list[float]:
@@ -126,6 +130,8 @@ class Agent:
                 record = self._execute(tools, call.name, call.arguments, step)
                 if record.ok and call.name == ANSWER_TOOL:
                     record = self._check_grounding(record, run.tool_calls)
+                if record.ok and call.name == ANSWER_TOOL and not run.tool_calls:
+                    record = self._check_unchecked_refusal(record)
                 run.tool_calls.append(record)
                 messages.append({"role": "tool", "tool_call_id": call.id, "content": record.result})
                 if call.name == ANSWER_TOOL and record.ok:
@@ -139,6 +145,20 @@ class Agent:
 
         run.error = f"No answer after {self.max_steps} steps"
         return run
+
+    @staticmethod
+    def _check_unchecked_refusal(record: ToolCallRecord) -> ToolCallRecord:
+        """Send back a refusal or clarification given before any tool was called."""
+        if record.arguments.get("status") not in ("refused", "needs_clarification"):
+            return record
+        return ToolCallRecord(
+            step=record.step,
+            tool=record.tool,
+            arguments=record.arguments,
+            ok=False,
+            result=to_json({"error": UNCHECKED_REFUSAL}),
+            seconds=record.seconds,
+        )
 
     @staticmethod
     def _check_grounding(record: ToolCallRecord, previous: list[ToolCallRecord]) -> ToolCallRecord:

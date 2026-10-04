@@ -258,6 +258,9 @@ export const en = {
   },
   ask: {
     title: "Ask about the housing market",
+    beta: "Beta",
+    betaNotice:
+      "Answers are based on official statistics. As a beta feature, the assistant may occasionally misinterpret a question.",
     examples: [
       "What was the average price per m² of flats in postal code 00100 in 2025 Q4?",
       "How much did prices of old flats in Helsinki change from a year earlier in 2025 Q4?",

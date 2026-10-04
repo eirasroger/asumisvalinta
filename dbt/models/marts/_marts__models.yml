@@ -809,29 +809,141 @@ models:
     description: >
       Quartiles of the price per m² of old dwellings by price area, building type, room type and
       quarter: half of the sales fall between the lower and the upper quartile.
+    semantic_model:
+      enabled: true
+      name: price_distribution
+    agg_time_dimension: period_start_date
     columns:
       - name: price_distribution_key
         data_tests: [unique, not_null]
+        entity:
+          type: primary
+          name: price_distribution
+      - name: area_key
+        description: Price area, links to dim_area.
+        entity:
+          type: foreign
+          name: area
+      - name: geography_level
+        description: sub_area, municipality or metro_aggregate.
+        dimension:
+          type: categorical
+      - name: period_start_date
+        description: First day of the quarter.
+        granularity: quarter
+        dimension:
+          type: time
+      - name: building_type
+        description: block_of_flats or terraced_house.
+        dimension:
+          type: categorical
+      - name: room_type
+        description: Harmonised room type.
+        entity:
+          type: foreign
+          name: room_type
       - name: price_per_m2_median
         data_tests:
           - dbt_utils.accepted_range:
               arguments:
                 min_value: 100
                 max_value: 30000
+    metrics:
+      - name: price_per_m2_lower_quartile
+        label: Price per m², lower quartile (€)
+        description: >
+          A quarter of the sales of old dwellings were below this price per m²; for one price area,
+          building type, room type and quarter. Published for the large cities, their sub-areas and
+          the satellite municipalities of Helsinki. Never combine areas or quarters.
+        type: simple
+        agg: average
+        expr: price_per_m2_lower_quartile
+      - name: price_per_m2_median
+        label: Price per m², median (€)
+        description: >
+          Half of the sales of old dwellings were below this price per m²; for one price area,
+          building type, room type and quarter. Published for the large cities, their sub-areas and
+          the satellite municipalities of Helsinki. Never combine areas or quarters.
+        type: simple
+        agg: average
+        expr: price_per_m2_median
+      - name: price_per_m2_upper_quartile
+        label: Price per m², upper quartile (€)
+        description: >
+          A quarter of the sales of old dwellings were above this price per m²; for one price area,
+          building type, room type and quarter. Published for the large cities, their sub-areas and
+          the satellite municipalities of Helsinki. Never combine areas or quarters.
+        type: simple
+        agg: average
+        expr: price_per_m2_upper_quartile
 
   - name: fct_rent_distribution
     description: >
       Quartiles of total monthly rents of non-subsidised rental dwellings in the large cities by rent
       area, room type and quarter: half of the agreements fall between the lower and upper quartile.
+    semantic_model:
+      enabled: true
+      name: rent_distribution
+    agg_time_dimension: period_start_date
     columns:
       - name: rent_distribution_key
         data_tests: [unique, not_null]
+        entity:
+          type: primary
+          name: rent_distribution
+      - name: area_key
+        description: Rent area, links to dim_area.
+        entity:
+          type: foreign
+          name: area
+      - name: geography_level
+        description: sub_area or municipality.
+        dimension:
+          type: categorical
+      - name: period_start_date
+        description: First day of the quarter.
+        granularity: quarter
+        dimension:
+          type: time
+      - name: room_type
+        description: Harmonised room type.
+        entity:
+          type: foreign
+          name: room_type
       - name: rent_median
         data_tests:
           - dbt_utils.accepted_range:
               arguments:
                 min_value: 100
                 max_value: 10000
+    metrics:
+      - name: rent_lower_quartile
+        label: Monthly rent, lower quartile (€)
+        description: >
+          A quarter of the non-subsidised rental agreements had a lower total monthly rent (whole
+          flat, not per m²); for one rent area, room type and quarter, in the large cities. Never
+          combine areas or quarters.
+        type: simple
+        agg: average
+        expr: rent_lower_quartile
+      - name: rent_median
+        label: Monthly rent, median (€)
+        description: >
+          Half of the non-subsidised rental agreements had a lower total monthly rent (whole flat,
+          not per m²); for one rent area, room type and quarter, in the large cities. Never combine
+          areas or quarters.
+        type: simple
+        agg: average
+        expr: rent_median
+      - name: rent_upper_quartile
+        label: Monthly rent, upper quartile (€)
+        description: >
+          A quarter of the non-subsidised rental agreements had a higher total monthly rent (whole
+          flat, not per m²); for one rent area, room type and quarter, in the large cities. Never
+          combine areas or quarters.
+        type: simple
+        agg: average
+        expr: rent_upper_quartile
 
   - name: fct_housing_company_charges_by_age
     description: >

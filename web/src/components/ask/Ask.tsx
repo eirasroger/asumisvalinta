@@ -37,7 +37,13 @@ export function Ask() {
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 pt-10 pb-16 sm:px-6">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">{t.ask.title}</h1>
+        <h1 className="flex flex-wrap items-center gap-x-3 gap-y-1 text-2xl font-semibold tracking-tight sm:text-[28px]">
+          {t.ask.title}
+          <span className="rounded-full border border-line-strong px-2.5 py-0.5 text-xs font-medium tracking-normal text-ink-2">
+            {t.ask.beta}
+          </span>
+        </h1>
+        <p className="mt-2 text-sm text-ink-3">{t.ask.betaNotice}</p>
       </header>
 
       {!consent && (
