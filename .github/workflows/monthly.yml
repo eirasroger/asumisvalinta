@@ -114,16 +114,17 @@ jobs:
 
       - name: Publish release
         run: |
-          tag="data-$(date -u +%Y-%m-%d)"
+          tag="data-$(date -u +%Y-%m-%d-%H%M)"
           gh release create "$tag" \
             dist/asumisvalinta.duckdb \
             dist/asumisvalinta-serving.duckdb \
             dist/raw-parquet.zip \
             dist/dbt-docs-index.html \
             dist/dbt-docs-manifest.json \
-            dist/dbt-docs-catalog.json             dist/postal-areas.topo.json \
-            --title "Data $(date -u +%Y-%m-%d)" \
-            --notes "Warehouse built by the monthly refresh. Sources: Statistics Finland (CC BY 4.0, including Paavo postal code areas), ECB statistics." \
+            dist/dbt-docs-catalog.json \
+            dist/postal-areas.topo.json \
+            --title "Data $(date -u '+%Y-%m-%d %H:%M') UTC" \
+            --notes "Warehouse built by the monthly refresh. Sources: Statistics Finland (CC BY 4.0, including Paavo postal code areas), ECB statistics. Street addresses: Posti Basic Address File, used under Posti's terms of use (https://www.posti.fi/mzj3zpe8qb7p/1eKbwM2WAEY5AuGi5TrSZ7/c76a865cf5feb2c527a114b8615e9580/posti-postal-code-services-service-description-and-terms-of-use-20150101.pdf), downloaded on the date in raw_posti.street_addresses.downloaded_at." \
             --latest
 
       - name: Redeploy the website
@@ -139,7 +140,7 @@ jobs:
           cutoff="data-$(date -u -d '12 months ago' +%Y-%m-%d)"
           gh release list --repo "$GITHUB_REPOSITORY" --limit 1000 \
             --json tagName,isLatest --jq '.[] | select(.isLatest | not) | .tagName' \
-            | { grep -E '^data-[0-9]{4}-[0-9]{2}-[0-9]{2}$' || true; } \
+            | { grep -E '^data-[0-9]{4}-[0-9]{2}-[0-9]{2}(-[0-9]{4})?$' || true; } \
             | sort -r | tail -n +12 \
             | while read -r tag; do
                 if [[ "$tag" < "$cutoff" ]] && ! git grep -q -F "$tag"; then
