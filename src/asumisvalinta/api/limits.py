@@ -1,9 +1,4 @@
-"""Question limits for the agent endpoint: per browser session and per day.
-
-Counters live in memory, so they reset when an instance restarts and are not
-shared between instances. The spending limit set on the model provider's
-account is the hard guarantee.
-"""
+"""Questions per browser session, kept in memory and cleared daily."""
 
 import datetime as dt
 import threading
@@ -11,9 +6,9 @@ from dataclasses import dataclass, field
 
 
 class LimitReached(Exception):
-    """A question limit is reached; `kind` is "daily_limit" or "session_limit"."""
+    """A session has used its questions; `kind` names the error text."""
 
-    def __init__(self, kind: str) -> None:
+    def __init__(self, kind: str = "session_limit") -> None:
         super().__init__(kind)
         self.kind = kind
 
@@ -21,31 +16,23 @@ class LimitReached(Exception):
 @dataclass
 class QuestionLimits:
     per_session: int
-    per_day: int
     _day: dt.date = field(default_factory=dt.date.today)
-    _today: int = 0
     _sessions: dict[str, int] = field(default_factory=dict)
     _lock: threading.Lock = field(default_factory=threading.Lock)
+
+    def _roll_over(self) -> None:
+        today = dt.date.today()
+        if today != self._day:
+            self._day, self._sessions = today, {}
 
     def take(self, session_id: str) -> None:
         """Count one question or raise LimitReached."""
         with self._lock:
-            today = dt.date.today()
-            if today != self._day:
-                self._day, self._today, self._sessions = today, 0, {}
-            if self._today >= self.per_day:
-                raise LimitReached("daily_limit")
+            self._roll_over()
             if self._sessions.get(session_id, 0) >= self.per_session:
-                raise LimitReached("session_limit")
-            self._today += 1
+                raise LimitReached()
             self._sessions[session_id] = self._sessions.get(session_id, 0) + 1
 
     def remaining(self, session_id: str) -> int:
         with self._lock:
-            return max(
-                0,
-                min(
-                    self.per_session - self._sessions.get(session_id, 0),
-                    self.per_day - self._today,
-                ),
-            )
+            return max(0, self.per_session - self._sessions.get(session_id, 0))

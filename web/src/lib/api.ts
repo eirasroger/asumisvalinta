@@ -223,6 +223,7 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    public retryAfter: number | null = null,
   ) {
     super(message);
   }
@@ -239,7 +240,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       // keep the status text
     }
-    throw new ApiError(response.status, detail);
+    const retryAfter = Number(response.headers.get("Retry-After"));
+    throw new ApiError(response.status, detail, retryAfter > 0 ? retryAfter : null);
   }
   return response.json() as Promise<T>;
 }

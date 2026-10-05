@@ -103,15 +103,14 @@ def test_ask_requires_consent(client):
 def test_question_limits():
     from asumisvalinta.api.limits import LimitReached, QuestionLimits
 
-    limits = QuestionLimits(per_session=2, per_day=3)
+    limits = QuestionLimits(per_session=2)
     limits.take("a")
     limits.take("a")
     with pytest.raises(LimitReached):
         limits.take("a")
     limits.take("b")
-    with pytest.raises(LimitReached):
-        limits.take("c")
-    assert limits.remaining("b") == 0
+    assert limits.remaining("a") == 0
+    assert limits.remaining("b") == 1
 
 
 def test_planner_start_returns_inputs_and_benchmarks(client):

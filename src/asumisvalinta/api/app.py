@@ -48,6 +48,7 @@ app.add_middleware(
     allow_origins=[origin.strip() for origin in allowed_origins.split(",") if origin.strip()],
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
+    expose_headers=["Retry-After"],
     max_age=86400,
 )
 MAX_BODY_BYTES = 64 * 1024
@@ -84,7 +85,6 @@ async def cache_reads(request: Request, call_next: Any) -> Response:
 
 limits = QuestionLimits(
     per_session=int(os.environ.get("ASUMISVALINTA_ASK_SESSION_LIMIT", "10")),
-    per_day=int(os.environ.get("ASUMISVALINTA_ASK_DAILY_LIMIT", "200")),
 )
 
 
