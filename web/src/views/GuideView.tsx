@@ -99,6 +99,13 @@ export function GuideView({ locale, guide }: { locale: Locale; guide: Guide }) {
               ul: ({ children }) => <ul className={LIST}>{children}</ul>,
               ol: ({ children }) => <ol className="mb-5 list-decimal space-y-2.5 pl-6 marker:font-semibold marker:text-ink-3">{children}</ol>,
               strong: ({ children }) => <strong className="font-semibold text-ink">{children}</strong>,
+              table: ({ children }) => (
+                <div className="my-6 overflow-x-auto rounded-2xl border border-line">
+                  <table className="w-full text-[14px] leading-snug">{children}</table>
+                </div>
+              ),
+              th: ({ children }) => <th className="bg-frost px-4 py-3 text-left text-[13px] font-semibold text-ink">{children}</th>,
+              td: ({ children }) => <td className="num border-t border-line px-4 py-3 whitespace-nowrap text-ink-2">{children}</td>,
               a: ({ href = "", children }) =>
                 href.startsWith("/") ? (
                   <Link href={localePath(locale, href)} className={LINK}>
