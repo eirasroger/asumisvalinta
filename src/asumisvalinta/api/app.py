@@ -37,8 +37,9 @@ app = FastAPI(
     title="Asumisvalinta API",
     description="Rent, right of occupancy or buy in Finland: market data and scenarios.",
     version="0.1.0",
-    docs_url="/api/docs",
-    openapi_url="/api/openapi.json",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
 )
 allowed_origins = os.environ.get("ASUMISVALINTA_ALLOWED_ORIGINS") or DEFAULT_ALLOWED_ORIGINS
 app.add_middleware(
@@ -48,8 +49,20 @@ app.add_middleware(
     allow_headers=["Content-Type"],
     max_age=86400,
 )
+MAX_BODY_BYTES = 64 * 1024
 # The data changes once a month with a new release, so reads are cacheable.
 CACHED_READ = "public, max-age=300, s-maxage=86400, stale-while-revalidate=604800"
+
+
+@app.middleware("http")
+async def limit_body(request: Request, call_next: Any) -> Response:
+    if request.method == "POST":
+        length = request.headers.get("content-length", "")
+        if not length.isdigit():
+            return Response(status_code=411)
+        if int(length) > MAX_BODY_BYTES:
+            return Response(status_code=413)
+    return await call_next(request)
 
 
 @app.middleware("http")

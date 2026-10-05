@@ -370,3 +370,16 @@ def test_client_ip_is_the_address_the_platform_appended():
     assert client_ip(request({"x-forwarded-for": "198.51.100.9, 203.0.113.7"})) == "203.0.113.7"
     assert client_ip(request({"x-forwarded-for": "203.0.113.7"})) == "203.0.113.7"
     assert client_ip(request({})) == "10.1.2.3"
+
+
+def test_large_bodies_are_refused_before_they_are_read(recorded):
+    client = TestClient(app)
+    response = client.post("/api/events", content="a" * (65 * 1024))
+    assert response.status_code == 413
+    assert recorded == []
+
+
+def test_api_documentation_is_not_published():
+    client = TestClient(app)
+    assert client.get("/api/docs").status_code == 404
+    assert client.get("/api/openapi.json").status_code == 404
