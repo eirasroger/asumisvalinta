@@ -105,8 +105,35 @@ def answer_tool() -> Tool:
                     "type": "string",
                     "description": "Metrics or tables, periods and geography levels used.",
                 },
+                "chart": {
+                    "type": ["object", "null"],
+                    "description": "Data for a chart the site draws, or null.",
+                    "properties": {
+                        "kind": {"type": "string", "enum": ["bar", "line"]},
+                        "title": {"type": "string"},
+                        "unit": {"type": ["string", "null"]},
+                        "categories": {"type": "array", "items": {"type": "string"}},
+                        "series": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {"type": "string"},
+                                    "values": {
+                                        "type": "array",
+                                        "items": {"type": ["number", "null"]},
+                                    },
+                                },
+                                "required": ["name", "values"],
+                                "additionalProperties": False,
+                            },
+                        },
+                    },
+                    "required": ["kind", "title", "unit", "categories", "series"],
+                    "additionalProperties": False,
+                },
             },
-            "required": ["status", "answer", "value", "unit", "sources"],
+            "required": ["status", "answer", "value", "unit", "sources", "chart"],
             "additionalProperties": False,
         },
         handler=submit_answer,

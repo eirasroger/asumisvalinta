@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useI18n } from "@/i18n/I18nProvider";
+import { AnswerChart } from "@/components/ask/AnswerChart";
 import { LogoMark } from "@/components/Logo";
 import { NIGHT } from "@/components/showcase";
 import { ApiError, type AskResponse, type AskTurn, api } from "@/lib/api";
@@ -79,7 +80,7 @@ function AnswerCard({ turn }: { turn: Turn }) {
   const words = answer ? answer.answer.split(/\s+/).length : 0;
   return (
     <article
-      className="message-in max-w-[85%] min-w-0 origin-bottom-left rounded-2xl rounded-bl-md bg-paper shadow-float ring-1 ring-line"
+      className="message-in max-w-[85%] min-w-0 flex-1 origin-bottom-left rounded-2xl rounded-bl-md bg-paper shadow-float ring-1 ring-line"
       style={{ animationDelay: "140ms" }}
       aria-live="polite"
       aria-busy={thinking}
@@ -109,10 +110,11 @@ function AnswerCard({ turn }: { turn: Turn }) {
           )}
           {error && <p className="soft-in mt-3 text-sm text-bad">{error}</p>}
           {answer && <RevealText text={answer.answer} />}
+          {answer?.chart && <AnswerChart chart={answer.chart} delay={Math.min(1300, words * 22)} />}
           {answer?.sources && (
             <p
               className="soft-in mt-4 border-t border-line pt-3 text-xs leading-relaxed text-ink-3"
-              style={{ animationDelay: `${Math.min(1300, words * 22) + 150}ms` }}
+              style={{ animationDelay: `${Math.min(1300, words * 22) + (answer.chart ? 700 : 150)}ms` }}
             >
               <span className="font-medium text-ink-2">{t.ask.basedOn}</span>
               {answer.sources}

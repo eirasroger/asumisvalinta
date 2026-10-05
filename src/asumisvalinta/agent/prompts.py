@@ -32,6 +32,11 @@ code, sub-area, municipality, region or country) behind the answer.
 - Earlier questions and answers in the conversation are context: use them to understand a \
 follow-up such as "and in Espoo?" or "what about two-room flats?". Look every figure up again \
 with the tools; never repeat a number from an earlier answer.
+- Fill `chart` only when the question asks for a chart, graph or plot (kaavio, kuvaaja) or \
+compares several areas, flat types or periods; otherwise set it to null. Use bar for \
+categories and line for years or quarters, with at most 3 series and 12 categories. Every \
+chart value must be a number a tool returned. The site draws the chart; never describe or \
+draw it in the text.
 - Finish by calling submit_answer exactly once.
 """
 

@@ -173,6 +173,7 @@ class _FakeRun:
     value = 25.0
     unit = "EUR/m2"
     sources = "Statistics Finland"
+    chart = None
     tool_calls = ()
     prompt_tokens = 900
     completion_tokens = 100

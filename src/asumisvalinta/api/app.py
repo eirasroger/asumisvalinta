@@ -350,6 +350,7 @@ def ask(
         "value": run.value,
         "unit": run.unit,
         "sources": run.sources,
+        "chart": run.chart,
         "tools_used": tools,
         "remaining_questions": limits.remaining(request.session_id),
         "signature": None

@@ -210,6 +210,15 @@ export interface AskResponse {
   remaining_questions: number;
   /** Null when conversation memory is off. */
   signature: string | null;
+  chart: AskChart | null;
+}
+
+export interface AskChart {
+  kind: "bar" | "line";
+  title: string;
+  unit: string | null;
+  categories: string[];
+  series: { name: string; values: (number | null)[] }[];
 }
 
 /** An earlier exchange, sent back with its signature. */

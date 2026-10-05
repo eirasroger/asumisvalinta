@@ -34,6 +34,17 @@ UNGROUNDED_VALUE = (
     "returned it; to get a total, average or change, query the metric at the grain the "
     "question asks for."
 )
+MAX_CHART_SERIES = 3
+MAX_CHART_CATEGORIES = 12
+MAX_CHART_LABEL = 60
+BAD_CHART = (
+    "A chart needs kind bar or line, a short title, 1 to 12 categories and 1 to 3 series, each "
+    "with a short name and one value (or null) per category. Fix it or set chart to null."
+)
+UNGROUNDED_CHART = (
+    "The chart value {value} does not appear in any tool result. Chart only numbers a tool "
+    "returned, or set chart to null."
+)
 UNCHECKED_REFUSAL = (
     "Look the question up with the tools before refusing or asking for clarification; the data "
     "often covers it. Submit again if it still cannot be answered."
@@ -70,6 +81,42 @@ def is_grounded(value: float, results: list[str]) -> bool:
     return False
 
 
+def _label(text: Any) -> bool:
+    return isinstance(text, str) and 0 < len(text) <= MAX_CHART_LABEL
+
+
+def chart_error(chart: Any, results: list[str]) -> str | None:
+    """Why a submitted chart is rejected, or None when it is absent or valid."""
+    if chart is None:
+        return None
+    if not isinstance(chart, dict) or chart.get("kind") not in ("bar", "line"):
+        return BAD_CHART
+    categories, series = chart.get("categories"), chart.get("series")
+    unit = chart.get("unit")
+    if not _label(chart.get("title")) or not (unit is None or _label(unit)):
+        return BAD_CHART
+    if not isinstance(categories, list) or not 1 <= len(categories) <= MAX_CHART_CATEGORIES:
+        return BAD_CHART
+    if not isinstance(series, list) or not 1 <= len(series) <= MAX_CHART_SERIES:
+        return BAD_CHART
+    if not all(_label(category) for category in categories):
+        return BAD_CHART
+    for item in series:
+        values = item.get("values") if isinstance(item, dict) else None
+        if not _label(item.get("name") if isinstance(item, dict) else None):
+            return BAD_CHART
+        if not isinstance(values, list) or len(values) != len(categories):
+            return BAD_CHART
+        for value in values:
+            if value is None:
+                continue
+            if isinstance(value, bool) or not isinstance(value, int | float):
+                return BAD_CHART
+            if not is_grounded(float(value), results):
+                return UNGROUNDED_CHART.format(value=value)
+    return None
+
+
 @dataclass(frozen=True)
 class ToolCallRecord:
     step: int
@@ -90,6 +137,7 @@ class AgentRun:
     value: float | None = None
     unit: str | None = None
     sources: str = ""
+    chart: dict[str, Any] | None = None
     tool_calls: list[ToolCallRecord] = field(default_factory=list)
     prompt_tokens: int = 0
     completion_tokens: int = 0
@@ -133,6 +181,8 @@ class Agent:
                 record = self._execute(tools, call.name, call.arguments, step)
                 if record.ok and call.name == ANSWER_TOOL:
                     record = self._check_grounding(record, run.tool_calls)
+                if record.ok and call.name == ANSWER_TOOL:
+                    record = self._check_chart(record, run.tool_calls)
                 if record.ok and call.name == ANSWER_TOOL and not run.tool_calls:
                     record = self._check_unchecked_refusal(record)
                 run.tool_calls.append(record)
@@ -144,6 +194,7 @@ class Agent:
                     run.value = answer.get("value")
                     run.unit = answer.get("unit")
                     run.sources = answer.get("sources", "")
+                    run.chart = answer.get("chart")
                     return run
 
         run.error = f"No answer after {self.max_steps} steps"
@@ -160,6 +211,21 @@ class Agent:
             arguments=record.arguments,
             ok=False,
             result=to_json({"error": UNCHECKED_REFUSAL}),
+            seconds=record.seconds,
+        )
+
+    @staticmethod
+    def _check_chart(record: ToolCallRecord, previous: list[ToolCallRecord]) -> ToolCallRecord:
+        results = [call.result for call in previous if call.ok and call.tool != ANSWER_TOOL]
+        error = chart_error(record.arguments.get("chart"), results)
+        if error is None:
+            return record
+        return ToolCallRecord(
+            step=record.step,
+            tool=record.tool,
+            arguments=record.arguments,
+            ok=False,
+            result=to_json({"error": error}),
             seconds=record.seconds,
         )
 

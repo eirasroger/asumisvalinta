@@ -8,7 +8,7 @@ import pytest
 
 from asumisvalinta.agent import Agent, AgentRun, baseline_agent, semantic_agent
 from asumisvalinta.agent.llm import ChatResponse, ToolCall
-from asumisvalinta.agent.tools import ToolError, answer_tool, sql_tools
+from asumisvalinta.agent.tools import Tool, ToolError, answer_tool, sql_tools
 from asumisvalinta.evaluation.golden import GoldenQuestion, Tolerance, load_golden_set
 from asumisvalinta.evaluation.grading import grade, summarise
 from asumisvalinta.semantic import Filter
@@ -440,3 +440,34 @@ def test_earlier_turns_come_before_the_question():
         ("assistant", "About 25 € per m²."),
         ("user", "And in Espoo?"),
     ]
+
+
+def rents_tool() -> Tool:
+    return Tool("rents", "Rents.", {"type": "object", "properties": {}}, lambda: {"kallio": 25.14})
+
+
+def submit_chart(values: list) -> ChatResponse:
+    chart = {
+        "kind": "bar",
+        "title": "Rent per m²",
+        "unit": "€/m²",
+        "categories": ["Kallio"],
+        "series": [{"name": "1 bedroom", "values": values}],
+    }
+    arguments = {"status": "answered", "answer": "text", "value": None, "unit": None}
+    return call("submit_answer", {**arguments, "sources": "test", "chart": chart}, call_id="final")
+
+
+def test_a_grounded_chart_is_returned():
+    model = ScriptedModel([call("rents", {}), submit_chart([25.14])])
+    run = Agent("test", "system", [rents_tool(), answer_tool()], model).run("Chart rents")
+    assert run.chart["series"][0]["values"] == [25.14]
+
+
+@pytest.mark.parametrize("values", [[99.0], ["25.14"], [25.14, 17.39]])
+def test_a_chart_with_other_numbers_or_shape_is_sent_back(values):
+    model = ScriptedModel([call("rents", {}), submit_chart(values), submit_chart([25.14])])
+    run = Agent("test", "system", [rents_tool(), answer_tool()], model).run("Chart rents")
+    assert [c.ok for c in run.tool_calls] == [True, False, True]
+    assert "chart" in run.tool_calls[1].result
+    assert run.chart["series"][0]["values"] == [25.14]
