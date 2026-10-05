@@ -28,20 +28,20 @@ function alternates(locale: Locale, path: string): Metadata["alternates"] {
 }
 
 export function siteMetadata(locale: Locale): Metadata {
-  const description = MESSAGES[locale].meta.description;
+  const { description, homeTitle: title } = MESSAGES[locale].meta;
   const image = { url: localePath(locale, "/og.png"), ...OG_SIZE, alt: ogAlt(locale), type: "image/png" };
   return {
     metadataBase: new URL(SITE_URL),
-    title: "Asumisvalinta",
+    title,
     description,
     alternates: alternates(locale, "/"),
-    openGraph: { title: "Asumisvalinta", description, siteName: "Asumisvalinta", type: "website", locale, images: [image] },
-    twitter: { card: "summary_large_image", title: "Asumisvalinta", description, images: [image] },
+    openGraph: { title, description, siteName: "Asumisvalinta", type: "website", locale, images: [image] },
+    twitter: { card: "summary_large_image", title, description, images: [image] },
   };
 }
 
 /** Metadata of a page: its title in the language of the page. */
-export function pageMetadata(locale: Locale, page: keyof Omit<Messages["meta"], "description">): Metadata {
+export function pageMetadata(locale: Locale, page: keyof Omit<Messages["meta"], "description" | "homeTitle">): Metadata {
   return { title: `${MESSAGES[locale].meta[page]} · Asumisvalinta`, alternates: alternates(locale, `/${page}`) };
 }
 

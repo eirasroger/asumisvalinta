@@ -6,6 +6,7 @@ const GENITIVE: Record<Option, string> = { buy: "ostamisen", rent: "vuokraamisen
 
 export const fi: Messages = {
   meta: {
+    homeTitle: "Asumisvalinta: vuokra, asumisoikeus vai omistusasunto?",
     description: "Vuokra-asunto, asumisoikeus vai omistusasunto? Vertaa kaikkia kolmea mille tahansa asunnolle Suomessa.",
     explore: "Kartta",
     compare: "Vertaa",
