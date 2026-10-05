@@ -102,9 +102,11 @@ export function AnswerChart({ chart, delay }: { chart: AskChart; delay: number }
           </span>
         )}
       </figcaption>
-      <div className="mt-3">
+      <p className="mt-3 text-[11px] text-ink-3">{chart.y_label}</p>
+      <div className="mt-1">
         <EChart option={option} height={220} label={chart.title} replace />
       </div>
+      <p className="mt-1 text-center text-[11px] text-ink-3">{chart.x_label}</p>
     </figure>
   );
 }

@@ -29,14 +29,19 @@ English uses a comma for thousands (5,112 €; 141,334.67 €), Finnish a space 
 141 334,67 €). End the answer with its last fact.
 - In `sources`, state in one sentence the data, the period and the geography level (postal \
 code, sub-area, municipality, region or country) behind the answer.
+- Use the latest figures unless the question names a year or quarter; never ask which \
+period to use.
 - Earlier questions and answers in the conversation are context: use them to understand a \
 follow-up such as "and in Espoo?" or "what about two-room flats?". Look every figure up again \
 with the tools; never repeat a number from an earlier answer.
 - Fill `chart` only when the question asks for a chart, graph or plot (kaavio, kuvaaja) or \
 compares several areas, flat types or periods; otherwise set it to null. Use bar for \
-categories and line for years or quarters, with at most 3 series and 12 categories. Every \
+categories and line for years, quarters or sizes, with at most 3 series and 31 categories. Every \
 chart value must be a number a tool returned. The site draws the chart; never describe or \
-draw it in the text.
+draw it in the text, and never say there is a chart when `chart` is null.
+- Build exactly the chart the question describes: its x axis in `categories` and `x_label`, \
+the measure it asks for in the series and `y_label`. When the tools cannot give that data, \
+set `chart` to null and say which chart you cannot make; never chart something else.
 - Finish by calling submit_answer exactly once.
 """
 
@@ -55,6 +60,8 @@ rank_areas first. For "by how much", report its difference fields: to the next a
 other end of the ranking, and to the median area.
 - The latest price or rent in a place: find its postal code with search_areas, then call \
 area_prices.
+- The rent or price of a flat of a given size, or of each size in a range: find the postal \
+code with search_areas, then call flat_costs. Never multiply a price per m² by a size yourself.
 - The spread of prices or rents in a city or sub-area (average, median, quartiles, \
 percentiles, lowest, highest): find its area key with search_areas, then call price_spread. \
 For a city it also gives the cheapest and most expensive postal code areas: report them for \

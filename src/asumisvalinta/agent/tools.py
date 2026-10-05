@@ -28,6 +28,7 @@ FLAT_LABELS = {
     "all": "all flats",
 }
 ANSWER_TOOL = "submit_answer"
+MAX_SIZES = 31
 
 SIMPLIFICATIONS = [
     "All amounts are nominal euros; growth rates are annual.",
@@ -112,6 +113,8 @@ def answer_tool() -> Tool:
                         "kind": {"type": "string", "enum": ["bar", "line"]},
                         "title": {"type": "string"},
                         "unit": {"type": ["string", "null"]},
+                        "x_label": {"type": "string", "description": "What the x axis shows."},
+                        "y_label": {"type": "string", "description": "What the values measure."},
                         "categories": {"type": "array", "items": {"type": "string"}},
                         "series": {
                             "type": "array",
@@ -129,7 +132,15 @@ def answer_tool() -> Tool:
                             },
                         },
                     },
-                    "required": ["kind", "title", "unit", "categories", "series"],
+                    "required": [
+                        "kind",
+                        "title",
+                        "unit",
+                        "x_label",
+                        "y_label",
+                        "categories",
+                        "series",
+                    ],
                     "additionalProperties": False,
                 },
             },
@@ -474,6 +485,48 @@ def semantic_tools(semantic_layer: SemanticLayer, warehouse: Path) -> list[Tool]
             ],
         }
 
+    def flat_costs(
+        postal_code: str,
+        room_type: str,
+        min_m2: float,
+        max_m2: float | None = None,
+        step_m2: float = 1,
+    ) -> dict[str, Any]:
+        top = min_m2 if max_m2 is None else max_m2
+        if not 10 <= min_m2 <= top <= 300 or step_m2 <= 0:
+            raise ToolError("Sizes run from 10 to 300 m², with min_m2 at most max_m2.")
+        count = int((top - min_m2) / step_m2 + 1e-9) + 1
+        if count > MAX_SIZES:
+            raise ToolError(f"At most {MAX_SIZES} sizes; use a larger step_m2.")
+        latest = area_prices(postal_code)
+        flat = FLAT_LABELS.get(room_type)
+        row = next((row for row in latest["by_room_type"] if row["flat"] == flat), None)
+        if row is None:
+            raise ToolError(f"No figures for {room_type} flats in {postal_code}.")
+        rent, price = row["rent_per_m2_month"], row["price_per_m2"]
+        sizes = [round(min_m2 + index * step_m2, 1) for index in range(count)]
+        return {
+            "postal_code": latest["postal_code"],
+            "name": latest["name"],
+            "municipality": latest["municipality"],
+            "flat": flat,
+            "rent_per_m2_month": rent,
+            "rent_period": row["rent_period"],
+            "rent_area_level": row["rent_area_level"],
+            "price_per_m2": price,
+            "price_period": row["price_period"],
+            "price_area_level": row["price_area_level"],
+            "note": "Estimates: the latest rent and price per m² times the flat size.",
+            "by_size": [
+                {
+                    "size_m2": size,
+                    "monthly_rent": None if rent is None else round(rent * size),
+                    "price": None if price is None else round(price * size),
+                }
+                for size in sizes
+            ],
+        }
+
     def latest_quarter(
         metrics: tuple[str, ...], area: str, *filters: Filter
     ) -> tuple[str, list[dict[str, Any]]] | None:
@@ -772,6 +825,26 @@ def semantic_tools(semantic_layer: SemanticLayer, warehouse: Path) -> list[Tool]
                 "required": ["postal_code"],
             },
             handler=area_prices,
+        ),
+        Tool(
+            name="flat_costs",
+            description=(
+                "Monthly rent and purchase price of a flat of a given size, or of each size in a "
+                "range (for example 50 to 70 m²), from the latest figures of a postal code. Use "
+                "it for any question about the total rent or price of a flat of some size."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "postal_code": {"type": "string", "description": "Five-digit postal code."},
+                    "room_type": {"type": "string", "enum": ROOM_TYPES},
+                    "min_m2": {"type": "number", "description": "Size, or the smallest size."},
+                    "max_m2": {"type": ["number", "null"], "description": "Largest size."},
+                    "step_m2": {"type": "number", "description": "Step, 1 m² by default."},
+                },
+                "required": ["postal_code", "room_type", "min_m2"],
+            },
+            handler=flat_costs,
         ),
         Tool(
             name="price_spread",

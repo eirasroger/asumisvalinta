@@ -242,6 +242,20 @@ def tools():
 class TestLookupsWithWarehouse:
     pytestmark = requires_warehouse
 
+    def test_flat_costs_scale_the_latest_figures_by_size(self, tools):
+        latest = tools["area_prices"](postal_code="00100")
+        result = tools["flat_costs"](
+            postal_code="00100", room_type="two_room", min_m2=50, max_m2=70
+        )
+        row = next(row for row in latest["by_room_type"] if row["flat"] == "1 bedroom")
+        assert [size["size_m2"] for size in result["by_size"]] == list(range(50, 71))
+        if row["rent_per_m2_month"] is not None:
+            assert result["by_size"][0]["monthly_rent"] == round(row["rent_per_m2_month"] * 50)
+
+    def test_flat_costs_limit_the_number_of_sizes(self, tools):
+        with pytest.raises(ToolError, match="At most"):
+            tools["flat_costs"](postal_code="00100", room_type="two_room", min_m2=20, max_m2=200)
+
     def test_dimension_values_list_the_building_types(self, tools):
         values = tools["list_dimension_values"](
             metrics=["avg_price_per_m2"], dimension="dwelling_price__building_type"
@@ -443,31 +457,73 @@ def test_earlier_turns_come_before_the_question():
 
 
 def rents_tool() -> Tool:
-    return Tool("rents", "Rents.", {"type": "object", "properties": {}}, lambda: {"kallio": 25.14})
+    rents = {"kallio": 25.14, "tampere": 17.39}
+    return Tool("rents", "Rents.", {"type": "object", "properties": {}}, lambda: rents)
 
 
-def submit_chart(values: list) -> ChatResponse:
+def submit_chart(values: list, answer: str = "text") -> ChatResponse:
     chart = {
         "kind": "bar",
         "title": "Rent per m²",
         "unit": "€/m²",
-        "categories": ["Kallio"],
+        "x_label": "Area",
+        "y_label": "Rent per m²",
+        "categories": ["Kallio", "Tampere"],
         "series": [{"name": "1 bedroom", "values": values}],
     }
-    arguments = {"status": "answered", "answer": "text", "value": None, "unit": None}
+    arguments = {"status": "answered", "answer": answer, "value": None, "unit": None}
     return call("submit_answer", {**arguments, "sources": "test", "chart": chart}, call_id="final")
 
 
 def test_a_grounded_chart_is_returned():
-    model = ScriptedModel([call("rents", {}), submit_chart([25.14])])
+    model = ScriptedModel([call("rents", {}), submit_chart([25.14, 17.39])])
     run = Agent("test", "system", [rents_tool(), answer_tool()], model).run("Chart rents")
-    assert run.chart["series"][0]["values"] == [25.14]
+    assert run.chart["series"][0]["values"] == [25.14, 17.39]
 
 
-@pytest.mark.parametrize("values", [[99.0], ["25.14"], [25.14, 17.39]])
+@pytest.mark.parametrize("values", [[99.0, 17.39], ["25.14", 17.39], [25.14], [25.14, None]])
 def test_a_chart_with_other_numbers_or_shape_is_sent_back(values):
-    model = ScriptedModel([call("rents", {}), submit_chart(values), submit_chart([25.14])])
+    model = ScriptedModel([call("rents", {}), submit_chart(values), submit_chart([25.14, 17.39])])
     run = Agent("test", "system", [rents_tool(), answer_tool()], model).run("Chart rents")
     assert [c.ok for c in run.tool_calls] == [True, False, True]
     assert "chart" in run.tool_calls[1].result
-    assert run.chart["series"][0]["values"] == [25.14]
+    assert run.chart["series"][0]["values"] == [25.14, 17.39]
+
+
+def answer_with(text: str) -> ChatResponse:
+    arguments = {"status": "answered", "answer": text, "value": None, "unit": None}
+    return call("submit_answer", {**arguments, "sources": "test", "chart": None}, call_id="final")
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Kallio 25.14 €/m², Tampere 17,39 €/m² for a 50 m² flat in 2026Q2.",
+        "Kallio 25 €/m², 2 bedrooms.",
+    ],
+)
+def test_numbers_from_tools_or_the_question_pass(text):
+    model = ScriptedModel([call("rents", {}), answer_with(text)])
+    agent = Agent("test", "system", [rents_tool(), answer_tool()], model)
+    run = agent.run("Rent of a 50 m² flat in 2026Q2?")
+    assert run.status == "answered" and run.answer == text
+
+
+def test_calculated_numbers_are_sent_back():
+    model = ScriptedModel(
+        [call("rents", {}), answer_with("About 1,257 € a month."), answer_with("25.14 €/m².")]
+    )
+    run = Agent("test", "system", [rents_tool(), answer_tool()], model).run("Rent for 50 m²?")
+    assert [c.ok for c in run.tool_calls] == [True, False, True]
+    assert "1,257" in run.tool_calls[1].result and "flat_costs" in run.tool_calls[1].result
+    assert run.answer == "25.14 €/m²."
+
+
+def test_a_chart_without_axis_names_is_sent_back():
+    unnamed = submit_chart([25.14, 17.39])
+    arguments = json.loads(unnamed.tool_calls[0].arguments)
+    arguments["chart"]["x_label"] = ""
+    unnamed = call("submit_answer", arguments, call_id="final")
+    model = ScriptedModel([call("rents", {}), unnamed, submit_chart([25.14, 17.39])])
+    run = Agent("test", "system", [rents_tool(), answer_tool()], model).run("Chart rents")
+    assert [c.ok for c in run.tool_calls] == [True, False, True]

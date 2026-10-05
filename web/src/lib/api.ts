@@ -217,6 +217,8 @@ export interface AskChart {
   kind: "bar" | "line";
   title: string;
   unit: string | null;
+  x_label: string;
+  y_label: string;
   categories: string[];
   series: { name: string; values: (number | null)[] }[];
 }
