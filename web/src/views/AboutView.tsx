@@ -5,17 +5,13 @@ import Link from "next/link";
 import { Reveal } from "@/components/about/Reveal";
 import { Arrow } from "@/components/icons";
 import { LogoMark } from "@/components/Logo";
+import { HelsinkiMap, MIST, NIGHT, OPTION_DOT, OPTIONS, WealthChart } from "@/components/showcase";
 import { type Locale, localePath } from "@/i18n/config";
-import { MESSAGES, type Messages } from "@/i18n/messages";
-import type { Option } from "@/lib/api";
+import { MESSAGES } from "@/i18n/messages";
 import { CONTACT_EMAIL } from "@/lib/site";
 
 /** Colours of the dot map, low to high price; written by scripts/build-about-maps.mjs. */
 const DOT_SCALE = ["#243a52", "#28507c", "#2c66a6", "#3580d6", "#5a9be6", "#86b6ef", "#b4d2f7"];
-const NIGHT = "bg-[#0e1a26]";
-const MIST = "bg-[#eaf2fc]";
-const OPTIONS: Option[] = ["rent", "aso", "buy"];
-const OPTION_DOT: Record<Option, string> = { rent: "bg-rent", aso: "bg-aso", buy: "bg-buy" };
 const HORIZON_YEARS = 30;
 const SOURCE_COUNT = 4;
 
@@ -40,53 +36,6 @@ function Glass({ children, className = "" }: { children: React.ReactNode; classN
       className={`absolute rounded-2xl bg-white/[0.07] px-4 py-3 text-white shadow-[0_12px_40px_rgba(0,0,0,0.35)] ring-1 ring-white/15 backdrop-blur-md ${className}`}
     >
       {children}
-    </div>
-  );
-}
-
-function WealthChart({ t }: { t: Messages }) {
-  const lines: { option: Option; d: string; end: [number, number] }[] = [
-    { option: "rent", d: "M40 214C170 196 320 170 480 140", end: [480, 140] },
-    { option: "aso", d: "M40 226C170 200 320 158 480 112", end: [480, 112] },
-    { option: "buy", d: "M40 262C150 244 300 160 480 56", end: [480, 56] },
-  ];
-  return (
-    <div className="rounded-2xl bg-paper p-5 shadow-float ring-1 ring-line sm:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[13px] font-semibold">{t.outcome.wealthChart}</p>
-        <p className="flex gap-3 text-xs text-ink-3">
-          {OPTIONS.map((option) => (
-            <span key={option} className="flex items-center gap-1.5">
-              <span className={`size-2 rounded-full ${OPTION_DOT[option]}`} />
-              {t.options.short[option]}
-            </span>
-          ))}
-        </p>
-      </div>
-      <svg viewBox="0 0 500 290" className="mt-4 w-full" aria-hidden="true">
-        <defs>
-          <linearGradient id="about-buy-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="var(--series-buy)" stopOpacity="0.16" />
-            <stop offset="1" stopColor="var(--series-buy)" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        {[40, 100, 160, 220].map((y) => (
-          <line key={y} x1="40" x2="480" y1={y} y2={y} stroke="var(--line)" strokeDasharray="3 5" />
-        ))}
-        <line x1="40" x2="480" y1="270" y2="270" stroke="var(--line-strong)" />
-        {Array.from({ length: 10 }, (_, index) => (
-          <text key={index} x={40 + (index + 1) * 44} y="286" textAnchor="middle" className="fill-ink-3 text-[11px]">
-            {index + 1}
-          </text>
-        ))}
-        <path d="M40 262C150 244 300 160 480 56V270H40Z" fill="url(#about-buy-fill)" />
-        {lines.map(({ option, d, end }) => (
-          <g key={option}>
-            <path d={d} pathLength={1} fill="none" stroke={`var(--series-${option})`} strokeWidth="3" strokeLinecap="round" className="draw" />
-            <circle cx={end[0]} cy={end[1]} r="5" fill={`var(--series-${option})`} stroke="var(--paper)" strokeWidth="2" />
-          </g>
-        ))}
-      </svg>
     </div>
   );
 }
@@ -218,13 +167,7 @@ export async function AboutView({ locale }: { locale: Locale }) {
             <p className="mt-4 text-[16px] leading-relaxed text-ink-2">{a.dataBody}</p>
           </Reveal>
           <Reveal delay={120}>
-            <div className="relative">
-              <span aria-hidden="true" className="dots absolute -top-8 -left-6 h-32 w-44 text-buy/40" />
-              <div className={`relative overflow-hidden rounded-[44%_56%_48%_52%/56%_44%_56%_44%] ${MIST} p-8 sm:p-12`}>
-                {/* eslint-disable-next-line @next/next/no-img-element -- static SVG, no optimisation needed */}
-                <img src="/about/helsinki.svg" alt="" className="w-full" />
-              </div>
-            </div>
+            <HelsinkiMap />
           </Reveal>
         </div>
 

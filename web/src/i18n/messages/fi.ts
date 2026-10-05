@@ -19,6 +19,19 @@ export const fi: Messages = {
       "Vuokra-asunto, asumisoikeus vai omistusasunto? Vertaa kaikkia kolmea mille tahansa asunnolle Suomessa virallisen avoimen datan avulla.",
     cta: "Avaa kartta",
     secondary: "Vertaa asuntoa",
+    mapTitle: "Koko Suomi postinumeroittain",
+    mapBody:
+      "Katso vanhojen asuntojen hinnat, vuokrat ja hinta–vuokra-suhteet kaikille postinumeroalueille samalta kartalta sekä hintojen kehitys vuosien varrella.",
+    compareTitle: "Vuokra, asumisoikeus ja omistus rinnakkain",
+    compareBody:
+      "Syötä asunnon tiedot, niin näet vuosi vuodelta, mikä vaihtoehto pärjää parhaiten. Lainan korot, verot ja yhtiövastikkeet ovat mukana.",
+    askTitle: "Kysy omin sanoin",
+    askBody:
+      "Kysy hinnoista, vuokrista ja koroista tavallisella kielellä. Avustaja vastaa virallisten tilastojen pohjalta ja kertoo lähteen.",
+    askCta: "Esitä kysymys",
+    askSource: "Tilastokeskus",
+    bandTitle: "Aloita omasta alueestasi",
+    bandBody: "Hae kartalta osoite tai postinumero.",
   },
   preview: {
     explore: "Hinnat, vuokrat ja hinta–vuokra-suhteet kaikille 3 018 postinumeroalueelle.",

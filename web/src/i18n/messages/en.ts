@@ -17,6 +17,19 @@ export const en = {
     tagline: "Rent, right of occupancy or buy? Compare all three for any flat in Finland, using official open data.",
     cta: "Explore the map",
     secondary: "Compare a flat",
+    mapTitle: "All of Finland, by postal code",
+    mapBody:
+      "See prices of old flats, rents and price-to-rent ratios for every postal code area on one map, with how prices have changed over the years.",
+    compareTitle: "Rent, right of occupancy and buying side by side",
+    compareBody:
+      "Enter a flat and see year by year which option comes out ahead. Loan interest, taxes and housing company charges are included.",
+    askTitle: "Ask in your own words",
+    askBody:
+      "Ask about prices, rents and interest rates in plain language. The assistant answers from official statistics and shows the source.",
+    askCta: "Ask a question",
+    askSource: "Statistics Finland",
+    bandTitle: "Start with your own area",
+    bandBody: "Search for an address or postal code on the map.",
   },
   preview: {
     explore: "Prices, rents and price-to-rent ratios for all 3,018 postal code areas.",
