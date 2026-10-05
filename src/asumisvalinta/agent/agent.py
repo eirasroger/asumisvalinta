@@ -4,6 +4,7 @@ import contextlib
 import json
 import logging
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -103,14 +104,16 @@ class Agent:
     model: ChatModel
     max_steps: int = MAX_STEPS
 
-    def run(self, question: str) -> AgentRun:
+    def run(self, question: str, history: Sequence[tuple[str, str]] = ()) -> AgentRun:
+        """`history` holds earlier (question, answer) pairs."""
         run = AgentRun(agent=self.name, model=self.model.name, question=question)
         tools = {tool.name: tool for tool in self.tools}
         schemas = [tool.schema for tool in self.tools]
-        messages: list[dict[str, Any]] = [
-            {"role": "system", "content": self.system_prompt},
-            {"role": "user", "content": question},
-        ]
+        messages: list[dict[str, Any]] = [{"role": "system", "content": self.system_prompt}]
+        for earlier_question, earlier_answer in history:
+            messages.append({"role": "user", "content": earlier_question})
+            messages.append({"role": "assistant", "content": earlier_answer})
+        messages.append({"role": "user", "content": question})
         reminded = False
         for step in range(self.max_steps):
             response = self.model.complete(messages, schemas)

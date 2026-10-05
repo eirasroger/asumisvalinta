@@ -1,7 +1,7 @@
 import type { Messages } from "@/i18n/messages";
 import type { Option } from "@/lib/api";
 
-/** Visuals shared by the front page and the About page; illustrations, not live results. */
+/** Illustrations shared by the front page and the About page. */
 
 export const NIGHT = "bg-[#0e1a26]";
 export const MIST = "bg-[#eaf2fc]";
@@ -55,7 +55,7 @@ export function WealthChart({ t }: { t: Messages }) {
   );
 }
 
-/** The Helsinki area's postal code areas in an organic frame, from scripts/build-about-maps.mjs. */
+/** Helsinki-area price map in an organic frame. */
 export function HelsinkiMap() {
   return (
     <div className="relative">
@@ -68,7 +68,7 @@ export function HelsinkiMap() {
   );
 }
 
-/** A question to the assistant and the shape of its answer, without figures. */
+/** A question and the shape of an answer, without figures. */
 export function AskThread({ t }: { t: Messages }) {
   const bars = [38, 44, 47, 52, 58, 61, 66];
   return (

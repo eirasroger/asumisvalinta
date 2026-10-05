@@ -208,6 +208,15 @@ export interface AskResponse {
   sources: string;
   tools_used: string[];
   remaining_questions: number;
+  /** Null when conversation memory is off. */
+  signature: string | null;
+}
+
+/** An earlier exchange, sent back with its signature. */
+export interface AskTurn {
+  question: string;
+  answer: string;
+  signature: string;
 }
 
 export class ApiError extends Error {
@@ -269,9 +278,9 @@ export const api = {
       body: JSON.stringify(scenario),
       signal,
     }),
-  ask: (question: string, sessionId: string, lang: Locale, consent: boolean) =>
+  ask: (question: string, sessionId: string, lang: Locale, consent: boolean, history: AskTurn[]) =>
     request<AskResponse>(`/api/ask?lang=${lang}`, {
       method: "POST",
-      body: JSON.stringify({ question, session_id: sessionId, record: trackingAllowed(), visit: visitId(), consent }),
+      body: JSON.stringify({ question, session_id: sessionId, record: trackingAllowed(), visit: visitId(), consent, history }),
     }),
 };

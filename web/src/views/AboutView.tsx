@@ -10,7 +10,7 @@ import { type Locale, localePath } from "@/i18n/config";
 import { MESSAGES } from "@/i18n/messages";
 import { CONTACT_EMAIL } from "@/lib/site";
 
-/** Colours of the dot map, low to high price; written by scripts/build-about-maps.mjs. */
+/** Dot map colours, low to high price (scripts/build-about-maps.mjs). */
 const DOT_SCALE = ["#243a52", "#28507c", "#2c66a6", "#3580d6", "#5a9be6", "#86b6ef", "#b4d2f7"];
 const HORIZON_YEARS = 30;
 const SOURCE_COUNT = 4;

@@ -1,7 +1,4 @@
-// Draw the About page's maps from the local map data: Finland as a grid of dots and the Helsinki
-// area as postal code areas, both shaded by the price per m² of two-room flats. Run once after
-// scripts/export_map_data.py has written public/map; the SVGs are committed.
-// Usage: node scripts/build-about-maps.mjs
+// About page maps from the local map data; the SVGs are committed.
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";

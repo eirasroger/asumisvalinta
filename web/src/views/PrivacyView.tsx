@@ -74,7 +74,8 @@ const NOTICES: Record<Locale, Notice> = {
           <ul className={LIST}>
             <li>
               AI service providers: questions submitted to the assistant, including for the training of AI models.
-              Data may be transferred outside the EU/EEA subject to appropriate safeguards (Chapter V GDPR).
+              Within a conversation, earlier questions and answers are sent again with each new question. Data may
+              be transferred outside the EU/EEA subject to appropriate safeguards (Chapter V GDPR).
             </li>
             <li>
               Hosting providers (Cloudflare, Google Cloud). The API runs in Finland and stored data are located
@@ -171,7 +172,8 @@ const NOTICES: Record<Locale, Notice> = {
           <ul className={LIST}>
             <li>
               Tekoälypalvelujen tarjoajat: avustajalle lähetetyt kysymykset, myös tekoälymallien kouluttamista varten.
-              Tietoja voidaan siirtää EU:n tai ETA:n ulkopuolelle asianmukaisin suojatoimin (tietosuoja-asetuksen V
+              Saman keskustelun aiemmat kysymykset ja vastaukset lähetetään uudelleen jokaisen uuden kysymyksen
+              mukana. Tietoja voidaan siirtää EU:n tai ETA:n ulkopuolelle asianmukaisin suojatoimin (tietosuoja-asetuksen V
               luku).
             </li>
             <li>

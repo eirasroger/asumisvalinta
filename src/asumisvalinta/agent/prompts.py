@@ -29,6 +29,9 @@ English uses a comma for thousands (5,112 €; 141,334.67 €), Finnish a space 
 141 334,67 €). End the answer with its last fact.
 - In `sources`, state in one sentence the data, the period and the geography level (postal \
 code, sub-area, municipality, region or country) behind the answer.
+- Earlier questions and answers in the conversation are context: use them to understand a \
+follow-up such as "and in Espoo?" or "what about two-room flats?". Look every figure up again \
+with the tools; never repeat a number from an earlier answer.
 - Finish by calling submit_answer exactly once.
 """
 

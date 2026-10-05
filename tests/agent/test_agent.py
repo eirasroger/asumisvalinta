@@ -425,3 +425,18 @@ def test_numeric_answer_must_come_from_a_tool_result():
 def test_answer_without_a_number_needs_no_tool_result():
     model = ScriptedModel([submit("answered", None)])
     assert Agent("test", "system", [answer_tool()], model).run("?").status == "answered"
+
+
+def test_earlier_turns_come_before_the_question():
+    model = ScriptedModel([submit()])
+    history = [("Price in 00100?", "About 7,800 € per m²."), ("And rents?", "About 25 € per m².")]
+    Agent("test", "system", [answer_tool()], model).run("And in Espoo?", history)
+    roles = [(message["role"], message["content"]) for message in model.seen[0]]
+    assert roles == [
+        ("system", "system"),
+        ("user", "Price in 00100?"),
+        ("assistant", "About 7,800 € per m²."),
+        ("user", "And rents?"),
+        ("assistant", "About 25 € per m²."),
+        ("user", "And in Espoo?"),
+    ]

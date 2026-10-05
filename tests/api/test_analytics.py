@@ -179,7 +179,7 @@ class _FakeRun:
 
 
 class _FakeAgent:
-    def run(self, question):
+    def run(self, question, history=()):
         return _FakeRun()
 
 
@@ -201,6 +201,7 @@ def test_questions_are_recorded_redacted_unless_the_browser_opts_out(monkeypatch
                 "question": "Rent in 00100? Reply to [email]",
                 "status": "answered",
                 "tools": [],
+                "turn": 1,
                 "visit": None,
             },
         )
@@ -223,9 +224,9 @@ def test_questions_are_refused_once_the_daily_tokens_are_used(monkeypatch, recor
     asked = []
 
     class _CountingAgent(_FakeAgent):
-        def run(self, question):
+        def run(self, question, history=()):
             asked.append(question)
-            return super().run(question)
+            return super().run(question, history)
 
     def exhausted():
         raise usage.BudgetExhausted("limit")

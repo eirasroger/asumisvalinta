@@ -1,7 +1,7 @@
 import type { Locale } from "@/i18n/config";
 import { CONTACT_EMAIL, SITE_URL } from "@/lib/site";
 
-/** Tells search engines the site's name and logo; rendered on the front page. */
+/** Site name and logo for search engines. */
 export function SiteJsonLd({ locale }: { locale: Locale }) {
   const data = {
     "@context": "https://schema.org",

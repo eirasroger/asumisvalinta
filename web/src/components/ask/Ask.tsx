@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useI18n } from "@/i18n/I18nProvider";
-import { type AskResponse, api } from "@/lib/api";
+import { type AskResponse, type AskTurn, api } from "@/lib/api";
+
+/** Earlier exchanges sent with each question (API maximum). */
+const MEMORY_TURNS = 4;
 
 // Kept in memory only: nothing is stored on the device, and a reload starts a new session.
 let currentSession: string | null = null;
@@ -28,7 +31,7 @@ const STATUS_DOT: Record<AskResponse["status"], string> = {
   error: "bg-bad",
 };
 
-/** Follows its content's height, so the card grows smoothly when the answer replaces the placeholder. */
+/** Animates height changes of its content. */
 function SmoothHeight({ children }: { children: React.ReactNode }) {
   const inner = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState<number>();
@@ -46,7 +49,7 @@ function SmoothHeight({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** The answer text, revealed word by word within about a second. */
+/** Reveals the text word by word. */
 function RevealText({ text }: { text: string }) {
   const parts = text.split(/(\s+)/);
   const step = Math.min(22, 1200 / Math.max(1, parts.length / 2));
@@ -137,12 +140,17 @@ export function Ask() {
     if (!ready) return;
     const text = question.trim();
     const id = nextId.current++;
+    const history: AskTurn[] = turns
+      .flatMap((turn) =>
+        turn.answer?.signature ? [{ question: turn.question, answer: turn.answer.answer, signature: turn.answer.signature }] : [],
+      )
+      .slice(-MEMORY_TURNS);
     setQuestion("");
     setTurns((current) => [...current, { id, question: text }]);
     const settle = (patch: Partial<Turn>) =>
       setTurns((current) => current.map((turn) => (turn.id === id ? { ...turn, ...patch } : turn)));
     try {
-      const answer = await api.ask(text, sessionId(), locale, consent);
+      const answer = await api.ask(text, sessionId(), locale, consent, history);
       setRemaining(answer.remaining_questions);
       settle({ answer });
     } catch (caught) {

@@ -14,7 +14,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 
-from asumisvalinta.api import addresses, analytics, throttle, usage
+from asumisvalinta.api import addresses, analytics, conversation, throttle, usage
 from asumisvalinta.api.limits import LimitReached, QuestionLimits
 from asumisvalinta.config import connect_read_only, duckdb_path, load_dotenv
 from asumisvalinta.scenario import ScenarioInput, ScenarioResult, simulate
@@ -282,6 +282,9 @@ class AskRequest(BaseModel):
     visit: str | None = Field(default=None, pattern=VISIT_ID)
     # Questions may be used to train the AI provider's models, so asking requires consent.
     consent: bool = False
+    history: list[conversation.Turn] = Field(
+        default_factory=list, max_length=conversation.MAX_TURNS
+    )
 
 
 @lru_cache(maxsize=1)
@@ -324,7 +327,8 @@ def ask(
         limits.take(request.session_id)
     except LimitReached as error:
         raise HTTPException(429, error_text(error.kind)) from error
-    run = agent.run(request.question)
+    history = conversation.verified(request.session_id, request.history)
+    run = agent.run(request.question, history)
     usage.add(run.prompt_tokens + run.completion_tokens)
     status = run.status if not run.error else "error"
     tools = [call.tool for call in run.tool_calls if call.tool != "submit_answer"]
@@ -336,6 +340,7 @@ def ask(
                 "question": analytics.redact(request.question),
                 "status": status,
                 "tools": tools,
+                "turn": len(history) + 1,
                 "visit": request.visit,
             },
         )
@@ -347,6 +352,9 @@ def ask(
         "sources": run.sources,
         "tools_used": tools,
         "remaining_questions": limits.remaining(request.session_id),
+        "signature": None
+        if run.error
+        else conversation.sign(request.session_id, request.question, run.answer),
     }
 
 
