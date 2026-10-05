@@ -45,6 +45,16 @@ export function pageMetadata(locale: Locale, page: keyof Omit<Messages["meta"], 
   return { title: `${MESSAGES[locale].meta[page]} · Asumisvalinta`, alternates: alternates(locale, `/${page}`) };
 }
 
+/** Metadata of a page with its own title and description, such as a guide. */
+export function articleMetadata(locale: Locale, path: string, title: string, description: string): Metadata {
+  return { title: `${title} · Asumisvalinta`, description, alternates: alternates(locale, path) };
+}
+
+export function guidesMetadata(locale: Locale): Metadata {
+  const t = MESSAGES[locale].guides;
+  return articleMetadata(locale, "/oppaat", t.title, t.lead);
+}
+
 export function Shell({ locale, children }: { locale: Locale; children: React.ReactNode }) {
   return (
     <html lang={locale} className={schibsted.variable}>

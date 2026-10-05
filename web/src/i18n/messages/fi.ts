@@ -49,6 +49,7 @@ export const fi: Messages = {
     methodology: "Menetelmät",
   },
   footer: {
+    guides: "Oppaat",
     note: "Arvioita, ei taloudellista neuvontaa. Lähde: Tilastokeskus (CC BY 4.0). Lähde: EKP:n tilastot. Osoitteet: Posti.",
     methodology: "Menetelmät",
     about: "Tietoa palvelusta",
@@ -307,6 +308,13 @@ export const fi: Messages = {
     wait: (seconds: number) => `Odota ${seconds} s`,
     basedOn: "Perustuu: ",
     failed: "Jokin meni vikaan.",
+  },
+  guides: {
+    title: "Oppaat",
+    lead: "Selkeät selitykset vuokra-asumisesta, asumisoikeudesta ja asunnon ostamisesta Suomessa virallisine lähteineen.",
+    read: "Lue opas",
+    contents: "Sisällys",
+    updated: (date: string) => `Päivitetty ${date}`,
   },
   about: {
     heroTitle: "Tiedä luvut ennen kuin valitset kodin",

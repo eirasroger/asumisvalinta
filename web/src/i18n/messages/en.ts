@@ -47,6 +47,7 @@ export const en = {
     methodology: "Methodology",
   },
   footer: {
+    guides: "Guides",
     note: "Estimates, not financial advice. Source: Statistics Finland (CC BY 4.0). Source: ECB statistics. Addresses: Posti.",
     methodology: "Methodology",
     about: "About",
@@ -305,6 +306,13 @@ export const en = {
     wait: (seconds: number) => `Wait ${seconds} s`,
     basedOn: "Based on ",
     failed: "Something went wrong.",
+  },
+  guides: {
+    title: "Guides",
+    lead: "Plain explanations of renting, right of occupancy and buying a home in Finland, with the official sources behind them.",
+    read: "Read the guide",
+    contents: "Contents",
+    updated: (date: string) => `Updated ${date}`,
   },
   about: {
     heroTitle: "Know the numbers before you choose a home",
