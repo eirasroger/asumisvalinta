@@ -36,5 +36,8 @@
     "mapshaper": "^0.7.70",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "adm-zip": "^0.6.1"
   }
 }
