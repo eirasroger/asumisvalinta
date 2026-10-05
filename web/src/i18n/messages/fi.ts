@@ -12,6 +12,7 @@ export const fi: Messages = {
     ask: "Kysy",
     methodology: "Menetelmät",
     privacy: "Tietosuojaseloste",
+    about: "Tietoa palvelusta",
   },
   home: {
     tagline:
@@ -36,6 +37,7 @@ export const fi: Messages = {
   footer: {
     note: "Arvioita, ei taloudellista neuvontaa. Lähde: Tilastokeskus (CC BY 4.0). Lähde: EKP:n tilastot. Osoitteet: Posti.",
     methodology: "Menetelmät",
+    about: "Tietoa palvelusta",
     privacy: "Tietosuoja",
     dataModel: "Tietomalli",
   },
@@ -287,5 +289,51 @@ export const fi: Messages = {
     submit: "Kysy",
     basedOn: "Perustuu: ",
     failed: "Jokin meni vikaan.",
+  },
+  about: {
+    heroTitle: "Tiedä luvut ennen kuin valitset kodin",
+    heroLead: "Asumisvalinta vertaa vuokra-asumista, asumisoikeutta ja omistamista missä tahansa Suomessa virallisten tilastojen avulla, jotka päivittyvät kuukausittain.",
+    mapLegend: "Kaksiot, neliöhinta",
+    legendLow: "Edullisempi",
+    legendHigh: "Kalliimpi",
+    statementTitle: "Kolme tapaa asua. Yksi laskelma.",
+    statementBody:
+      "Valitse alue tai syötä asunnon tiedot, niin näet vuokra-asumisen, asumisoikeuden ja omistamisen kustannukset rinnakkain vuosi vuodelta.",
+    costTitle: "Koko hinta vuosi vuodelta",
+    costBody:
+      "Laskelmassa ovat mukana lainan korot, varainsiirtovero, yhtiövastike, asumisoikeusmaksu ja vuokrien nousu. Jokainen oletus näkyy ja on muutettavissa, ja tulos näyttää, mikä vaihtoehto pärjää parhaiten valitsemallasi aikavälillä.",
+    years: "Vuodet",
+    differentTitle: "Mikä tekee Asumisvalinnasta erilaisen",
+    dataTitle: "Rakennettu virallisen datan varaan",
+    dataBody:
+      "Hinnat ja vuokrat tulevat Tilastokeskukselta postinumeroalueittain, korot Euroopan keskuspankilta ja vero- ja lainasäännöt suomalaisilta viranomaisilta. Jos alueella on liian vähän kauppoja, luku haetaan laajemmalta alueelta, ja sovellus kertoo sen.",
+    engineTitle: "Laskettu testatulla moottorilla",
+    engineBody:
+      "Jokainen luku lasketaan kuukausi kerrallaan testatussa laskentamoottorissa. Tekoälyavustaja hakee lukunsa samasta moottorista eikä laske itse.",
+    engineChips: ["Testattu", "Päivittyy kuukausittain", "Avoimet oletukset"],
+    numbersTitle: "Asumisvalinta lukuina",
+    stats: {
+      areas: "postinumeroaluetta",
+      history: "vuotta hintahistoriaa",
+      horizon: "vuotta suunniteltavissa eteenpäin",
+      sources: "virallista tietolähdettä",
+    },
+    principlesTitle: "Periaatteet",
+    principles: [
+      {
+        title: "Riippumaton",
+        body: "Ei sidoksissa pankkeihin, kiinteistönvälittäjiin tai asuntotoimijoihin, joten mitään vaihtoehtoa ei suosita.",
+      },
+      { title: "Avoin", body: "Menetelmät ja tietomalli on julkaistu kokonaisuudessaan." },
+      { title: "Huolellinen", body: "Data ja laskelmat testataan automaattisesti ennen jokaista kuukausijulkaisua." },
+      {
+        title: "Arvioita",
+        body: "Tulokset ovat arvioita suunnittelun tueksi. Tarkista isot päätökset pankkisi tai neuvonantajan kanssa.",
+      },
+    ],
+    methodology: "Menetelmät",
+    dataModel: "Tietomalli",
+    contactTitle: "Löysitkö virheen tai onko sinulla idea?",
+    contactBody: "Korjaukset, käännösvirheet ja ehdotukset ovat tervetulleita sähköpostitse.",
   },
 };

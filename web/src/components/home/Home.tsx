@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { Arrow } from "@/components/icons";
 import { AnimatedLogoMark } from "@/components/Logo";
 import { type Section, SectionPreview } from "@/components/SectionPreview";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -12,12 +13,6 @@ const SECTIONS: { section: Section; path: string }[] = [
   { section: "compare", path: "/compare" },
   { section: "ask", path: "/ask" },
 ];
-
-const Arrow = ({ className = "" }: { className?: string }) => (
-  <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" className={className}>
-    <path d="M3 8h9.5M8.5 3.5 13 8l-4.5 4.5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
 
 export function Home() {
   const { t, href } = useI18n();

@@ -11,6 +11,7 @@ export const en = {
     ask: "Ask",
     methodology: "Methodology",
     privacy: "Privacy notice",
+    about: "About",
   },
   home: {
     tagline: "Rent, right of occupancy or buy? Compare all three for any flat in Finland, using official open data.",
@@ -34,6 +35,7 @@ export const en = {
   footer: {
     note: "Estimates, not financial advice. Source: Statistics Finland (CC BY 4.0). Source: ECB statistics. Addresses: Posti.",
     methodology: "Methodology",
+    about: "About",
     privacy: "Privacy",
     dataModel: "Data model",
   },
@@ -285,6 +287,52 @@ export const en = {
     submit: "Ask",
     basedOn: "Based on ",
     failed: "Something went wrong.",
+  },
+  about: {
+    heroTitle: "Know the numbers before you choose a home",
+    heroLead: "Asumisvalinta compares renting, right of occupancy and buying anywhere in Finland, using official statistics that update every month.",
+    mapLegend: "Two-room flats, price per m²",
+    legendLow: "Lower",
+    legendHigh: "Higher",
+    statementTitle: "Three ways to live. One calculation.",
+    statementBody:
+      "Choose an area or enter a flat and see the costs of renting, right of occupancy and buying side by side, year by year.",
+    costTitle: "The full cost, year by year",
+    costBody:
+      "Loan interest, transfer tax, housing company charges, the right-of-occupancy fee and rent increases are all included. Every assumption is visible and can be changed, and the result shows which option comes out ahead over the years you choose.",
+    years: "Years",
+    differentTitle: "What makes Asumisvalinta different",
+    dataTitle: "Built on official data",
+    dataBody:
+      "Prices and rents come from Statistics Finland by postal code area, interest rates from the European Central Bank, and tax and lending rules from Finnish authorities. Where an area has too few sales, the figure comes from a wider area, and the app says so.",
+    engineTitle: "Worked out by a tested engine",
+    engineBody:
+      "Every figure is calculated month by month in a tested calculation engine. The AI assistant fetches its numbers from the same engine and never does the arithmetic itself.",
+    engineChips: ["Tested", "Updated monthly", "Open assumptions"],
+    numbersTitle: "Asumisvalinta in numbers",
+    stats: {
+      areas: "postal code areas",
+      history: "years of price history",
+      horizon: "years you can plan ahead",
+      sources: "official sources",
+    },
+    principlesTitle: "Principles",
+    principles: [
+      {
+        title: "Independent",
+        body: "Not affiliated with any bank, estate agent or housing provider, so no option is favoured.",
+      },
+      { title: "Open", body: "The methodology and the data model are published in full." },
+      { title: "Careful", body: "Data and calculations are tested automatically before every monthly release." },
+      {
+        title: "Estimates",
+        body: "Results are estimates for planning. Check big decisions with your bank or an adviser.",
+      },
+    ],
+    methodology: "Methodology",
+    dataModel: "Data model",
+    contactTitle: "Found an error or have an idea?",
+    contactBody: "Corrections, translation fixes and suggestions are welcome by email.",
   },
 };
 

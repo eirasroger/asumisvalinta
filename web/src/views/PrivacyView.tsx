@@ -1,25 +1,31 @@
 import type { Locale } from "@/i18n/config";
+import { PRIVACY_EMAIL } from "@/lib/site";
 
 const LINK = "text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink";
+const LIST =
+  "space-y-3 [&>li]:relative [&>li]:pl-6 [&>li]:before:absolute [&>li]:before:top-[0.75em] [&>li]:before:left-0.5 [&>li]:before:size-1.5 [&>li]:before:rounded-full [&>li]:before:bg-buy";
 const CONTROLLER = "Roger Vergés";
-const CONTACT = "asumisvalinta@gmail.com";
 
 const Email = () => (
-  <a className={LINK} href={`mailto:${CONTACT}`}>
-    {CONTACT}
+  <a className={LINK} href={`mailto:${PRIVACY_EMAIL}`}>
+    {PRIVACY_EMAIL}
   </a>
 );
 
 interface Notice {
   title: string;
+  intro: string;
   updated: string;
+  contents: string;
   sections: { title: string; body: React.ReactNode }[];
 }
 
 const NOTICES: Record<Locale, Notice> = {
   en: {
     title: "Privacy notice",
+    intro: "This notice explains which personal data Asumisvalinta processes and why.",
     updated: "Last updated 5 October 2026",
+    contents: "Contents",
     sections: [
       {
         title: "Controller",
@@ -32,7 +38,7 @@ const NOTICES: Record<Locale, Notice> = {
       {
         title: "Data processed",
         body: (
-          <ul className="list-disc space-y-1.5 pl-5">
+          <ul className={LIST}>
             <li>
               Usage data: inputs to the calculator and the map, and the results shown. Events from one visit share a
               random number that is created when the page loads and is not stored on your device.
@@ -53,7 +59,7 @@ const NOTICES: Record<Locale, Notice> = {
       {
         title: "Purpose and legal basis",
         body: (
-          <ul className="list-disc space-y-1.5 pl-5">
+          <ul className={LIST}>
             <li>Operating, developing and securing the service: legitimate interest (Article 6(1)(f) GDPR).</li>
             <li>
               Answering questions submitted to the assistant and their use for training AI models: consent (Article
@@ -65,7 +71,7 @@ const NOTICES: Record<Locale, Notice> = {
       {
         title: "Recipients and transfers",
         body: (
-          <ul className="list-disc space-y-1.5 pl-5">
+          <ul className={LIST}>
             <li>
               AI service providers: questions submitted to the assistant, including for the training of AI models.
               Data may be transferred outside the EU/EEA subject to appropriate safeguards (Chapter V GDPR).
@@ -111,7 +117,9 @@ const NOTICES: Record<Locale, Notice> = {
   },
   fi: {
     title: "Tietosuojaseloste",
+    intro: "Tämä seloste kertoo, mitä henkilötietoja Asumisvalinta käsittelee ja miksi.",
     updated: "Päivitetty 5.10.2026",
+    contents: "Sisällys",
     sections: [
       {
         title: "Rekisterinpitäjä",
@@ -124,7 +132,7 @@ const NOTICES: Record<Locale, Notice> = {
       {
         title: "Käsiteltävät tiedot",
         body: (
-          <ul className="list-disc space-y-1.5 pl-5">
+          <ul className={LIST}>
             <li>
               Käyttötiedot: laskuriin ja karttaan syötetyt tiedot ja näytetyt tulokset. Saman käynnin tapahtumat
               yhdistää satunnaisluku, joka luodaan sivun latautuessa eikä sitä tallenneta laitteellesi.
@@ -145,7 +153,7 @@ const NOTICES: Record<Locale, Notice> = {
       {
         title: "Käsittelyn tarkoitus ja oikeusperuste",
         body: (
-          <ul className="list-disc space-y-1.5 pl-5">
+          <ul className={LIST}>
             <li>
               Palvelun ylläpito, kehittäminen ja suojaaminen: rekisterinpitäjän oikeutettu etu (tietosuoja-asetuksen 6
               artiklan 1 kohdan f alakohta).
@@ -160,7 +168,7 @@ const NOTICES: Record<Locale, Notice> = {
       {
         title: "Vastaanottajat ja siirrot",
         body: (
-          <ul className="list-disc space-y-1.5 pl-5">
+          <ul className={LIST}>
             <li>
               Tekoälypalvelujen tarjoajat: avustajalle lähetetyt kysymykset, myös tekoälymallien kouluttamista varten.
               Tietoja voidaan siirtää EU:n tai ETA:n ulkopuolelle asianmukaisin suojatoimin (tietosuoja-asetuksen V
@@ -211,17 +219,49 @@ const NOTICES: Record<Locale, Notice> = {
 export function PrivacyView({ locale }: { locale: Locale }) {
   const notice = NOTICES[locale];
   return (
-    <article className="mx-auto max-w-2xl px-4 pt-10 pb-16 text-[15px] leading-relaxed text-ink-2 sm:px-6">
-      <h1 className="text-2xl font-semibold tracking-tight text-ink sm:text-[28px]">{notice.title}</h1>
-      <p className="mt-1 text-sm text-ink-3">{notice.updated}</p>
-      {notice.sections.map((section, index) => (
-        <section key={section.title} className="mt-7">
-          <h2 className="mb-1.5 text-[15px] font-semibold text-ink">
-            {index + 1}. {section.title}
-          </h2>
-          <div>{section.body}</div>
-        </section>
-      ))}
-    </article>
+    <div className="bg-paper">
+      <header className="relative overflow-hidden bg-[#0e1a26] text-white">
+        {/* eslint-disable-next-line @next/next/no-img-element -- static SVG, no optimisation needed */}
+        <img
+          src="/about/finland-dots.svg"
+          alt=""
+          className="map-reveal pointer-events-none absolute top-[-60%] right-[2%] w-[340px] opacity-40 [mask-image:linear-gradient(to_left,black_35%,transparent)] sm:w-[520px]"
+        />
+        <div className="relative mx-auto max-w-6xl px-4 pt-20 pb-16 sm:px-6 sm:pt-28 sm:pb-24">
+          <h1 className="fade-up text-[44px] leading-none font-semibold tracking-[-0.04em] sm:text-[76px]">{notice.title}</h1>
+        </div>
+      </header>
+
+      <div className="mx-auto grid max-w-6xl gap-12 px-4 pt-12 pb-24 sm:px-6 sm:pt-16 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-20">
+        <nav aria-label={notice.contents} className="hidden lg:block">
+          <div className="sticky top-24">
+            <p className="text-xs font-medium tracking-wider text-ink-3 uppercase">{notice.contents}</p>
+            <ol className="mt-4 space-y-2.5 border-l border-line">
+              {notice.sections.map((section, index) => (
+                <li key={section.title}>
+                  <a
+                    href={`#section-${index + 1}`}
+                    className="-ml-px block border-l border-transparent pl-4 text-sm text-ink-2 transition-colors hover:border-ink hover:text-ink"
+                  >
+                    {section.title}
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </nav>
+
+        <article className="max-w-[680px] text-[16px] leading-[1.8] text-ink-2">
+          <p className="text-lg leading-relaxed text-ink">{notice.intro}</p>
+          <p className="mt-2 text-sm text-ink-3">{notice.updated}</p>
+          {notice.sections.map((section, index) => (
+            <section key={section.title} id={`section-${index + 1}`} className="mt-14 scroll-mt-24">
+              <h2 className="mb-4 text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">{section.title}</h2>
+              <div>{section.body}</div>
+            </section>
+          ))}
+        </article>
+      </div>
+    </div>
   );
 }

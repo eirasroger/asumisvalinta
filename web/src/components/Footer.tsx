@@ -13,6 +13,9 @@ export function Footer({ dataDocs }: { dataDocs: boolean }) {
       <div className="mx-auto flex max-w-[1240px] flex-col gap-2 px-4 py-6 text-xs text-ink-3 sm:flex-row sm:justify-between sm:px-6">
         <p>{t.footer.note}</p>
         <p className="flex gap-4">
+          <Link href={href("/about")} className="hover:text-ink">
+            {t.footer.about}
+          </Link>
           <Link href={href("/methodology")} className="hover:text-ink">
             {t.footer.methodology}
           </Link>
