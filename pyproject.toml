@@ -13,7 +13,6 @@ dependencies = [
     "duckdb>=1.5.6,<1.6",
     "fastapi>=0.142,<1",
     "openai>=3.22,<4",
-    "psycopg[binary]>=3.2,<4",
     "pydantic>=2.13",
     "uvicorn>=0.30",
 ]

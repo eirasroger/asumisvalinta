@@ -1,0 +1,10 @@
+{
+  "name": "asumisvalinta-api",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-05",
+  "workers_dev": false,
+  "routes": [{ "pattern": "api.asumisvalinta.fi", "custom_domain": true }],
+  "vars": {
+    "ORIGIN": "https://asumisvalinta-api-964712698374.europe-north1.run.app"
+  }
+}

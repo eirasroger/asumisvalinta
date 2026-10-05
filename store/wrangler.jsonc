@@ -1,0 +1,13 @@
+{
+  "name": "asumisvalinta-store",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-05",
+  "workers_dev": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "asumisvalinta",
+      "database_id": "3809f531-b292-4e30-9fed-0e4842223e2c"
+    }
+  ]
+}

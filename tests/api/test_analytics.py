@@ -1,6 +1,7 @@
-import os
+import io
+import json
+import sqlite3
 
-import psycopg
 import pytest
 from fastapi.testclient import TestClient
 
@@ -26,13 +27,13 @@ def test_redact(question, expected):
 
 
 def test_record_does_nothing_without_a_database(monkeypatch):
-    monkeypatch.delenv("ASUMISVALINTA_ANALYTICS_DATABASE_URL", raising=False)
+    monkeypatch.delenv("ASUMISVALINTA_STORE_URL", raising=False)
     analytics.record("area", {"postal_code": "00100"})
 
 
 @pytest.fixture
 def recorded(monkeypatch):
-    monkeypatch.delenv("ASUMISVALINTA_ANALYTICS_DATABASE_URL", raising=False)
+    monkeypatch.delenv("ASUMISVALINTA_STORE_URL", raising=False)
     events = []
     monkeypatch.setattr(analytics, "record", lambda kind, payload: events.append((kind, payload)))
     return events
@@ -113,27 +114,56 @@ def test_malformed_events_are_rejected(recorded):
     assert recorded == []
 
 
-POSTGRES = os.environ.get("ASUMISVALINTA_ANALYTICS_TEST_DATABASE_URL")
+@pytest.fixture
+def store_file(tmp_path, monkeypatch):
+    path = tmp_path / "store.db"
+    monkeypatch.setenv("ASUMISVALINTA_STORE_URL", f"sqlite:///{path}")
+    monkeypatch.delenv("ASUMISVALINTA_STORE_SECRET", raising=False)
+    return path
 
 
-@pytest.mark.skipif(not POSTGRES, reason="needs a Postgres test database")
-def test_record_writes_to_postgres_and_expires_old_events(monkeypatch):
-    monkeypatch.setenv("ASUMISVALINTA_ANALYTICS_DATABASE_URL", POSTGRES)
+UNREACHABLE_STORE = "http://127.0.0.1:1/store"
+
+
+def test_record_writes_to_the_store_and_expires_old_events(store_file):
     analytics.record("area", {"postal_code": "00100"})
-    with psycopg.connect(POSTGRES, autocommit=True) as connection:
+    with sqlite3.connect(store_file) as connection:
         kind, payload = connection.execute(
             "select event_type, payload from analytics_events order by id desc limit 1"
         ).fetchone()
-        assert (kind, payload) == ("area", {"postal_code": "00100"})
+        assert (kind, json.loads(payload)) == ("area", {"postal_code": "00100"})
         connection.execute(
             "insert into analytics_events (created_at, event_type, payload) "
-            "values (now() - interval '400 days', 'area', '{}'::jsonb)"
+            "values (unixepoch('now', '-400 days'), 'area', '{}')"
         )
     analytics.record("area", {"postal_code": "00130"})
-    with psycopg.connect(POSTGRES) as connection:
-        oldest = connection.execute("select min(created_at) from analytics_events").fetchone()[0]
-        recent = connection.execute("select now() - interval '366 days'").fetchone()[0]
-    assert oldest > recent
+    with sqlite3.connect(store_file) as connection:
+        oldest, cutoff = connection.execute(
+            "select min(created_at), unixepoch('now', '-366 days') from analytics_events"
+        ).fetchone()
+    assert oldest > cutoff
+
+
+def test_the_store_worker_receives_the_statements_and_the_secret(monkeypatch):
+    from asumisvalinta.api import store
+
+    sent = []
+
+    def urlopen(request, timeout):
+        sent.append(request)
+        return io.BytesIO(json.dumps({"results": [[], [{"tokens": 5}]]}).encode())
+
+    monkeypatch.setenv("ASUMISVALINTA_STORE_URL", "https://store.example.test")
+    monkeypatch.setenv("ASUMISVALINTA_STORE_SECRET", "store-secret")
+    monkeypatch.setattr(store.urllib.request, "urlopen", urlopen)
+    store._ready.add("https://store.example.test")
+    rows = store.execute(("select 1", ()), ("select tokens from t where day = ?", ("d",)))
+    assert rows == [[], [{"tokens": 5}]]
+    assert sent[0].get_header("X-store-secret") == "store-secret"
+    assert json.loads(sent[0].data)["statements"][1] == {
+        "sql": "select tokens from t where day = ?",
+        "params": ["d"],
+    }
 
 
 class _FakeRun:
@@ -210,14 +240,10 @@ def test_questions_are_refused_once_the_daily_tokens_are_used(monkeypatch, recor
     assert asked == []
 
 
-@pytest.mark.skipif(not POSTGRES, reason="needs a Postgres test database")
-def test_daily_token_budget_in_postgres(monkeypatch):
+def test_daily_token_budget(store_file, monkeypatch):
     from asumisvalinta.api import usage
 
-    monkeypatch.setenv("ASUMISVALINTA_ANALYTICS_DATABASE_URL", POSTGRES)
     monkeypatch.setenv("ASUMISVALINTA_LLM_DAILY_TOKEN_LIMIT", "1000")
-    with psycopg.connect(POSTGRES, autocommit=True) as connection:
-        connection.execute("drop table if exists llm_token_usage")
     usage.check()
     usage.add(600)
     usage.check()
@@ -229,9 +255,7 @@ def test_daily_token_budget_in_postgres(monkeypatch):
 def test_unreachable_database_refuses_questions(monkeypatch):
     from asumisvalinta.api import usage
 
-    monkeypatch.setenv(
-        "ASUMISVALINTA_ANALYTICS_DATABASE_URL", "postgresql://nobody@127.0.0.1:1/none"
-    )
+    monkeypatch.setenv("ASUMISVALINTA_STORE_URL", UNREACHABLE_STORE)
     with pytest.raises(usage.BudgetUnavailable):
         usage.check()
 
@@ -300,42 +324,32 @@ def test_unreachable_database_pauses_questions(monkeypatch, recorded):
     from asumisvalinta.api import app as app_module
 
     monkeypatch.setattr(app_module, "_agent", lambda: _FakeAgent())
-    monkeypatch.setenv(
-        "ASUMISVALINTA_ANALYTICS_DATABASE_URL", "postgresql://nobody@127.0.0.1:1/none"
-    )
+    monkeypatch.setenv("ASUMISVALINTA_STORE_URL", UNREACHABLE_STORE)
     response = TestClient(app).post(
         "/api/ask", json={"question": "Rent in 00100?", "session_id": "session-6", "consent": True}
     )
     assert response.status_code == 503
 
 
-@pytest.mark.skipif(not POSTGRES, reason="needs a Postgres test database")
-def test_request_limits_in_postgres(monkeypatch):
+def test_request_limits(store_file):
     from asumisvalinta.api import throttle
 
-    monkeypatch.setenv("ASUMISVALINTA_ANALYTICS_DATABASE_URL", POSTGRES)
-    with psycopg.connect(POSTGRES, autocommit=True) as connection:
-        connection.execute("drop table if exists request_limits")
     assert throttle.allow("203.0.113.7", "ask", 15)
     assert not throttle.allow("203.0.113.7", "ask", 15)
     assert throttle.allow("203.0.113.8", "ask", 15)
     assert throttle.allow("203.0.113.7", "event:area", 10)
-    with psycopg.connect(POSTGRES, autocommit=True) as connection:
+    with sqlite3.connect(store_file) as connection:
         stored = [row[0] for row in connection.execute("select client from request_limits")]
-        connection.execute("update request_limits set last_at = now() - interval '20 seconds'")
+        connection.execute("update request_limits set last_at = unixepoch() - 20")
     assert not any("203.0.113" in client for client in stored)
     assert throttle.allow("203.0.113.7", "ask", 15)
 
 
-@pytest.mark.skipif(not POSTGRES, reason="needs a Postgres test database")
-def test_events_stop_at_the_daily_limit(monkeypatch):
-    monkeypatch.setenv("ASUMISVALINTA_ANALYTICS_DATABASE_URL", POSTGRES)
+def test_events_stop_at_the_daily_limit(store_file, monkeypatch):
     monkeypatch.setenv("ASUMISVALINTA_EVENTS_DAILY_LIMIT", "2")
-    with psycopg.connect(POSTGRES, autocommit=True) as connection:
-        connection.execute("drop table if exists analytics_events")
     for code in ("00100", "00120", "00130"):
         analytics.record("area", {"postal_code": code})
-    with psycopg.connect(POSTGRES) as connection:
+    with sqlite3.connect(store_file) as connection:
         assert connection.execute("select count(*) from analytics_events").fetchone()[0] == 2
 
 
@@ -383,3 +397,30 @@ def test_api_documentation_is_not_published():
     client = TestClient(app)
     assert client.get("/api/docs").status_code == 404
     assert client.get("/api/openapi.json").status_code == 404
+
+
+def test_only_the_proxy_may_call_the_api_when_a_secret_is_set(monkeypatch):
+    monkeypatch.setenv("ASUMISVALINTA_PROXY_SECRET", "proxy-secret")
+    client = TestClient(app)
+    assert client.get("/api/rates").status_code == 403
+    assert client.get("/api/rates", headers={"x-proxy-secret": "wrong"}).status_code == 403
+    response = client.options(
+        "/api/planner/run",
+        headers={
+            "x-proxy-secret": "proxy-secret",
+            "Origin": "https://asumisvalinta.fi",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+    assert response.status_code == 200
+
+
+def test_client_ip_comes_from_the_proxy_when_a_secret_is_set(monkeypatch):
+    from starlette.requests import Request
+
+    from asumisvalinta.api.throttle import client_ip
+
+    monkeypatch.setenv("ASUMISVALINTA_PROXY_SECRET", "proxy-secret")
+    headers = [(b"x-client-ip", b"198.51.100.4"), (b"x-forwarded-for", b"104.28.0.1")]
+    request = Request({"type": "http", "headers": headers, "client": ("10.1.2.3", 1234)})
+    assert client_ip(request) == "198.51.100.4"

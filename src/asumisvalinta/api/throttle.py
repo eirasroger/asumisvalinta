@@ -1,23 +1,16 @@
-"""Minimum time between requests from one client, shared by all API instances through Postgres."""
+"""Minimum time between requests from one client, shared by all API instances through the store."""
 
 import datetime as dt
 import hashlib
 import hmac
+import os
 
-import psycopg
 from fastapi import Request
 
-from asumisvalinta.api.analytics import database_url
+from asumisvalinta.api import store
 
 ASK_INTERVAL_SECONDS = 15
 EVENT_INTERVAL_SECONDS = 10
-
-_SCHEMA = """
-create table if not exists request_limits (
-    client text primary key,
-    last_at timestamptz not null
-)
-"""
 
 
 class Unavailable(RuntimeError):
@@ -25,40 +18,34 @@ class Unavailable(RuntimeError):
 
 
 def client_ip(request: Request) -> str:
-    """The caller's address, which Cloud Run appends last to X-Forwarded-For."""
+    """The caller's address, from the Cloudflare proxy or Cloud Run's X-Forwarded-For."""
+    if os.environ.get("ASUMISVALINTA_PROXY_SECRET") and (ip := request.headers.get("x-client-ip")):
+        return ip
     if forwarded := request.headers.get("x-forwarded-for"):
         return forwarded.rsplit(",", 1)[-1].strip()
     return request.client.host if request.client else "unknown"
 
 
-def _client_key(ip: str, scope: str, url: str) -> str:
+def _client_key(ip: str, scope: str) -> str:
     day = dt.datetime.now(dt.UTC).date().isoformat()
-    key = hashlib.sha256(f"{url}|{day}".encode()).digest()
+    key = hashlib.sha256(f"{store.secret()}|{day}".encode()).digest()
     return hmac.new(key, f"{scope}|{ip}".encode(), hashlib.sha256).hexdigest()
 
 
 def allow(ip: str, scope: str, seconds: int) -> bool:
-    """Record a request and say whether `seconds` passed since the client's last allowed one.
-
-    Raises Unavailable when the database cannot be reached.
-    """
-    url = database_url()
-    if not url:
+    """Record a request; False if the client's last allowed one was under `seconds` ago."""
+    if not store.url():
         return True
     try:
-        with psycopg.connect(url, connect_timeout=5, autocommit=True) as connection:
-            connection.execute(_SCHEMA)
-            allowed = connection.execute(
-                "insert into request_limits (client, last_at) values (%s, now()) "
+        allowed, _ = store.execute(
+            (
+                "insert into request_limits (client, last_at) values (?, unixepoch()) "
                 "on conflict (client) do update set last_at = excluded.last_at "
-                "where request_limits.last_at <= now() - make_interval(secs => %s) "
-                "returning 1",
-                (_client_key(ip, scope, url), seconds),
-            ).fetchone()
-            if allowed:
-                connection.execute(
-                    "delete from request_limits where last_at < now() - interval '1 day'"
-                )
+                "where request_limits.last_at <= unixepoch() - ? returning 1 as allowed",
+                (_client_key(ip, scope), seconds),
+            ),
+            ("delete from request_limits where last_at < unixepoch() - 86400", ()),
+        )
     except Exception as error:
         raise Unavailable("Request limits cannot be checked") from error
-    return allowed is not None
+    return bool(allowed)

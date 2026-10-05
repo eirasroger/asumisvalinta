@@ -71,8 +71,8 @@ const NOTICES: Record<Locale, Notice> = {
               Data may be transferred outside the EU/EEA subject to appropriate safeguards (Chapter V GDPR).
             </li>
             <li>
-              Hosting providers (Cloudflare, Google Cloud, Neon). The API runs in Finland and stored data are
-              located in the EU.
+              Hosting providers (Cloudflare, Google Cloud). The API runs in Finland and stored data are located
+              in the EU.
             </li>
           </ul>
         ),
@@ -167,7 +167,7 @@ const NOTICES: Record<Locale, Notice> = {
               luku).
             </li>
             <li>
-              Ylläpitopalvelujen tarjoajat (Cloudflare, Google Cloud, Neon). Palvelun rajapinta toimii Suomessa, ja
+              Ylläpitopalvelujen tarjoajat (Cloudflare, Google Cloud). Palvelun rajapinta toimii Suomessa, ja
               tallennetut tiedot sijaitsevat EU:ssa.
             </li>
           </ul>

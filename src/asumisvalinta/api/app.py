@@ -1,6 +1,7 @@
 """HTTP API for the web front end: market data, scenarios and the agent."""
 
 import datetime as dt
+import hmac
 import os
 import tempfile
 from functools import lru_cache
@@ -52,6 +53,14 @@ app.add_middleware(
 MAX_BODY_BYTES = 64 * 1024
 # The data changes once a month with a new release, so reads are cacheable.
 CACHED_READ = "public, max-age=300, s-maxage=86400, stale-while-revalidate=604800"
+
+
+@app.middleware("http")
+async def require_proxy(request: Request, call_next: Any) -> Response:
+    secret = os.environ.get("ASUMISVALINTA_PROXY_SECRET")
+    if secret and not hmac.compare_digest(request.headers.get("x-proxy-secret", ""), secret):
+        return Response(status_code=403)
+    return await call_next(request)
 
 
 @app.middleware("http")

@@ -88,6 +88,14 @@ jobs:
           fi
           echo "url=$API_ORIGIN" >> "$GITHUB_OUTPUT"
 
+      - name: Deploy the API proxy and the store to Cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          (cd api-proxy && npx --yes wrangler@4.147.0 deploy)
+          (cd store && npx --yes wrangler@4.147.0 deploy)
+
       - name: Check the deployed API
         run: |
           curl -fsS --retry 5 --retry-all-errors --max-time 60 "${{ steps.api.outputs.url }}/api/health"

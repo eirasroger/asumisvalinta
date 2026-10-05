@@ -1,8 +1,4 @@
-"""Call the API routes the website uses against a serving warehouse.
-
-Run after `scripts/build_serving.py`, which downloads the warehouse of the latest release
-and parses the dbt project, so the check sees what a deployment would see.
-"""
+"""Call the API routes the website uses against the serving warehouse."""
 
 import os
 import sys
