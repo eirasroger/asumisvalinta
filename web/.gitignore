@@ -33,9 +33,6 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
-# vercel
-.vercel
-
 # typescript
 *.tsbuildinfo
 next-env.d.ts
@@ -44,7 +41,11 @@ next-env.d.ts
 AGENTS.md
 CLAUDE.md
 
-# dbt docs downloaded at build time
+# Generated at build time
 /public/data-docs
 /public/geo
+/public/map
 /public/maplibre
+
+# Cloudflare Wrangler local state
+.wrangler

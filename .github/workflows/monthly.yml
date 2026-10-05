@@ -97,7 +97,8 @@ jobs:
 
       - name: Run the website's API calls on the new serving warehouse
         run: |
-          ASUMISVALINTA_SERVING_URL="file://$PWD/dist/asumisvalinta-serving.duckdb"             uv run python scripts/vercel_build.py
+          ASUMISVALINTA_SERVING_URL="file://$PWD/dist/asumisvalinta-serving.duckdb" \
+            uv run python scripts/build_serving.py
           uv run python scripts/check_serving.py
 
       - uses: actions/setup-node@v7
@@ -127,12 +128,6 @@ jobs:
             --notes "Warehouse built by the monthly refresh. Sources: Statistics Finland (CC BY 4.0, including Paavo postal code areas), ECB statistics. Street addresses: Posti Basic Address File, used under Posti's terms of use (https://www.posti.fi/mzj3zpe8qb7p/1eKbwM2WAEY5AuGi5TrSZ7/c76a865cf5feb2c527a114b8615e9580/posti-postal-code-services-service-description-and-terms-of-use-20150101.pdf), downloaded on the date in raw_posti.street_addresses.downloaded_at." \
             --latest
 
-      - name: Redeploy the website
-        env:
-          DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
-        if: ${{ env.DEPLOY_HOOK != '' }}
-        run: curl -fsS -X POST "$DEPLOY_HOOK" > /dev/null
-
       # Keeps the latest release, the newest 12 releases, every release from the last
       # 12 months and every release whose tag appears in the repository.
       - name: Delete data releases older than 12 months
@@ -149,3 +144,12 @@ jobs:
                 fi
               done
 
+  deploy:
+    needs: refresh
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/deploy.yml
+    with:
+      ref: production
+    secrets: inherit

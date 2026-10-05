@@ -56,7 +56,7 @@ def daily_limit() -> int:
 
 
 def database_url() -> str | None:
-    return os.environ.get("ASUMISVALINTA_ANALYTICS_DATABASE_URL") or os.environ.get("DATABASE_URL")
+    return os.environ.get("ASUMISVALINTA_ANALYTICS_DATABASE_URL") or None
 
 
 def record(event_type: str, payload: dict[str, Any]) -> None:

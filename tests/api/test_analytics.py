@@ -27,14 +27,12 @@ def test_redact(question, expected):
 
 def test_record_does_nothing_without_a_database(monkeypatch):
     monkeypatch.delenv("ASUMISVALINTA_ANALYTICS_DATABASE_URL", raising=False)
-    monkeypatch.delenv("DATABASE_URL", raising=False)
     analytics.record("area", {"postal_code": "00100"})
 
 
 @pytest.fixture
 def recorded(monkeypatch):
     monkeypatch.delenv("ASUMISVALINTA_ANALYTICS_DATABASE_URL", raising=False)
-    monkeypatch.delenv("DATABASE_URL", raising=False)
     events = []
     monkeypatch.setattr(analytics, "record", lambda kind, payload: events.append((kind, payload)))
     return events
@@ -95,6 +93,23 @@ def test_events_with_unknown_fields_are_rejected(recorded):
         "ip": "1.2.3.4",
     }
     assert client.post("/api/events", json=body).status_code == 422
+    assert recorded == []
+
+
+def test_events_sent_as_plain_text_are_recorded(recorded):
+    body = '{"type": "area", "postal_code": "00100", "room_type": "two_room", "source": "map"}'
+    response = TestClient(app).post(
+        "/api/events", content=body, headers={"Content-Type": "text/plain;charset=UTF-8"}
+    )
+    assert response.status_code == 204
+    assert recorded[0][0] == "area"
+
+
+def test_malformed_events_are_rejected(recorded):
+    response = TestClient(app).post(
+        "/api/events", content="not json", headers={"Content-Type": "text/plain"}
+    )
+    assert response.status_code == 422
     assert recorded == []
 
 
@@ -264,7 +279,7 @@ def test_questions_must_wait_between_calls(monkeypatch, recorded):
     response = client.post(
         "/api/ask",
         json={"question": "Rent in 00100?", "session_id": "session-5", "consent": True},
-        headers={"x-vercel-forwarded-for": "203.0.113.7, 10.0.0.1"},
+        headers={"x-forwarded-for": "10.0.0.1, 203.0.113.7"},
     )
     assert response.status_code == 429
     assert response.headers["retry-after"] == "15"
@@ -322,3 +337,36 @@ def test_events_stop_at_the_daily_limit(monkeypatch):
         analytics.record("area", {"postal_code": code})
     with psycopg.connect(POSTGRES) as connection:
         assert connection.execute("select count(*) from analytics_events").fetchone()[0] == 2
+
+
+def test_the_website_may_call_the_api_from_its_own_origin():
+    client = TestClient(app)
+    preflight = client.options(
+        "/api/planner/run",
+        headers={
+            "Origin": "https://asumisvalinta.fi",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+    assert preflight.status_code == 200
+    assert preflight.headers["access-control-allow-origin"] == "https://asumisvalinta.fi"
+    other = client.options(
+        "/api/planner/run",
+        headers={"Origin": "https://example.com", "Access-Control-Request-Method": "POST"},
+    )
+    assert "access-control-allow-origin" not in other.headers
+
+
+def test_client_ip_is_the_address_the_platform_appended():
+    from starlette.requests import Request
+
+    from asumisvalinta.api.throttle import client_ip
+
+    def request(headers: dict[str, str]) -> Request:
+        raw = [(key.encode(), value.encode()) for key, value in headers.items()]
+        return Request({"type": "http", "headers": raw, "client": ("10.1.2.3", 1234)})
+
+    assert client_ip(request({"x-forwarded-for": "198.51.100.9, 203.0.113.7"})) == "203.0.113.7"
+    assert client_ip(request({"x-forwarded-for": "203.0.113.7"})) == "203.0.113.7"
+    assert client_ip(request({})) == "10.1.2.3"

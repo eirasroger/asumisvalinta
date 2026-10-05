@@ -1,9 +1,10 @@
-"""Build step of the API on Vercel: fetch the serving warehouse, load the seeds, parse dbt.
+"""Prepare what the API serves: fetch the serving warehouse, load the seeds, parse dbt.
 
-The serving warehouse comes from the latest GitHub release. The seeds are reloaded from the
-deployed commit, so assumptions and policy rules go live with the code instead of waiting for
-the next data release; no model is built from a seed. The dbt manifest must be generated here
-because MetricFlow reads it at runtime and the target folder is not in git.
+The serving warehouse comes from the latest GitHub release, or from ASUMISVALINTA_SERVING_URL.
+The seeds are reloaded from the deployed commit, so assumptions and policy rules go live with
+the code instead of waiting for the next data release; no model is built from a seed. The dbt
+manifest must be generated here because MetricFlow reads it at runtime and the target folder
+is not in git. The API image copies both results.
 """
 
 import os

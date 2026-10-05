@@ -18,10 +18,10 @@ Rent, right of occupancy (asumisoikeus) or buy a flat in Finland? Asumisvalinta 
 | Scenario engine | Python, Pydantic | Month-by-month cash flows, loans, Finnish capital income tax rules and break-even. All arithmetic is deterministic and tested against hand calculations. |
 | Agent | OpenAI-compatible API | Answers questions through tools that query governed metrics, rank areas, look up the latest prices and rents of a postal code and run the scenario engine. Every number in an answer must come from a tool result. |
 | Evaluation | pytest, YAML golden set | 58 questions with reference answers computed from the warehouse. The governed agent is scored against a text-to-SQL baseline. |
-| API | FastAPI, Postgres (Neon) | Serves market data, scenario runs and the agent from a read-only copy of the warehouse. Reads are cached at the CDN. Postgres holds the agent's daily token cap and per-client request limits, shared by all instances. |
-| Front end | Next.js, React, TypeScript, Tailwind CSS, MapLibre GL, ECharts, Radix UI | Map, comparison and question pages. The postal code map is simplified with mapshaper and shipped as TopoJSON. |
+| API | FastAPI, Docker, Postgres (Neon) | Serves market data, scenario runs and the agent from a read-only copy of the warehouse that is built into the container image. Postgres holds the agent's daily token cap and per-client request limits, shared by all instances. |
+| Front end | Next.js, React, TypeScript, Tailwind CSS, MapLibre GL, ECharts, Radix UI | Map, comparison and question pages, exported as static files. The postal code map is simplified with mapshaper and shipped as TopoJSON, and the map data of each room type ships as JSON with the site. |
 | Quality | pytest, ruff, SQLFluff, ESLint | Unit and integration tests against a fixture warehouse, Python and SQL linting, and type-checked TypeScript. |
-| Delivery | GitHub Actions, Vercel | CI on every push, a monthly data refresh that publishes a GitHub release, a manually triggered evaluation run, and deployment of the web app and API as one Vercel project. |
+| Delivery | GitHub Actions, Google Cloud Run, Cloudflare Workers | CI on every push, a monthly data refresh that publishes a GitHub release, and a manually triggered evaluation run. A release deploys the API to Cloud Run in Finland and the website to Cloudflare as static assets once every check passes. |
 
 ```mermaid
 flowchart LR
@@ -39,7 +39,7 @@ flowchart LR
     MARTS --> API[FastAPI]
     ENGINE --> API
     AGENT --> API
-    API --> WEB[Next.js on Vercel]
+    API --> WEB[Next.js on Cloudflare]
 ```
 
 ## Design decisions
@@ -66,9 +66,10 @@ cp .env.example .env            # add an API key only if you use the agent
 uv run asumisvalinta-ingest     # load all sources into data/asumisvalinta.duckdb
 uv run dbt build --project-dir dbt --profiles-dir dbt
 
+uv run python scripts/export_map_data.py   # map data, written to web/public/map
 uv run uvicorn asumisvalinta.api.app:app --port 8000
 cd web && npm install && npm run build:map
-API_ORIGIN=http://127.0.0.1:8000 npm run dev
+NEXT_PUBLIC_API_ORIGIN=http://127.0.0.1:8000 npm run dev
 ```
 
 Tests run against a small fixture warehouse built from `fixtures/`:

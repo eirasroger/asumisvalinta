@@ -86,7 +86,7 @@ export const en = {
     loaderSteps: ["3,018 postal code areas", "Prices and rents", "Drawing the map"],
     loaderKicker: "Housing market, Finland",
     loaderTitle: "Preparing the map",
-    shapesError: "The postal area map could not be loaded.",
+    loadError: "The map could not be loaded.",
     priceRoom: (room: string) => `Price, ${room}`,
     rent: "Rent",
     priceToRent: "Price-to-rent",

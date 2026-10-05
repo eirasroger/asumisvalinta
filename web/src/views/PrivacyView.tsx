@@ -19,7 +19,7 @@ interface Notice {
 const NOTICES: Record<Locale, Notice> = {
   en: {
     title: "Privacy notice",
-    updated: "Last updated 4 October 2026",
+    updated: "Last updated 5 October 2026",
     sections: [
       {
         title: "Controller",
@@ -42,7 +42,7 @@ const NOTICES: Record<Locale, Notice> = {
               random number that limits how many can be asked; it lives only in the open page and is not stored on
               your device.
             </li>
-            <li>Page views, counted by Vercel Web Analytics without identifiers.</li>
+            <li>Page views, counted by Cloudflare Web Analytics without cookies or other identifiers.</li>
             <li>
               A keyed one-way hash of the IP address, used only to limit how often requests can be sent. The key
               changes daily and the hash is stored apart from all other data.
@@ -70,7 +70,10 @@ const NOTICES: Record<Locale, Notice> = {
               AI service providers: questions submitted to the assistant, including for the training of AI models.
               Data may be transferred outside the EU/EEA subject to appropriate safeguards (Chapter V GDPR).
             </li>
-            <li>Hosting provider (Vercel). Stored data are located in the EU.</li>
+            <li>
+              Hosting providers (Cloudflare, Google Cloud, Neon). The API runs in Finland and stored data are
+              located in the EU.
+            </li>
           </ul>
         ),
       },
@@ -108,7 +111,7 @@ const NOTICES: Record<Locale, Notice> = {
   },
   fi: {
     title: "Tietosuojaseloste",
-    updated: "Päivitetty 4.10.2026",
+    updated: "Päivitetty 5.10.2026",
     sections: [
       {
         title: "Rekisterinpitäjä",
@@ -131,7 +134,7 @@ const NOTICES: Record<Locale, Notice> = {
               jolla rajoitetaan kysymysten määrää; se on olemassa vain avoimella sivulla eikä sitä tallenneta
               laitteellesi.
             </li>
-            <li>Sivujen katselukerrat, jotka Vercel Web Analytics laskee ilman tunnisteita.</li>
+            <li>Sivujen katselukerrat, jotka Cloudflare Web Analytics laskee ilman evästeitä tai muita tunnisteita.</li>
             <li>
               IP-osoitteesta avaimella muodostettu yksisuuntainen tiiviste, jota käytetään vain pyyntöjen tiheyden
               rajoittamiseen. Avain vaihtuu päivittäin, ja tiiviste säilytetään erillään muista tiedoista.
@@ -163,7 +166,10 @@ const NOTICES: Record<Locale, Notice> = {
               Tietoja voidaan siirtää EU:n tai ETA:n ulkopuolelle asianmukaisin suojatoimin (tietosuoja-asetuksen V
               luku).
             </li>
-            <li>Ylläpitopalvelun tarjoaja (Vercel). Tallennetut tiedot sijaitsevat EU:ssa.</li>
+            <li>
+              Ylläpitopalvelujen tarjoajat (Cloudflare, Google Cloud, Neon). Palvelun rajapinta toimii Suomessa, ja
+              tallennetut tiedot sijaitsevat EU:ssa.
+            </li>
           </ul>
         ),
       },

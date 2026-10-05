@@ -1,0 +1,125 @@
+name: Deploy
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit or branch to deploy
+        type: string
+        default: production
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  REGION: europe-north1
+  SERVICE: asumisvalinta-api
+  REPOSITORY: asumisvalinta
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      DBT_PROJECT_DIR: dbt
+      DBT_PROFILES_DIR: dbt
+      ASUMISVALINTA_DUCKDB_PATH: serving/asumisvalinta.duckdb
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || 'production' }}
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked --all-groups
+
+      - name: Prepare the serving warehouse of the latest release
+        run: uv run python scripts/build_serving.py
+
+      - name: Run the website's API calls on it
+        run: uv run python scripts/check_serving.py
+
+      - name: Export the map data for the website
+        run: uv run python scripts/export_map_data.py
+
+      - uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v3
+
+      - name: Build and push the API image
+        id: image
+        run: |
+          image="$REGION-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/$REPOSITORY/api:$(git rev-parse --short HEAD)-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+          docker build --tag "$image" .
+          docker push "$image"
+          echo "name=$image" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy the API to Cloud Run
+        id: api
+        env:
+          API_ORIGIN: ${{ vars.API_ORIGIN }}
+        run: |
+          gcloud run deploy "$SERVICE" \
+            --image "${{ steps.image.outputs.name }}" \
+            --region "$REGION" \
+            --cpu 1 \
+            --memory 512Mi \
+            --concurrency 10 \
+            --min-instances 0 \
+            --max-instances 1 \
+            --timeout 120 \
+            --cpu-boost \
+            --quiet
+          if [ -z "$API_ORIGIN" ]; then
+            API_ORIGIN=$(gcloud run services describe "$SERVICE" --region "$REGION" --format 'value(status.url)')
+          fi
+          echo "url=$API_ORIGIN" >> "$GITHUB_OUTPUT"
+
+      - name: Check the deployed API
+        run: |
+          curl -fsS --retry 5 --retry-all-errors --max-time 60 "${{ steps.api.outputs.url }}/api/health"
+          curl -fsS --max-time 60 -o /dev/null \
+            "${{ steps.api.outputs.url }}/api/planner/start?postal_code=00100&room_type=two_room&size_m2=55"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build the website
+        working-directory: web
+        env:
+          NEXT_PUBLIC_API_ORIGIN: ${{ steps.api.outputs.url }}
+          NEXT_PUBLIC_CLOUDFLARE_ANALYTICS_TOKEN: ${{ vars.CLOUDFLARE_ANALYTICS_TOKEN }}
+        run: |
+          npm ci
+          npm run build
+
+      - name: Deploy the website to Cloudflare
+        working-directory: web
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4.147.0 deploy
+
+      - name: Check the deployed website
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          curl -fsS --retry 5 --retry-all-errors --max-time 30 -o /dev/null "$SITE_URL/"
+          curl -fsS --max-time 30 -o /dev/null "$SITE_URL/map/values-two_room.json"
+          curl -fsS --max-time 30 -o /dev/null "$SITE_URL/geo/postal-areas.topo.json"

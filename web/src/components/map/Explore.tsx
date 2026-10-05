@@ -17,13 +17,13 @@ import {
   inScope,
   isEstimated,
   loadShapes,
+  MAP_DATA_ERROR,
   type MapMetric,
   type MapScope,
   METRICS,
   metricValue,
   quantileCuts,
   SCOPES,
-  SHAPES_ERROR,
   preloadMap,
   preloadRest,
   SEQUENTIAL,
@@ -203,7 +203,7 @@ export function Explore() {
 
       <MapLoader
         steps={[shapes, rows !== null, shown]}
-        error={shapesError === SHAPES_ERROR ? t.map.shapesError : (error ?? shapesError)}
+        error={[shapesError, error].includes(MAP_DATA_ERROR) ? t.map.loadError : (error ?? shapesError)}
       />
     </div>
   );

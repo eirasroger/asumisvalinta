@@ -1,4 +1,5 @@
 import type { Option, RoomType } from "@/lib/api";
+import { API_ORIGIN } from "@/lib/site";
 
 export interface AreaEvent {
   type: "area";
@@ -40,13 +41,12 @@ export function visitId() {
 /** Send an anonymous usage event without waiting for it. */
 export function track(event: AreaEvent | ScenarioEvent) {
   if (!trackingAllowed()) return;
+  const url = `${API_ORIGIN}/api/events`;
   const body = JSON.stringify({ ...event, visit: visitId() });
   try {
-    if (navigator.sendBeacon?.("/api/events", new Blob([body], { type: "application/json" }))) return;
+    if (navigator.sendBeacon?.(url, body)) return;
   } catch {
     // fall back to fetch
   }
-  fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(
-    () => undefined,
-  );
+  fetch(url, { method: "POST", headers: { "Content-Type": "text/plain" }, body, keepalive: true }).catch(() => undefined);
 }

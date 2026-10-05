@@ -7,9 +7,11 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from fastapi import BackgroundTasks, Body, FastAPI, HTTPException, Query, Request, Response
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request, Response
 from fastapi import Path as PathParam
-from pydantic import BaseModel, ConfigDict, Field
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 
 from asumisvalinta.api import addresses, analytics, throttle, usage
 from asumisvalinta.api.limits import LimitReached, QuestionLimits
@@ -24,6 +26,10 @@ RoomType = Literal["one_room", "two_room", "three_room_plus"]
 POSTAL_CODE = r"^\d{5}$"
 VISIT_ID = r"^[0-9a-f-]{36}$"
 PostalCode = Annotated[str, PathParam(pattern=POSTAL_CODE)]
+DEFAULT_ALLOWED_ORIGINS = (
+    "https://asumisvalinta.fi,https://www.asumisvalinta.fi,"
+    "http://localhost:3000,http://127.0.0.1:3000"
+)
 
 load_dotenv()
 os.environ.setdefault("DBT_LOG_PATH", str(Path(tempfile.gettempdir()) / "dbt-logs"))
@@ -34,7 +40,15 @@ app = FastAPI(
     docs_url="/api/docs",
     openapi_url="/api/openapi.json",
 )
-# The data changes once a month with a new release, so reads are cached on the CDN.
+allowed_origins = os.environ.get("ASUMISVALINTA_ALLOWED_ORIGINS") or DEFAULT_ALLOWED_ORIGINS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[origin.strip() for origin in allowed_origins.split(",") if origin.strip()],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
+    max_age=86400,
+)
+# The data changes once a month with a new release, so reads are cacheable.
 CACHED_READ = "public, max-age=300, s-maxage=86400, stale-while-revalidate=604800"
 
 
@@ -346,13 +360,17 @@ class ScenarioEvent(BaseModel):
     visit: str | None = Field(default=None, pattern=VISIT_ID)
 
 
+Event = TypeAdapter(Annotated[AreaEvent | ScenarioEvent, Field(discriminator="type")])
+
+
 @app.post("/api/events", status_code=204)
-def events(
-    event: Annotated[AreaEvent | ScenarioEvent, Body(discriminator="type")],
-    http: Request,
-    background: BackgroundTasks,
-) -> Response:
+async def events(http: Request, background: BackgroundTasks) -> Response:
     """Record an anonymous usage event, at most one of each type per client every few seconds."""
+    try:
+        event = Event.validate_json(await http.body())
+    except ValidationError as error:
+        errors = error.errors(include_url=False, include_context=False)
+        raise RequestValidationError(errors) from error
     payload = event.model_dump(exclude={"type"})
     background.add_task(_record_event, throttle.client_ip(http), event.type, payload)
     return Response(status_code=204)

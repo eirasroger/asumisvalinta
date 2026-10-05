@@ -4,7 +4,7 @@ import type { Feature, FeatureCollection, Geometry } from "geojson";
 import { useEffect, useState } from "react";
 import { feature } from "topojson-client";
 import type { GeometryCollection, Topology } from "topojson-specification";
-import { api, type MapTrends, type MapValue, ROOM_TYPES, type RoomType } from "@/lib/api";
+import { type MapTrends, type MapValue, ROOM_TYPES, type RoomType } from "@/lib/api";
 import { formatCompactEuro, formatEuro, formatEuroCents, formatNumber } from "@/lib/format";
 
 export const HELSINKI_METRO = ["091", "049", "092", "235"];
@@ -31,8 +31,8 @@ export const METRICS: {
 
 export const SEQUENTIAL = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"];
 
-/** Shown as the translated map.shapesError message. */
-export const SHAPES_ERROR = "shapes";
+/** Shown as the translated map.loadError message. */
+export const MAP_DATA_ERROR = "map-data";
 
 export type Shape = Feature<Geometry, { postal_code: string; municipality_code: string }>;
 
@@ -63,14 +63,20 @@ function cached<K, V>(load: (key: K) => Promise<V>) {
   };
 }
 
+async function siteFile<T>(path: string): Promise<T> {
+  const response = await fetch(path);
+  if (!response.ok) throw new Error(MAP_DATA_ERROR);
+  return response.json() as Promise<T>;
+}
+
 const shapeCache = cached(async () => {
-  const response = await fetch("/geo/postal-areas.topo.json");
-  if (!response.ok) throw new Error(SHAPES_ERROR);
-  const topology = (await response.json()) as Topology<{ postal_areas: GeometryCollection<Shape["properties"]> }>;
+  const topology = await siteFile<Topology<{ postal_areas: GeometryCollection<Shape["properties"]> }>>(
+    "/geo/postal-areas.topo.json",
+  );
   return (feature(topology, topology.objects.postal_areas) as FeatureCollection<Geometry, Shape["properties"]>).features;
 });
-const valueCache = cached((roomType: RoomType) => api.mapValues(roomType));
-const trendCache = cached((roomType: RoomType) => api.mapTrends(roomType));
+const valueCache = cached((roomType: RoomType) => siteFile<MapValue[]>(`/map/values-${roomType}.json`));
+const trendCache = cached((roomType: RoomType) => siteFile<MapTrends>(`/map/trends-${roomType}.json`));
 
 export const loadShapes = () => shapeCache.get("all");
 

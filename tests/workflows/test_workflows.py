@@ -14,7 +14,7 @@ def test_workflow_is_valid(path):
     assert workflow["name"]
     assert workflow["jobs"]
     for job in workflow["jobs"].values():
-        assert job.get("steps"), f"{path.name}: a job has no steps"
+        assert job.get("steps") or job.get("uses"), f"{path.name}: a job has no steps"
 
 
 def _actions() -> list[str]:

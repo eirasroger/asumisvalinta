@@ -1,6 +1,6 @@
 """Call the API routes the website uses against a serving warehouse.
 
-Run after `scripts/vercel_build.py`, which downloads the warehouse of the latest release
+Run after `scripts/build_serving.py`, which downloads the warehouse of the latest release
 and parses the dbt project, so the check sees what a deployment would see.
 """
 

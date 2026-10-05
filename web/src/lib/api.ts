@@ -1,5 +1,6 @@
 import type { Locale } from "@/i18n/config";
 import { trackingAllowed, visitId } from "@/lib/analytics";
+import { API_ORIGIN } from "@/lib/site";
 
 export type RoomType = "one_room" | "two_room" | "three_room_plus";
 export type Option = "buy" | "rent" | "aso";
@@ -219,10 +220,8 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
-  });
+  const headers: HeadersInit = init?.body ? { "Content-Type": "application/json" } : {};
+  const response = await fetch(`${API_ORIGIN}${path}`, { ...init, headers: { ...headers, ...init?.headers } });
   if (!response.ok) {
     let detail = response.statusText;
     try {
@@ -270,8 +269,6 @@ export const api = {
       body: JSON.stringify(scenario),
       signal,
     }),
-  mapValues: (roomType: RoomType) => request<MapValue[]>(`/api/map/values?room_type=${roomType}`),
-  mapTrends: (roomType: RoomType) => request<MapTrends>(`/api/map/trends?room_type=${roomType}`),
   ask: (question: string, sessionId: string, lang: Locale, consent: boolean) =>
     request<AskResponse>(`/api/ask?lang=${lang}`, {
       method: "POST",

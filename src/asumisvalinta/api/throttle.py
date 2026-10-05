@@ -25,10 +25,9 @@ class Unavailable(RuntimeError):
 
 
 def client_ip(request: Request) -> str:
-    """The caller's address as set by Vercel's edge, which overwrites client-supplied values."""
-    for header in ("x-vercel-forwarded-for", "x-forwarded-for", "x-real-ip"):
-        if value := request.headers.get(header):
-            return value.split(",")[0].strip()
+    """The caller's address, which Cloud Run appends last to X-Forwarded-For."""
+    if forwarded := request.headers.get("x-forwarded-for"):
+        return forwarded.rsplit(",", 1)[-1].strip()
     return request.client.host if request.client else "unknown"
 
 

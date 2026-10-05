@@ -104,8 +104,8 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked --all-groups
 
-      - name: Fetch the live warehouse as a deployment does
-        run: uv run python scripts/vercel_build.py
+      - name: Prepare the serving warehouse of the latest release as a deployment does
+        run: uv run python scripts/build_serving.py
 
       - name: Run the website's API calls on it
         run: uv run python scripts/check_serving.py
@@ -113,9 +113,10 @@ jobs:
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/production'
     needs: [checks, web, serving]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy production on Vercel
-        env:
-          DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
-        run: curl -fsS -X POST "$DEPLOY_HOOK" > /dev/null
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/deploy.yml
+    with:
+      ref: ${{ github.sha }}
+    secrets: inherit

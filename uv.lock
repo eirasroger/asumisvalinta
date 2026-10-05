@@ -73,6 +73,7 @@ dependencies = [
     { name = "openai" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pydantic" },
+    { name = "uvicorn" },
 ]
 
 [package.dev-dependencies]
@@ -82,7 +83,6 @@ dev = [
     { name = "ruff" },
     { name = "sqlfluff" },
     { name = "sqlfluff-templater-dbt" },
-    { name = "uvicorn" },
 ]
 eval = [
     { name = "pyyaml" },
@@ -104,6 +104,7 @@ requires-dist = [
     { name = "openai", specifier = ">=3.22,<4" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2,<4" },
     { name = "pydantic", specifier = ">=2.13" },
+    { name = "uvicorn", specifier = ">=0.30" },
 ]
 
 [package.metadata.requires-dev]
@@ -113,7 +114,6 @@ dev = [
     { name = "ruff", specifier = ">=0.16" },
     { name = "sqlfluff", specifier = ">=4.3,<5" },
     { name = "sqlfluff-templater-dbt", specifier = ">=4.3,<5" },
-    { name = "uvicorn", specifier = ">=0.30" },
 ]
 eval = [{ name = "pyyaml", specifier = ">=6,<7" }]
 ingest = [{ name = "dlt", extras = ["duckdb"], specifier = ">=1.30,<2" }]

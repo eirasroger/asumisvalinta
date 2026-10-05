@@ -88,7 +88,7 @@ export const fi: Messages = {
     loaderSteps: ["3 018 postinumeroaluetta", "Hinnat ja vuokrat", "Karttaa piirretään"],
     loaderKicker: "Asuntomarkkinat, Suomi",
     loaderTitle: "Karttaa valmistellaan",
-    shapesError: "Postinumeroalueiden karttaa ei voitu ladata.",
+    loadError: "Karttaa ei voitu ladata.",
     priceRoom: (room: string) => `Hinta, ${room.toLowerCase()}`,
     rent: "Vuokra",
     priceToRent: "Hinta–vuokra-suhde",

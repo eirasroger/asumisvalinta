@@ -1,0 +1,9 @@
+*
+!pyproject.toml
+!uv.lock
+!README.md
+!LICENSE
+!src/
+!dbt/target/semantic_manifest.json
+!serving/asumisvalinta.duckdb
+**/__pycache__
