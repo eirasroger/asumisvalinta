@@ -39,3 +39,9 @@ export async function loadGuide(slug: string, locale: Locale): Promise<Guide> {
 export async function loadGuides(locale: Locale) {
   return Promise.all((await guideSlugs()).map((slug) => loadGuide(slug, locale)));
 }
+
+export type GuideCard = Pick<Guide, "slug" | "title" | "description">;
+
+export async function guideCards(locale: Locale): Promise<GuideCard[]> {
+  return (await loadGuides(locale)).map(({ slug, title, description }) => ({ slug, title, description }));
+}

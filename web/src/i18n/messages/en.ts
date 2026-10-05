@@ -311,6 +311,7 @@ export const en = {
     title: "Guides",
     lead: "Plain explanations of renting, right of occupancy and buying a home in Finland, with the official sources behind them.",
     read: "Read the guide",
+    all: "All guides",
     contents: "Contents",
     updated: (date: string) => `Updated ${date}`,
   },

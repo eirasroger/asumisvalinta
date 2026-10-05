@@ -9,6 +9,7 @@ import { Reveal } from "@/components/about/Reveal";
 import { AskThread, HelsinkiMap, NIGHT, WealthChart } from "@/components/showcase";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { Messages } from "@/i18n/messages";
+import type { GuideCard } from "@/lib/guides";
 
 const ROWS: { key: "map" | "compare" | "ask"; path: string; cta: (t: Messages) => string }[] = [
   { key: "map", path: "/explore", cta: (t) => t.home.cta },
@@ -16,7 +17,7 @@ const ROWS: { key: "map" | "compare" | "ask"; path: string; cta: (t: Messages) =
   { key: "ask", path: "/ask", cta: (t) => t.home.askCta },
 ];
 
-export function Home() {
+export function Home({ guides }: { guides: GuideCard[] }) {
   const { t, href } = useI18n();
   const router = useRouter();
 
@@ -87,6 +88,37 @@ export function Home() {
           </div>
         ))}
       </section>
+
+      {guides.length > 0 && (
+        <section className="mx-auto max-w-6xl px-6 pb-28 sm:pb-36">
+          <Reveal className="flex flex-wrap items-end justify-between gap-4">
+            <h2 className="text-[28px] leading-[1.15] font-semibold tracking-[-0.025em] sm:text-[36px]">{t.guides.title}</h2>
+            <Link href={href("/oppaat")} className="group inline-flex items-center gap-2 text-[15px] font-medium">
+              <span className="underline decoration-line-strong underline-offset-4 transition-colors group-hover:decoration-ink">
+                {t.guides.all}
+              </span>
+              <Arrow className="transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          </Reveal>
+          <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {guides.map((guide, index) => (
+              <Reveal key={guide.slug} delay={index * 100}>
+                <Link
+                  href={href(`/oppaat/${guide.slug}`)}
+                  className="group flex h-full flex-col rounded-[24px] border border-line bg-paper p-7 transition-[transform,box-shadow,border-color] hover:-translate-y-1 hover:border-line-strong hover:shadow-float"
+                >
+                  <h3 className="text-xl leading-snug font-semibold tracking-tight">{guide.title}</h3>
+                  <p className="mt-3 flex-1 text-[15px] leading-relaxed text-ink-2">{guide.description}</p>
+                  <span className="mt-6 inline-flex items-center gap-2 text-sm font-medium">
+                    {t.guides.read}
+                    <Arrow className="transition-transform group-hover:translate-x-1" />
+                  </span>
+                </Link>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className={`relative overflow-hidden ${NIGHT} text-white`}>
         {/* eslint-disable-next-line @next/next/no-img-element -- static SVG, no optimisation needed */}

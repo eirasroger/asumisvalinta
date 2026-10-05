@@ -313,6 +313,7 @@ export const fi: Messages = {
     title: "Oppaat",
     lead: "Selkeät selitykset vuokra-asumisesta, asumisoikeudesta ja asunnon ostamisesta Suomessa virallisine lähteineen.",
     read: "Lue opas",
+    all: "Kaikki oppaat",
     contents: "Sisällys",
     updated: (date: string) => `Päivitetty ${date}`,
   },
