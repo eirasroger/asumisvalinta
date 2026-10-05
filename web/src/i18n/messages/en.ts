@@ -298,6 +298,7 @@ export const en = {
     remaining: (count: number) => ` ${count} questions left in this session.`,
     thinking: "Thinking…",
     submit: "Ask",
+    newConversation: "New conversation",
     basedOn: "Based on ",
     failed: "Something went wrong.",
   },

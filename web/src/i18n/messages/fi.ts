@@ -300,6 +300,7 @@ export const fi: Messages = {
     remaining: (count: number) => ` Tässä istunnossa ${count} kysymystä jäljellä.`,
     thinking: "Mietitään…",
     submit: "Kysy",
+    newConversation: "Uusi keskustelu",
     basedOn: "Perustuu: ",
     failed: "Jokin meni vikaan.",
   },
