@@ -194,7 +194,7 @@ function Line({
   const tone = near || worse === null ? "text-ink-3" : worse ? "text-bad" : "text-good";
 
   return (
-    <div className="grid grid-cols-[1fr_160px] items-center gap-x-3 gap-y-1">
+    <div className="grid grid-cols-[1fr_160px] items-center gap-x-3 gap-y-1 max-[389px]:grid-cols-[1fr_140px]">
       <InfoLabel label={field.label}>
         <p className="leading-relaxed text-ink">{field.about}</p>
         {benchmark && <Comparison value={value} typical={typical} benchmark={benchmark} />}

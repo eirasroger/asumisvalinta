@@ -5,6 +5,7 @@
   --frost: #f3f5f7;
   --paper: #ffffff;
   --well: #eef1f4;
+  --bone: #e6eaee;
   --ink: #1a2530;
   --ink-2: #4b5866;
   --ink-3: #7c8794;
@@ -120,6 +121,83 @@ body {
 .shimmer {
   background: linear-gradient(90deg, var(--well) 25%, var(--frost) 50%, var(--well) 75%) 0 0 / 200% 100%;
   animation: shimmer 1.4s linear infinite;
+}
+
+/* Loading placeholders: one soft highlight crosses the whole page, so every shape moves together. */
+.bone {
+  background: var(--bone);
+  border-radius: 6px;
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 30%, rgb(255 255 255 / 0.75) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: skeleton-sweep 2400ms cubic-bezier(0.4, 0, 0.2, 1) var(--sweep-delay, 0ms) infinite;
+}
+
+@keyframes skeleton-sweep {
+  70%,
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* The loaded page assembles: each part rises into place, a little after the one before. */
+@keyframes assemble {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.assemble,
+.assemble-children > * {
+  animation: assemble 640ms cubic-bezier(0.22, 1, 0.36, 1) var(--delay, 0ms) both;
+}
+
+.assemble-children > :nth-child(2) {
+  animation-delay: calc(var(--delay, 0ms) + 80ms);
+}
+
+.assemble-children > :nth-child(3) {
+  animation-delay: calc(var(--delay, 0ms) + 160ms);
+}
+
+.assemble-children > :nth-child(n + 4) {
+  animation-delay: calc(var(--delay, 0ms) + 240ms);
+}
+
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: none;
+  }
+}
+
+.grow-x {
+  transform-origin: left;
+  animation: grow-x 900ms cubic-bezier(0.22, 1, 0.36, 1) 350ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    display: none;
+  }
 }
 
 @media (max-width: 639px) {

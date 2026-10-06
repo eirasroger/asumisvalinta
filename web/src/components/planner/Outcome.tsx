@@ -2,7 +2,7 @@
 
 import { GuideLink } from "@/components/GuideLink";
 import { Tabs } from "radix-ui";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { EChart, INK_2, INK_3, LINE, TOOLTIP_STYLE, tooltipBox } from "@/components/charts/EChart";
 import { Dot, Money, Popover } from "@/components/ui";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -45,10 +45,17 @@ export function Outcome({ run, loading, strategy }: { run: PlannerRun; loading: 
   const [best, second, third] = ranked;
   const [view, setView] = useState<View>("wealth");
   const [table, setTable] = useState(false);
+  const [counted, setCounted] = useState(false);
   const firstYear = costs[0] ?? { year: 1 };
 
+  // The lead rolls up from zero as the page appears.
+  useEffect(() => {
+    const timer = setTimeout(() => setCounted(true), 280);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <div className="space-y-5">
+    <div className="assemble-children space-y-5" style={{ "--delay": "120ms" } as React.CSSProperties}>
       <section aria-live="polite" className="px-1">
         <p className="flex items-center gap-2 text-[15px] text-ink-2">
           <Dot color={COLORS[best.option]} />
@@ -58,7 +65,7 @@ export function Outcome({ run, loading, strategy }: { run: PlannerRun; loading: 
           </span>
         </p>
         <p className="mt-1 text-[56px] leading-none font-semibold tracking-[-0.03em]">
-          <Money value={best.end_wealth - second.end_wealth} signed />
+          <Money value={counted ? best.end_wealth - second.end_wealth : 0} signed />
         </p>
         <p className="mt-2 text-[15px] text-ink-2">
           {o.moreThan(second.option)}
@@ -193,7 +200,7 @@ function MonthlySplit({ run, strategy }: { run: PlannerRun; strategy: Strategy }
                 {t.options.label[option]}
               </span>
               <div className="flex h-2.5 overflow-hidden rounded-full bg-well max-sm:order-last max-sm:col-span-2" aria-hidden="true">
-                <div style={{ width: `${(cost / budget) * 100}%`, background: COLORS[option] }} />
+                <div className="grow-x" style={{ width: `${(cost / budget) * 100}%`, background: COLORS[option] }} />
               </div>
               <span className="text-right sm:w-36">
                 {left >= 1 ? (
