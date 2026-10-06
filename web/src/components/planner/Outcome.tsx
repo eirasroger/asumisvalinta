@@ -1,5 +1,6 @@
 "use client";
 
+import { GuideLink } from "@/components/GuideLink";
 import { Tabs } from "radix-ui";
 import { useMemo, useState } from "react";
 import { EChart, INK_2, INK_3, LINE, TOOLTIP_STYLE, tooltipBox } from "@/components/charts/EChart";
@@ -151,6 +152,10 @@ export function Outcome({ run, loading, strategy }: { run: PlannerRun; loading: 
           </tbody>
         </table>
       </section>
+
+      <GuideLink slug="vuokra-vai-omistus" className="px-1">
+        {t.guides.links.rentVsBuy}
+      </GuideLink>
     </div>
   );
 }

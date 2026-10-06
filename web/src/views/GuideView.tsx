@@ -68,7 +68,7 @@ export function GuideView({ locale, guide }: { locale: Locale; guide: Guide }) {
           </div>
         </nav>
 
-        <article className="max-w-[680px] text-[16px] leading-[1.8] text-ink-2">
+        <article className="max-w-[680px] min-w-0 text-[16px] leading-[1.8] text-ink-2">
           <p className="mb-8 text-sm text-ink-3">{t.updated(formatDate(guide.updated, locale))}</p>
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}

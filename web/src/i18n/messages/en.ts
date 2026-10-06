@@ -92,9 +92,9 @@ export const en = {
     view: "Map view",
     scopes: { metro: "Helsinki area", finland: "Finland" },
     metrics: {
-      price: { label: "Price", unit: "per m²" },
-      rent: { label: "Rent", unit: "per m² a month" },
-      ratio: { label: "Price-to-rent", unit: "years of rent" },
+      price: { label: "Price", short: "Price", unit: "per m²" },
+      rent: { label: "Rent", short: "Rent", unit: "per m² a month" },
+      ratio: { label: "Price-to-rent", short: "Price/rent", unit: "years of rent" },
     },
     years: (value: string) => `${value} years`,
     hatched: "Hatched: figure from a larger area",
@@ -314,6 +314,12 @@ export const en = {
     all: "All guides",
     contents: "Contents",
     updated: (date: string) => `Updated ${date}`,
+    links: {
+      aso: "What is right of occupancy?",
+      buying: "What does buying a flat cost?",
+      ratio: "How to read this ratio",
+      rentVsBuy: "Renting or buying in Helsinki: two examples",
+    },
   },
   about: {
     heroTitle: "Know the numbers before you choose a home",

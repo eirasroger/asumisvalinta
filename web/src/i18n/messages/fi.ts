@@ -94,9 +94,9 @@ export const fi: Messages = {
     view: "Kartan alue",
     scopes: { metro: "Pääkaupunkiseutu", finland: "Suomi" },
     metrics: {
-      price: { label: "Hinta", unit: "per m²" },
-      rent: { label: "Vuokra", unit: "per m² kuukaudessa" },
-      ratio: { label: "Hinta–vuokra-suhde", unit: "vuotta" },
+      price: { label: "Hinta", short: "Hinta", unit: "per m²" },
+      rent: { label: "Vuokra", short: "Vuokra", unit: "per m² kuukaudessa" },
+      ratio: { label: "Hinta–vuokra-suhde", short: "Hinta/vuokra", unit: "vuotta" },
     },
     years: (value: string) => `${value} vuotta`,
     hatched: "Viivoitettu: luku suuremmalta alueelta",
@@ -316,6 +316,12 @@ export const fi: Messages = {
     all: "Kaikki oppaat",
     contents: "Sisällys",
     updated: (date: string) => `Päivitetty ${date}`,
+    links: {
+      aso: "Mikä on asumisoikeus?",
+      buying: "Mitä asunnon ostaminen maksaa?",
+      ratio: "Miten suhdetta luetaan?",
+      rentVsBuy: "Vuokra vai omistus Helsingissä: kaksi esimerkkiä",
+    },
   },
   about: {
     heroTitle: "Tiedä luvut ennen kuin valitset kodin",

@@ -253,7 +253,7 @@ export function PrivacyView({ locale }: { locale: Locale }) {
           </div>
         </nav>
 
-        <article className="max-w-[680px] text-[16px] leading-[1.8] text-ink-2">
+        <article className="max-w-[680px] min-w-0 text-[16px] leading-[1.8] text-ink-2">
           <p className="text-lg leading-relaxed text-ink">{notice.intro}</p>
           <p className="mt-2 text-sm text-ink-3">{notice.updated}</p>
           {notice.sections.map((section, index) => (

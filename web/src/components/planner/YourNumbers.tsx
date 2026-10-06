@@ -1,5 +1,6 @@
 "use client";
 
+import { GuideLink } from "@/components/GuideLink";
 import { Dot, InfoLabel, NumberField, Switch } from "@/components/ui";
 import { useI18n } from "@/i18n/I18nProvider";
 import { OPTION_COLORS, type Option, type PlannerStart } from "@/lib/api";
@@ -111,6 +112,7 @@ export function YourNumbers({ start, flat, offer, typical, onOffer, assumptions,
           about: n.buy.companyLoanAbout,
           source: n.buy.companyLoanSource,
         })}
+        <GuideLink slug="asunnon-ostamisen-kulut">{t.guides.links.buying}</GuideLink>
       </Section>
 
       <Section
@@ -138,6 +140,7 @@ export function YourNumbers({ start, flat, offer, typical, onOffer, assumptions,
           about: n.aso.chargeAbout,
           source: `${sources.aso_charge}.`,
         })}
+        <GuideLink slug="asumisoikeus">{t.guides.links.aso}</GuideLink>
       </Section>
     </div>
   );

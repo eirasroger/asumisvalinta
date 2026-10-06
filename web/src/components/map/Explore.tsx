@@ -1,5 +1,6 @@
 "use client";
 
+import { GuideLink } from "@/components/GuideLink";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -139,7 +140,7 @@ export function Explore() {
             className="w-full"
             value={metric}
             onChange={setMetric}
-            options={METRICS.map((item) => ({ value: item.value, label: t.map.metrics[item.value].label }))}
+            options={METRICS.map((item) => ({ value: item.value, label: t.map.metrics[item.value].short }))}
           />
           <Segmented
             label={t.map.rooms}
@@ -182,6 +183,11 @@ export function Explore() {
             {t.map.hatched}
           </p>
           <p className="mt-1 text-[11px] text-ink-3">{t.map.source}</p>
+          {metric === "ratio" && (
+            <GuideLink slug="hinta-vuokrasuhde" className="mt-2">
+              {t.guides.links.ratio}
+            </GuideLink>
+          )}
         </div>
       )}
 

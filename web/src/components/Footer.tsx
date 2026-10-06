@@ -12,7 +12,7 @@ export function Footer({ dataDocs }: { dataDocs: boolean }) {
     <footer className="border-t border-line">
       <div className="mx-auto flex max-w-[1240px] flex-col gap-2 px-4 py-6 text-xs text-ink-3 sm:flex-row sm:justify-between sm:px-6">
         <p>{t.footer.note}</p>
-        <p className="flex gap-4">
+        <p className="flex flex-wrap gap-x-4 gap-y-1.5 whitespace-nowrap">
           <Link href={href("/oppaat")} className="hover:text-ink">
             {t.footer.guides}
           </Link>
