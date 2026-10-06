@@ -5,7 +5,7 @@ const GERUND: Record<Option, string> = { buy: "buying", rent: "renting", aso: "r
 /** English text. Its shape is the type every other language must follow. */
 export const en = {
   meta: {
-    homeTitle: "Asumisvalinta: rent, right of occupancy or buy?",
+    homeTitle: "Rent vs buy calculator for Finland · Asumisvalinta",
     description: "Rent, right of occupancy or buy? Compare all three for any flat in Finland.",
     explore: "Map",
     compare: "Compare",
