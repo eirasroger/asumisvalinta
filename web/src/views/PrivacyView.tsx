@@ -1,10 +1,9 @@
 import type { Locale } from "@/i18n/config";
-import { PRIVACY_EMAIL } from "@/lib/site";
+import { ADS_LIVE, PRIVACY_EMAIL } from "@/lib/site";
+import { LINK, LIST, type LegalText, LegalView } from "@/views/LegalView";
 
-const LINK = "text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink";
-const LIST =
-  "space-y-3 [&>li]:relative [&>li]:pl-6 [&>li]:before:absolute [&>li]:before:top-[0.75em] [&>li]:before:left-0.5 [&>li]:before:size-1.5 [&>li]:before:rounded-full [&>li]:before:bg-buy";
 const CONTROLLER = "Roger Vergés";
+const GOOGLE_AD_SETTINGS = "https://www.google.com/settings/ads";
 
 const Email = () => (
   <a className={LINK} href={`mailto:${PRIVACY_EMAIL}`}>
@@ -12,19 +11,11 @@ const Email = () => (
   </a>
 );
 
-interface Notice {
-  title: string;
-  intro: string;
-  updated: string;
-  contents: string;
-  sections: { title: string; body: React.ReactNode }[];
-}
-
-const NOTICES: Record<Locale, Notice> = {
+const NOTICES: Record<Locale, LegalText> = {
   en: {
     title: "Privacy notice",
     intro: "This notice explains which personal data Asumisvalinta processes and why.",
-    updated: "Last updated 5 October 2026",
+    updated: "Last updated 8 October 2026",
     contents: "Contents",
     sections: [
       {
@@ -48,11 +39,12 @@ const NOTICES: Record<Locale, Notice> = {
               random number that limits how many can be asked; it lives only in the open page and is not stored on
               your device.
             </li>
-            <li>Page views, counted by Cloudflare Web Analytics without cookies or other identifiers.</li>
+            <li>Page views, counted without cookies or other identifiers.</li>
             <li>
               A keyed one-way hash of the IP address, used only to limit how often requests can be sent. The key
               changes daily and the hash is stored apart from all other data.
             </li>
+            {ADS_LIVE && <li>Cookies used to show ads.</li>}
           </ul>
         ),
       },
@@ -65,6 +57,7 @@ const NOTICES: Record<Locale, Notice> = {
               Answering questions submitted to the assistant and their use for training AI models: consent (Article
               6(1)(a) GDPR).
             </li>
+            {ADS_LIVE && <li>Showing ads: consent (Article 6(1)(a) GDPR).</li>}
           </ul>
         ),
       },
@@ -77,10 +70,13 @@ const NOTICES: Record<Locale, Notice> = {
               Within a conversation, earlier questions and answers are sent again with each new question. Data may
               be transferred outside the EU/EEA subject to appropriate safeguards (Chapter V GDPR).
             </li>
-            <li>
-              Hosting providers (Cloudflare, Google Cloud). The API runs in Finland and stored data are located
-              in the EU.
-            </li>
+            <li>Hosting providers. The API runs in Finland and stored data are located in the EU.</li>
+            {ADS_LIVE && (
+              <li>
+                Google, which shows the ads. Data may be transferred outside the EU/EEA subject to appropriate
+                safeguards (Chapter V GDPR).
+              </li>
+            )}
           </ul>
         ),
       },
@@ -90,7 +86,20 @@ const NOTICES: Record<Locale, Notice> = {
       },
       {
         title: "Cookies",
-        body: "The service does not use cookies. Do Not Track and Global Privacy Control signals are respected.",
+        body: ADS_LIVE ? (
+          <>
+            The service itself does not use cookies. Google and other ad vendors use cookies to show ads based on your
+            visits to this and other websites. Ad cookies are used only with your consent, which you can change at any
+            time under &quot;Privacy and cookie settings&quot; at the bottom of the page. You can turn off personalised
+            ads in Google&apos;s{" "}
+            <a className={LINK} href={GOOGLE_AD_SETTINGS}>
+              Ads Settings
+            </a>
+            .
+          </>
+        ) : (
+          "The service does not use cookies. Do Not Track and Global Privacy Control signals are respected."
+        ),
       },
       {
         title: "Your rights",
@@ -119,7 +128,7 @@ const NOTICES: Record<Locale, Notice> = {
   fi: {
     title: "Tietosuojaseloste",
     intro: "Tämä seloste kertoo, mitä henkilötietoja Asumisvalinta käsittelee ja miksi.",
-    updated: "Päivitetty 5.10.2026",
+    updated: "Päivitetty 8.10.2026",
     contents: "Sisällys",
     sections: [
       {
@@ -143,11 +152,12 @@ const NOTICES: Record<Locale, Notice> = {
               jolla rajoitetaan kysymysten määrää; se on olemassa vain avoimella sivulla eikä sitä tallenneta
               laitteellesi.
             </li>
-            <li>Sivujen katselukerrat, jotka Cloudflare Web Analytics laskee ilman evästeitä tai muita tunnisteita.</li>
+            <li>Sivujen katselukerrat, jotka lasketaan ilman evästeitä tai muita tunnisteita.</li>
             <li>
               IP-osoitteesta avaimella muodostettu yksisuuntainen tiiviste, jota käytetään vain pyyntöjen tiheyden
               rajoittamiseen. Avain vaihtuu päivittäin, ja tiiviste säilytetään erillään muista tiedoista.
             </li>
+            {ADS_LIVE && <li>Mainosten näyttämiseen käytettävät evästeet.</li>}
           </ul>
         ),
       },
@@ -163,6 +173,7 @@ const NOTICES: Record<Locale, Notice> = {
               Avustajalle lähetettyihin kysymyksiin vastaaminen ja niiden käyttö tekoälymallien kouluttamiseen:
               suostumus (6 artiklan 1 kohdan a alakohta).
             </li>
+            {ADS_LIVE && <li>Mainosten näyttäminen: suostumus (6 artiklan 1 kohdan a alakohta).</li>}
           </ul>
         ),
       },
@@ -176,10 +187,13 @@ const NOTICES: Record<Locale, Notice> = {
               mukana. Tietoja voidaan siirtää EU:n tai ETA:n ulkopuolelle asianmukaisin suojatoimin (tietosuoja-asetuksen V
               luku).
             </li>
-            <li>
-              Ylläpitopalvelujen tarjoajat (Cloudflare, Google Cloud). Palvelun rajapinta toimii Suomessa, ja
-              tallennetut tiedot sijaitsevat EU:ssa.
-            </li>
+            <li>Ylläpitopalvelujen tarjoajat. Palvelun rajapinta toimii Suomessa, ja tallennetut tiedot sijaitsevat EU:ssa.</li>
+            {ADS_LIVE && (
+              <li>
+                Google, joka näyttää mainokset. Tietoja voidaan siirtää EU:n tai ETA:n ulkopuolelle asianmukaisin
+                suojatoimin (tietosuoja-asetuksen V luku).
+              </li>
+            )}
           </ul>
         ),
       },
@@ -189,7 +203,20 @@ const NOTICES: Record<Locale, Notice> = {
       },
       {
         title: "Evästeet",
-        body: "Palvelu ei käytä evästeitä. Do Not Track- ja Global Privacy Control -signaaleja noudatetaan.",
+        body: ADS_LIVE ? (
+          <>
+            Palvelu itse ei käytä evästeitä. Google ja muut mainostoimittajat käyttävät evästeitä näyttääkseen mainoksia
+            käyntiesi perusteella tällä ja muilla sivustoilla. Mainosevästeitä käytetään vain suostumuksellasi, ja voit
+            muuttaa valintaasi milloin tahansa sivun alareunan kohdasta Tietosuoja- ja evästeasetukset. Voit poistaa
+            kohdennetut mainokset käytöstä Googlen{" "}
+            <a className={LINK} href={GOOGLE_AD_SETTINGS}>
+              mainosasetuksissa
+            </a>
+            .
+          </>
+        ) : (
+          "Palvelu ei käytä evästeitä. Do Not Track- ja Global Privacy Control -signaaleja noudatetaan."
+        ),
       },
       {
         title: "Oikeutesi",
@@ -219,51 +246,5 @@ const NOTICES: Record<Locale, Notice> = {
 };
 
 export function PrivacyView({ locale }: { locale: Locale }) {
-  const notice = NOTICES[locale];
-  return (
-    <div className="bg-paper">
-      <header className="relative overflow-hidden bg-[#0e1a26] text-white">
-        {/* eslint-disable-next-line @next/next/no-img-element -- static SVG, no optimisation needed */}
-        <img
-          src="/about/finland-dots.svg"
-          alt=""
-          className="map-reveal pointer-events-none absolute top-[-60%] right-[2%] w-[340px] opacity-40 [mask-image:linear-gradient(to_left,black_35%,transparent)] sm:w-[520px]"
-        />
-        <div className="relative mx-auto max-w-6xl px-4 pt-20 pb-16 sm:px-6 sm:pt-28 sm:pb-24">
-          <h1 className="fade-up text-[44px] leading-none font-semibold tracking-[-0.04em] sm:text-[76px]">{notice.title}</h1>
-        </div>
-      </header>
-
-      <div className="mx-auto grid max-w-6xl gap-12 px-4 pt-12 pb-24 sm:px-6 sm:pt-16 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-20">
-        <nav aria-label={notice.contents} className="hidden lg:block">
-          <div className="sticky top-24">
-            <p className="text-xs font-medium tracking-wider text-ink-3 uppercase">{notice.contents}</p>
-            <ol className="mt-4 space-y-2.5 border-l border-line">
-              {notice.sections.map((section, index) => (
-                <li key={section.title}>
-                  <a
-                    href={`#section-${index + 1}`}
-                    className="-ml-px block border-l border-transparent pl-4 text-sm text-ink-2 transition-colors hover:border-ink hover:text-ink"
-                  >
-                    {section.title}
-                  </a>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </nav>
-
-        <article className="max-w-[680px] min-w-0 text-[16px] leading-[1.8] text-ink-2">
-          <p className="text-lg leading-relaxed text-ink">{notice.intro}</p>
-          <p className="mt-2 text-sm text-ink-3">{notice.updated}</p>
-          {notice.sections.map((section, index) => (
-            <section key={section.title} id={`section-${index + 1}`} className="mt-14 scroll-mt-24">
-              <h2 className="mb-4 text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">{section.title}</h2>
-              <div>{section.body}</div>
-            </section>
-          ))}
-        </article>
-      </div>
-    </div>
-  );
+  return <LegalView text={NOTICES[locale]} />;
 }

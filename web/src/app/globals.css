@@ -414,3 +414,7 @@ body {
     animation-delay: 0ms !important;
   }
 }
+
+.ad-slot:has(ins[data-ad-status="unfilled"]) {
+  display: none;
+}

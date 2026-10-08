@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { AdSlot } from "@/components/AdSlot";
 import { Arrow } from "@/components/icons";
 import { AnimatedLogoMark } from "@/components/Logo";
 import { Reveal } from "@/components/about/Reveal";
@@ -88,6 +89,8 @@ export function Home({ guides }: { guides: GuideCard[] }) {
           </div>
         ))}
       </section>
+
+      <AdSlot className="mx-auto max-w-3xl px-6 pb-28 sm:pb-36" />
 
       {guides.length > 0 && (
         <section className="mx-auto max-w-6xl px-6 pb-28 sm:pb-36">

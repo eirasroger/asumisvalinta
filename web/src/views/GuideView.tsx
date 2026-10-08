@@ -2,11 +2,13 @@ import Link from "next/link";
 import { Children, isValidElement, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { AdSlot } from "@/components/AdSlot";
 import { Arrow } from "@/components/icons";
 import { NIGHT } from "@/components/showcase";
 import { type Locale, localePath } from "@/i18n/config";
 import { MESSAGES } from "@/i18n/messages";
 import { type Guide, headingId } from "@/lib/guides";
+import { splitAtMiddle } from "@/lib/markdown";
 
 const LINK = "text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink";
 const LIST =
@@ -47,8 +49,65 @@ export function GuideHero({ locale, title, lead, back }: { locale: Locale; title
   );
 }
 
+/** A guide text in the site's article style; local links open in the same language. */
+function GuideMarkdown({ locale, text }: { locale: Locale; text: string }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        h2: ({ children }) => (
+          <h2 id={headingId(textOf(children))} className="mt-14 mb-4 scroll-mt-24 text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">
+            {children}
+          </h2>
+        ),
+        p: ({ node, children }) => {
+          const only = node?.children.length === 1 ? node.children[0] : null;
+          const href = only?.type === "element" && only.tagName === "a" ? String(only.properties.href ?? "") : "";
+          if (href.startsWith("/")) {
+            return (
+              <p className="my-8">
+                <Link
+                  href={localePath(locale, href)}
+                  className="group inline-flex h-12 items-center gap-2 rounded-xl bg-ink px-6 text-[15px] font-medium text-paper transition-transform hover:-translate-y-0.5"
+                >
+                  {textOf(children)}
+                  <Arrow className="transition-transform group-hover:translate-x-0.5" />
+                </Link>
+              </p>
+            );
+          }
+          return <p className="mb-5">{children}</p>;
+        },
+        ul: ({ children }) => <ul className={LIST}>{children}</ul>,
+        ol: ({ children }) => <ol className="mb-5 list-decimal space-y-2.5 pl-6 marker:font-semibold marker:text-ink-3">{children}</ol>,
+        strong: ({ children }) => <strong className="font-semibold text-ink">{children}</strong>,
+        table: ({ children }) => (
+          <div className="my-6 overflow-x-auto rounded-2xl border border-line">
+            <table className="w-full text-[14px] leading-snug">{children}</table>
+          </div>
+        ),
+        th: ({ children }) => <th className="bg-frost px-4 py-3 text-left text-[13px] font-semibold text-ink">{children}</th>,
+        td: ({ children }) => <td className="num border-t border-line px-4 py-3 whitespace-nowrap text-ink-2">{children}</td>,
+        a: ({ href = "", children }) =>
+          href.startsWith("/") ? (
+            <Link href={localePath(locale, href)} className={LINK}>
+              {children}
+            </Link>
+          ) : (
+            <a href={href} className={LINK} target="_blank" rel="noopener noreferrer">
+              {children}
+            </a>
+          ),
+      }}
+    >
+      {text}
+    </ReactMarkdown>
+  );
+}
+
 export function GuideView({ locale, guide }: { locale: Locale; guide: Guide }) {
   const t = MESSAGES[locale].guides;
+  const [first, rest] = splitAtMiddle(guide.body);
   return (
     <div className="bg-paper">
       <GuideHero locale={locale} title={guide.title} lead={guide.description} back />
@@ -70,56 +129,14 @@ export function GuideView({ locale, guide }: { locale: Locale; guide: Guide }) {
 
         <article className="max-w-[680px] min-w-0 text-[16px] leading-[1.8] text-ink-2">
           <p className="mb-8 text-sm text-ink-3">{t.updated(formatDate(guide.updated, locale))}</p>
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              h2: ({ children }) => (
-                <h2 id={headingId(textOf(children))} className="mt-14 mb-4 scroll-mt-24 text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px]">
-                  {children}
-                </h2>
-              ),
-              p: ({ node, children }) => {
-                const only = node?.children.length === 1 ? node.children[0] : null;
-                const href = only?.type === "element" && only.tagName === "a" ? String(only.properties.href ?? "") : "";
-                if (href.startsWith("/")) {
-                  return (
-                    <p className="my-8">
-                      <Link
-                        href={localePath(locale, href)}
-                        className="group inline-flex h-12 items-center gap-2 rounded-xl bg-ink px-6 text-[15px] font-medium text-paper transition-transform hover:-translate-y-0.5"
-                      >
-                        {textOf(children)}
-                        <Arrow className="transition-transform group-hover:translate-x-0.5" />
-                      </Link>
-                    </p>
-                  );
-                }
-                return <p className="mb-5">{children}</p>;
-              },
-              ul: ({ children }) => <ul className={LIST}>{children}</ul>,
-              ol: ({ children }) => <ol className="mb-5 list-decimal space-y-2.5 pl-6 marker:font-semibold marker:text-ink-3">{children}</ol>,
-              strong: ({ children }) => <strong className="font-semibold text-ink">{children}</strong>,
-              table: ({ children }) => (
-                <div className="my-6 overflow-x-auto rounded-2xl border border-line">
-                  <table className="w-full text-[14px] leading-snug">{children}</table>
-                </div>
-              ),
-              th: ({ children }) => <th className="bg-frost px-4 py-3 text-left text-[13px] font-semibold text-ink">{children}</th>,
-              td: ({ children }) => <td className="num border-t border-line px-4 py-3 whitespace-nowrap text-ink-2">{children}</td>,
-              a: ({ href = "", children }) =>
-                href.startsWith("/") ? (
-                  <Link href={localePath(locale, href)} className={LINK}>
-                    {children}
-                  </Link>
-                ) : (
-                  <a href={href} className={LINK} target="_blank" rel="noopener noreferrer">
-                    {children}
-                  </a>
-                ),
-            }}
-          >
-            {guide.body}
-          </ReactMarkdown>
+          {first && <GuideMarkdown locale={locale} text={first} />}
+          {rest && (
+            <>
+              <AdSlot className="my-12" />
+              <GuideMarkdown locale={locale} text={rest} />
+            </>
+          )}
+          <AdSlot className="mt-14" />
         </article>
       </div>
     </div>

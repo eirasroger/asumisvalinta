@@ -113,6 +113,8 @@ jobs:
         env:
           NEXT_PUBLIC_API_ORIGIN: ${{ steps.api.outputs.url }}
           NEXT_PUBLIC_CLOUDFLARE_ANALYTICS_TOKEN: ${{ vars.CLOUDFLARE_ANALYTICS_TOKEN }}
+          NEXT_PUBLIC_ADSENSE_CLIENT: ${{ vars.ADSENSE_CLIENT }}
+          NEXT_PUBLIC_ADSENSE_SLOT: ${{ vars.ADSENSE_SLOT }}
         run: |
           npm ci
           npm run build

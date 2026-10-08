@@ -12,6 +12,7 @@ export const en = {
     ask: "Ask",
     methodology: "Methodology",
     privacy: "Privacy notice",
+    terms: "Terms of use",
     about: "About",
   },
   home: {
@@ -52,7 +53,12 @@ export const en = {
     methodology: "Methodology",
     about: "About",
     privacy: "Privacy",
+    terms: "Terms",
+    cookies: "Privacy and cookie settings",
     dataModel: "Data model",
+  },
+  ads: {
+    label: "Advertisements",
   },
   common: {
     close: "Close",

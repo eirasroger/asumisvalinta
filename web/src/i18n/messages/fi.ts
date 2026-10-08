@@ -13,6 +13,7 @@ export const fi: Messages = {
     ask: "Kysy",
     methodology: "Menetelmät",
     privacy: "Tietosuojaseloste",
+    terms: "Käyttöehdot",
     about: "Tietoa palvelusta",
   },
   home: {
@@ -54,7 +55,12 @@ export const fi: Messages = {
     methodology: "Menetelmät",
     about: "Tietoa palvelusta",
     privacy: "Tietosuoja",
+    terms: "Käyttöehdot",
+    cookies: "Tietosuoja- ja evästeasetukset",
     dataModel: "Tietomalli",
+  },
+  ads: {
+    label: "Mainokset",
   },
   common: {
     close: "Sulje",

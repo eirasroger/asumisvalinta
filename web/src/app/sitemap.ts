@@ -5,7 +5,7 @@ import { SITE_URL } from "@/lib/site";
 
 export const dynamic = "force-static";
 
-const PAGES = ["/", "/explore", "/compare", "/ask", "/oppaat", "/methodology", "/about", "/privacy"];
+const PAGES = ["/", "/explore", "/compare", "/ask", "/oppaat", "/methodology", "/about", "/privacy", "/terms"];
 
 const url = (locale: (typeof LOCALES)[number], page: string) => `${SITE_URL}${localePath(locale, page)}`;
 

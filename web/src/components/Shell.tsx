@@ -3,6 +3,7 @@ import path from "node:path";
 import type { Metadata } from "next";
 import { Schibsted_Grotesk } from "next/font/google";
 import Link from "next/link";
+import Script from "next/script";
 import { Footer } from "@/components/Footer";
 import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { LogoMark } from "@/components/Logo";
@@ -12,7 +13,7 @@ import { DEFAULT_LOCALE, LOCALES, type Locale, localePath } from "@/i18n/config"
 import { I18nProvider } from "@/i18n/I18nProvider";
 import { MESSAGES, type Messages } from "@/i18n/messages";
 import { OG_SIZE, ogAlt } from "@/lib/ogImage";
-import { SITE_URL } from "@/lib/site";
+import { ADS_LIVE, ADSENSE_CLIENT, SITE_URL } from "@/lib/site";
 import "@/app/globals.css";
 
 const schibsted = Schibsted_Grotesk({ subsets: ["latin"], variable: "--font-schibsted", display: "swap" });
@@ -37,6 +38,7 @@ export function siteMetadata(locale: Locale): Metadata {
     alternates: alternates(locale, "/"),
     openGraph: { title, description, siteName: "Asumisvalinta", type: "website", locale, images: [image] },
     twitter: { card: "summary_large_image", title, description, images: [image] },
+    ...(ADSENSE_CLIENT && { other: { "google-adsense-account": ADSENSE_CLIENT } }),
   };
 }
 
@@ -72,6 +74,12 @@ export function Shell({ locale, children }: { locale: Locale; children: React.Re
           </header>
           {children}
           <PageAnalytics />
+          {ADS_LIVE && (
+            <Script
+              src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
+              crossOrigin="anonymous"
+            />
+          )}
           <Footer dataDocs={existsSync(path.join(process.cwd(), "public", "data-docs", "index.html"))} />
         </I18nProvider>
       </body>

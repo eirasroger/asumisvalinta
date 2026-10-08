@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AdSlot } from "@/components/AdSlot";
 import { AssumptionInputs } from "@/components/planner/AssumptionInputs";
 import { Outcome } from "@/components/planner/Outcome";
 import { PlannerSkeleton } from "@/components/planner/PlannerSkeleton";
@@ -272,6 +273,7 @@ export function Planner() {
           </div>
         </div>
       )}
+      {run && <AdSlot className="mx-auto mt-16 max-w-3xl" />}
     </div>
   );
 }
