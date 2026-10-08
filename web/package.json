@@ -16,7 +16,7 @@
     "@number-flow/react": "^0.6.2",
     "echarts": "^6.1.0",
     "maplibre-gl": "^6.11.2",
-    "next": "16.3.7",
+    "next": "16.3.8",
     "radix-ui": "^1.6.7",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -32,12 +32,13 @@
     "@types/topojson-client": "^3.1.5",
     "@types/topojson-specification": "^1.0.5",
     "eslint": "^9",
-    "eslint-config-next": "16.3.7",
+    "eslint-config-next": "16.3.8",
     "mapshaper": "^0.7.70",
     "tailwindcss": "^4",
     "typescript": "^5"
   },
   "overrides": {
-    "adm-zip": "^0.6.1"
+    "adm-zip": "^0.6.1",
+    "source-map-js": "^1.2.2"
   }
 }
