@@ -15,6 +15,7 @@ export const fi: Messages = {
     privacy: "Tietosuojaseloste",
     terms: "Käyttöehdot",
     about: "Tietoa palvelusta",
+    contact: "Yhteystiedot",
   },
   home: {
     tagline:
@@ -54,6 +55,7 @@ export const fi: Messages = {
     note: "Arvioita, ei taloudellista neuvontaa. Lähde: Tilastokeskus (CC BY 4.0). Lähde: EKP:n tilastot. Osoitteet: Posti.",
     methodology: "Menetelmät",
     about: "Tietoa palvelusta",
+    contact: "Yhteystiedot",
     privacy: "Tietosuoja",
     terms: "Käyttöehdot",
     cookies: "Tietosuoja- ja evästeasetukset",
@@ -398,5 +400,24 @@ export const fi: Messages = {
     dataModel: "Tietomalli",
     contactTitle: "Löysitkö virheen tai onko sinulla idea?",
     contactBody: "Korjaukset, käännösvirheet ja ehdotukset ovat tervetulleita sähköpostitse.",
+  },
+    contact: {
+    title: "Yhteystiedot",
+    lead: "Kysyttävää, korjattavaa tai palautetta Asumisvalinnasta? Lähetä sähköpostia.",
+    general: {
+      title: "Yleiset yhteydenotot",
+      body: "Palaute, tietojen korjaukset, ehdotukset ja yhteistyö.",
+    },
+    privacy: {
+      title: "Tietosuoja",
+      body: "Henkilötietojasi koskevat pyynnöt.",
+      link: "Tietosuojaseloste",
+    },
+    operator: "Palvelun tarjoaja",
+    response: "Vastausaika",
+    responseValue: "Yleensä muutaman arkipäivän kuluessa",
+    website: "Verkkosivusto",
+    noAdvice: "Asumisvalinta ei anna neuvoja yksittäisiin asunto- tai lainapäätöksiin.",
+    guides: "Lue oppaat",
   },
 };

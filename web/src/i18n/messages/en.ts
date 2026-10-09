@@ -14,6 +14,7 @@ export const en = {
     privacy: "Privacy notice",
     terms: "Terms of use",
     about: "About",
+    contact: "Contact",
   },
   home: {
     tagline: "Rent, right of occupancy or buy? Compare all three for any flat in Finland, using official open data.",
@@ -52,6 +53,7 @@ export const en = {
     note: "Estimates, not financial advice. Source: Statistics Finland (CC BY 4.0). Source: ECB statistics. Addresses: Posti.",
     methodology: "Methodology",
     about: "About",
+    contact: "Contact",
     privacy: "Privacy",
     terms: "Terms",
     cookies: "Privacy and cookie settings",
@@ -396,6 +398,25 @@ export const en = {
     dataModel: "Data model",
     contactTitle: "Found an error or have an idea?",
     contactBody: "Corrections, translation fixes and suggestions are welcome by email.",
+  },
+    contact: {
+    title: "Contact",
+    lead: "Questions, corrections or feedback about Asumisvalinta? Send an email.",
+    general: {
+      title: "General enquiries",
+      body: "Feedback, data corrections, suggestions and cooperation.",
+    },
+    privacy: {
+      title: "Privacy",
+      body: "Requests concerning your personal data.",
+      link: "Privacy notice",
+    },
+    operator: "Provided by",
+    response: "Response time",
+    responseValue: "Usually within a few working days",
+    website: "Website",
+    noAdvice: "Asumisvalinta cannot advise on individual housing or loan decisions.",
+    guides: "Read the guides",
   },
 };
 

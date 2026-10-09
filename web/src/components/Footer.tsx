@@ -53,6 +53,9 @@ export function Footer({ dataDocs }: { dataDocs: boolean }) {
           <Link href={href("/about")} className="hover:text-ink">
             {t.footer.about}
           </Link>
+          <Link href={href("/contact")} className="hover:text-ink">
+            {t.footer.contact}
+          </Link>
           <Link href={href("/methodology")} className="hover:text-ink">
             {t.footer.methodology}
           </Link>
