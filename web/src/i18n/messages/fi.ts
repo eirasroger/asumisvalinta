@@ -322,6 +322,30 @@ export const fi: Messages = {
     all: "Kaikki oppaat",
     contents: "Sisällys",
     updated: (date: string) => `Päivitetty ${date}`,
+    charts: {
+      mortgageRates: {
+        title: "Uusien asuntolainojen keskikorko",
+        area: "Suomi, kuukausittain",
+        change: (points: string) => `${points} prosenttiyksikköä vuodessa`,
+        source: "Lähde: EKP:n tilastot.",
+      },
+      paymentByRate: {
+        title: "250 000 euron lainan kuukausierä",
+        subtitle: "Tasaerälaina korkotason mukaan",
+        term: (years: number) => `${years} vuotta`,
+        marker: "Keskikorko elokuussa 2026",
+        note: "Ensimmäinen kuukausierä, laskettu Asumisvalinnan laskentamallilla.",
+      },
+      companyLoan: {
+        title: "Kaksi asuntoa, velaton hinta 250 000 euroa",
+        flat: (name: string) => `Asunto ${name}`,
+        sellingPrice: "Myyntihinta",
+        loanShare: "Lainaosuus",
+        charge: (amount: string) => `Rahoitusvastike ${amount} kuukaudessa`,
+        interest: (amount: string, years: number) => `Korkoja ${amount} ${years} vuodessa`,
+        note: (rate: string, years: number) => `Yhtiölainan korko ${rate}, laina-aikaa jäljellä ${years} vuotta. Laskettu Asumisvalinnan laskentamallilla.`,
+      },
+    },
     links: {
       aso: "Mikä on asumisoikeus?",
       buying: "Mitä asunnon ostaminen maksaa?",

@@ -3,6 +3,7 @@ import { Children, isValidElement, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { AdSlot } from "@/components/AdSlot";
+import { GuideChart } from "@/components/charts/GuideChart";
 import { Arrow } from "@/components/icons";
 import { NIGHT } from "@/components/showcase";
 import { type Locale, localePath } from "@/i18n/config";
@@ -77,6 +78,11 @@ function GuideMarkdown({ locale, text }: { locale: Locale; text: string }) {
             );
           }
           return <p className="mb-5">{children}</p>;
+        },
+        pre: ({ node, children }) => {
+          const code = node?.children[0];
+          const chart = code?.type === "element" && [code.properties.className].flat().includes("language-chart");
+          return chart ? <GuideChart name={textOf(children).trim()} /> : <pre>{children}</pre>;
         },
         ul: ({ children }) => <ul className={LIST}>{children}</ul>,
         ol: ({ children }) => <ol className="mb-5 list-decimal space-y-2.5 pl-6 marker:font-semibold marker:text-ink-3">{children}</ol>,

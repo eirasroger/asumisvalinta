@@ -326,6 +326,30 @@ export const en = {
       ratio: "How to read this ratio",
       rentVsBuy: "Renting or buying in Helsinki: two examples",
     },
+    charts: {
+      mortgageRates: {
+        title: "Average rate on new housing loans",
+        area: "Finland, monthly",
+        change: (points: string) => `${points} percentage points in a year`,
+        source: "Source: ECB statistics.",
+      },
+      paymentByRate: {
+        title: "Monthly payment on a €250,000 loan",
+        subtitle: "Annuity loan, by interest rate",
+        term: (years: number) => `${years} years`,
+        marker: "Average, August 2026",
+        note: "First monthly payment, calculated with the Asumisvalinta scenario engine.",
+      },
+      companyLoan: {
+        title: "Two flats with a debt-free price of €250,000",
+        flat: (name: string) => `Flat ${name}`,
+        sellingPrice: "Selling price",
+        loanShare: "Loan share",
+        charge: (amount: string) => `Finance charge ${amount} a month`,
+        interest: (amount: string, years: number) => `${amount} interest over ${years} years`,
+        note: (rate: string, years: number) => `Company loan at ${rate} with ${years} years left, calculated with the Asumisvalinta scenario engine.`,
+      },
+    },
   },
   about: {
     heroTitle: "Know the numbers before you choose a home",
