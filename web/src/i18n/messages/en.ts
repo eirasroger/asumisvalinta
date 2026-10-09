@@ -353,6 +353,14 @@ export const en = {
       },
     },
   },
+  methodology: {
+    contents: "On this page",
+    backToTop: "Back to top",
+    copyLink: "Link to this section",
+    ctaTitle: "See the method at work",
+    ctaBody: "Every formula on this page runs in the comparison. Enter a flat and change any assumption.",
+    cta: "Run a comparison",
+  },
   about: {
     heroTitle: "Know the numbers before you choose a home",
     heroLead: "Asumisvalinta compares renting, right of occupancy and buying anywhere in Finland, using official statistics that update every month.",

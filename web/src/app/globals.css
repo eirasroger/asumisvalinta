@@ -418,3 +418,22 @@ body {
 .ad-slot:has(ins[data-ad-status="unfilled"]) {
   display: none;
 }
+
+/* Sections fade in as they scroll into view. Without script, or with reduced motion, they are simply shown. */
+.reveal-ready .reveal:not(.revealed) {
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+.reveal-ready .reveal {
+  transition:
+    opacity 600ms ease-out,
+    transform 700ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-ready .reveal:not(.revealed) {
+    opacity: 1;
+    transform: none;
+  }
+}

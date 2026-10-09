@@ -6,6 +6,13 @@ Tällä sivulla kerrotaan, miten laskuri vertaa kolmea tapaa asua asunnossa tiet
 
 Jokainen vaihtoehto aloittaa samalla rahamäärällä ja käyttää kuukaudessa saman verran rahaa. Kuukauden budjetin määrää vaihtoehto, jonka asumiskulut ovat sinä kuukautena suurimmat. Muut vaihtoehdot säästävät erotuksen joko säästötilille tai indeksirahastoihin käyttäjän valinnan mukaan. Tarkastelujakson lopussa kaikki muutetaan rahaksi: asunto myydään, asumisoikeusmaksu palautetaan, säästöt nostetaan ja verot maksetaan. Vaihtoehto, jolle jää eniten rahaa, on valituilla oletuksilla edullisin tapa asua kyseisen jakson ajan.
 
+```steps
+Sama alku | Jokainen vaihtoehto aloittaa samalla pääomalla.
+Sama budjetti | Kuukauden kallein vaihtoehto määrää budjetin.
+Erotus säästöön | Edullisemmat vaihtoehdot säästävät sen, mitä ne eivät käytä.
+Rahaksi | Lopussa asunto myydään, maksu palautetaan ja verot maksetaan.
+```
+
 ## Merkinnät
 
 | Merkki | Merkitys |
@@ -38,22 +45,26 @@ Suomalaisissa asuntoilmoituksissa keittiötä ei lasketa huoneeksi. Tilastokesku
 
 Ostaja maksaa omarahoitusosuuden ja varainsiirtoveron asunnon kaupan yhteydessä:
 
-- Velaton hinta: V₀ = P₀ × A
-- Omarahoitusosuus: D = d × V₀, missä d on omarahoituksen osuus
-- Varainsiirtovero: τ × V₀, missä τ on varainsiirtoveron osuus velattomasta hinnasta
-- Ostajan maksu alussa: U_buy = D + τ × V₀
+```formula
+Velaton hinta | V₀ = P₀ × A
+Omarahoitusosuus | D = d × V₀
+Varainsiirtovero | τ × V₀
+Ostajan maksu alussa | U_buy = D + τ × V₀
+Asumisoikeusmaksu | U_aso = F × A
+Alkupääoma | C₀ = max(U_buy, U_aso)
+```
 
-Asumisoikeusasukas maksaa asumisoikeusmaksun: U_aso = F × A.
-
-Jokainen vaihtoehto aloittaa samalla pääomalla C₀ = max(U_buy, U_aso). Se osa, jota vaihtoehto ei maksa alussa, siirtyy sen säästöihin kuukautena 0. Vuokralainen säästää koko pääoman C₀.
+Tässä d on omarahoituksen osuus ja τ varainsiirtoveron osuus velattomasta hinnasta. Jokainen vaihtoehto aloittaa samalla pääomalla C₀. Se osa, jota vaihtoehto ei maksa alussa, siirtyy sen säästöihin kuukautena 0. Vuokralainen säästää koko pääoman C₀.
 
 ## Kuukausittaiset asumiskulut
 
 Kasvavat kulut nousevat kerran vuodessa, kunkin vuoden alussa:
 
-- Vuokra: R₀ × (1 + g_R)^y × A
-- Asumisoikeus: K₀ × (1 + g_K)^y × A
-- Omistus: asuntolainan erä + yhtiölainan erä + (M₀ + C_y + W / 12) × (1 + g_M)^y × A − ASP-korkotuki
+```formula
+Vuokra | R₀ × (1 + g_R)^y × A
+Asumisoikeus | K₀ × (1 + g_K)^y × A
+Omistus | asuntolainan erä + yhtiölainan erä + (M₀ + C_y + W / 12) × (1 + g_M)^y × A − ASP-korkotuki
+```
 
 Kuukauden budjetti on näistä kuluista suurin. Kukin vaihtoehto säästää kuukauden lopussa budjetin ja omien kulujensa erotuksen.
 
@@ -90,7 +101,11 @@ Ensiasunnon ostaja, joka on säästänyt ASP-tilille vähintään 10 prosenttia 
 
 ## Säästöt
 
-Säästöt kasvavat kuukausittain: säästöt(t + 1) = säästöt(t) × (1 + i) + talletus(t).
+Säästöt kasvavat kuukausittain, missä i on valitun säästötavan kuukausituotto:
+
+```formula
+Säästöt | säästöt(t + 1) = säästöt(t) × (1 + i) + talletus(t)
+```
 
 - **Säästötili.** Pankki pidättää talletusten koroista 30 prosentin lähdeveron korkoa maksaessaan, ja vero on lopullinen. Saldo kasvaa siis verojen jälkeisellä korolla: i = (1 + r × 0,7)^(1/12) − 1. Lopussa ei makseta mitään.
 - **Indeksirahastot.** Tuotto kasvaa ennen veroja: i = (1 + r)^(1/12) − 1. Voitosta maksetaan vero, kun osuudet myydään tarkastelujakson lopussa.

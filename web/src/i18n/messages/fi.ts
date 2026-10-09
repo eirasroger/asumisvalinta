@@ -355,6 +355,14 @@ export const fi: Messages = {
       rentVsBuy: "Vuokra vai omistus Helsingissä: kaksi esimerkkiä",
     },
   },
+  methodology: {
+    contents: "Tällä sivulla",
+    backToTop: "Takaisin ylös",
+    copyLink: "Linkki tähän osioon",
+    ctaTitle: "Näe menetelmä käytössä",
+    ctaBody: "Jokainen tämän sivun kaava on käytössä vertailussa. Syötä asunto ja muuta mitä tahansa oletusta.",
+    cta: "Tee vertailu",
+  },
   about: {
     heroTitle: "Tiedä luvut ennen kuin valitset kodin",
     heroLead: "Asumisvalinta vertaa vuokra-asumista, asumisoikeutta ja omistamista missä tahansa Suomessa virallisten tilastojen avulla, jotka päivittyvät kuukausittain.",

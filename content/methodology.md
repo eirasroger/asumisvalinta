@@ -6,6 +6,13 @@ This page explains how the calculator compares three ways of living in a flat fo
 
 Each option starts with the same amount of money and spends the same amount each month. Whichever option has the highest housing cost in a month sets that month's budget. The other options save the difference, in a savings account or in index funds, as the user chooses. At the end of the horizon everything is turned into cash: the flat is sold, the right-of-occupancy fee is refunded, the savings are withdrawn and taxes are paid. The option that ends with the most money is the cheapest way to live for that horizon under the chosen assumptions.
 
+```steps
+Same start | Every option starts with the same capital.
+Same budget | Each month, the most expensive option sets the budget.
+Difference saved | The cheaper options save what they do not spend.
+Cash out | At the end, the flat is sold, the fee is refunded and taxes are paid.
+```
+
 ## Notation
 
 | Symbol | Meaning |
@@ -38,22 +45,26 @@ Finnish listings count rooms without the kitchen. A yksiö is a studio, a kaksio
 
 The buyer pays the down payment and the transfer tax when the flat is bought:
 
-- Debt-free price: V₀ = P₀ × A
-- Down payment: D = d × V₀, where d is the down payment share
-- Transfer tax: τ × V₀, where τ is the transfer tax rate on the debt-free price
-- Buyer's upfront payment: U_buy = D + τ × V₀
+```formula
+Debt-free price | V₀ = P₀ × A
+Down payment | D = d × V₀
+Transfer tax | τ × V₀
+Buyer's upfront payment | U_buy = D + τ × V₀
+Right-of-occupancy fee | U_aso = F × A
+Starting capital | C₀ = max(U_buy, U_aso)
+```
 
-The right-of-occupancy resident pays the fee: U_aso = F × A.
-
-Every option starts with the same capital C₀ = max(U_buy, U_aso). Whatever an option does not pay up front goes into its savings in month 0. The renter saves the whole C₀.
+Here d is the down payment share and τ the transfer tax rate on the debt-free price. Every option starts with the same capital C₀. Whatever an option does not pay up front goes into its savings in month 0. The renter saves the whole C₀.
 
 ## Monthly housing costs
 
 Costs that grow do so once a year, at the start of each year:
 
-- Rent: R₀ × (1 + g_R)^y × A
-- Right of occupancy: K₀ × (1 + g_K)^y × A
-- Buying: mortgage payment + housing company loan payment + (M₀ + C_y + W / 12) × (1 + g_M)^y × A − ASP interest subsidy
+```formula
+Rent | R₀ × (1 + g_R)^y × A
+Right of occupancy | K₀ × (1 + g_K)^y × A
+Buying | mortgage payment + housing company loan payment + (M₀ + C_y + W / 12) × (1 + g_M)^y × A − ASP interest subsidy
+```
 
 The monthly budget is the highest of these costs in that month. Each option saves (budget minus its own cost) at the end of the month.
 
@@ -90,7 +101,11 @@ A first-time buyer who saved at least 10 % of the price in an ASP account can ta
 
 ## Savings
 
-Savings grow monthly: savings(t + 1) = savings(t) × (1 + i) + contribution(t).
+Savings grow monthly, where i is the monthly return of the chosen saving method:
+
+```formula
+Savings | savings(t + 1) = savings(t) × (1 + i) + contribution(t)
+```
 
 - **Savings account.** Banks withhold 30 % of deposit interest when they pay it, and that tax is final. The balance therefore compounds at the rate after tax: i = (1 + r × 0.7)^(1/12) − 1. Nothing is due at the end.
 - **Index funds.** The return compounds before tax: i = (1 + r)^(1/12) − 1. Tax is due on the gain when the units are sold at the end of the horizon.
