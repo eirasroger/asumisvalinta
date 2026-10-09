@@ -301,7 +301,7 @@ export const en = {
     question: "Your question",
     placeholder: "For example: what is the average rent per m² for one-room flats in Oulu?",
     consent:
-      "Questions are processed by an AI service provider and may be used to train its models. Do not include personal information.",
+      "Questions are processed by an AI service provider and may be used to train its models. Questions are stored for twelve months to improve the service. Do not include personal information.",
     agree: "I agree",
     personal: "Leave out personal information.",
     privacy: "Privacy",

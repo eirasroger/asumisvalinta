@@ -39,78 +39,79 @@ def recorded(monkeypatch):
     return events
 
 
-def test_area_event_is_recorded(recorded):
-    client = TestClient(app)
-    body = {
-        "type": "area",
-        "postal_code": "00100",
-        "room_type": "two_room",
-        "source": "map",
-        "metric": "price",
-    }
-    assert client.post("/api/events", json=body).status_code == 204
-    assert recorded == [
-        (
-            "area",
-            {
-                "postal_code": "00100",
-                "room_type": "two_room",
-                "source": "map",
-                "metric": "price",
-                "visit": None,
-            },
-        )
-    ]
+SCENARIO = {
+    "size_m2": 50,
+    "horizon_years": 1,
+    "buy": {
+        "price_per_m2": 4_000,
+        "price_growth": 0.0,
+        "maintenance_charge_per_m2_month": 5,
+        "maintenance_charge_growth": 0.0,
+        "selling_cost_rate": 0.04,
+        "mortgage": {
+            "down_payment_share": 0.10,
+            "term_years": 10,
+            "repayment": "equal_principal",
+            "rate_path": {"kind": "flat", "start_rate": 0.0},
+        },
+    },
+    "rent": {"rent_per_m2_month": 20, "rent_growth": 0.0},
+    "aso": {
+        "fee_per_m2": 400,
+        "charge_per_m2_month": 15,
+        "charge_growth": 0.0,
+        "building_cost_index_growth": 0.0,
+    },
+    "investment": {"investment_return": 0.0, "parked_cash_return": 0.0},
+    "policy": {
+        "transfer_tax_rate": 0.015,
+        "capital_income_tax_rate": 0.30,
+        "interest_tax_at_source_rate": 0.30,
+        "home_sale_exemption_min_years": 2,
+        "presumptive_acquisition_cost_rate_short": 0.20,
+        "presumptive_acquisition_cost_rate_long": 0.40,
+        "presumptive_acquisition_cost_threshold_years": 10,
+        "presumptive_acquisition_cost_rate_securities_short": 0.20,
+        "presumptive_acquisition_cost_rate_securities_long": 0.40,
+        "max_loan_to_collateral": 0.95,
+        "asp_interest_subsidy_threshold_rate": 0.038,
+        "asp_interest_subsidy_share": 0.70,
+        "asp_interest_subsidy_max_years": 10,
+        "asp_min_savings_share": 0.10,
+        "asp_loan_max": 230_000,
+    },
+}
+FLAT = {"postal_code": "00100", "room_type": "two_room", "building_year": 1990}
 
 
-def test_scenario_event_is_recorded(recorded):
-    client = TestClient(app)
-    body = {
-        "type": "scenario",
-        "postal_code": "00100",
-        "room_type": "two_room",
-        "size_m2": 55,
-        "building_year": 1990,
-        "horizon_years": 5,
-        "own_numbers": {"rent": 1450},
-        "assumptions": {"surplus_strategy": "invest"},
-        "best_option": "aso",
-        "end_wealth": {"buy": 107_000, "rent": 100_000, "aso": 113_000},
-        "updates": 7,
-    }
-    assert client.post("/api/events", json=body).status_code == 204
-    assert recorded[0][0] == "scenario"
-    assert recorded[0][1]["own_numbers"] == {"rent": 1450}
-    assert recorded[0][1]["updates"] == 7
+def test_comparison_runs_are_recorded(recorded):
+    response = TestClient(app).post("/api/planner/run", params=FLAT, json=SCENARIO)
+    assert response.status_code == 200
+    ((kind, payload),) = recorded
+    assert kind == "scenario"
+    assert {key: payload[key] for key in FLAT} == FLAT
+    assert payload["scenario"]["rent"]["rent_per_m2_month"] == 20
+    assert set(payload["end_wealth"]) == {"buy", "rent", "aso"}
+    assert payload["best_option"] in payload["end_wealth"]
 
 
-def test_events_with_unknown_fields_are_rejected(recorded):
-    client = TestClient(app)
-    body = {
-        "type": "area",
-        "postal_code": "00100",
-        "room_type": "two_room",
-        "source": "map",
-        "ip": "1.2.3.4",
-    }
-    assert client.post("/api/events", json=body).status_code == 422
+def test_runs_without_the_flat_are_not_recorded(recorded):
+    assert TestClient(app).post("/api/planner/run", json=SCENARIO).status_code == 200
     assert recorded == []
 
 
-def test_events_sent_as_plain_text_are_recorded(recorded):
-    body = '{"type": "area", "postal_code": "00100", "room_type": "two_room", "source": "map"}'
-    response = TestClient(app).post(
-        "/api/events", content=body, headers={"Content-Type": "text/plain;charset=UTF-8"}
-    )
-    assert response.status_code == 204
-    assert recorded[0][0] == "area"
+@pytest.mark.parametrize("header", [{"Sec-GPC": "1"}, {"DNT": "1"}])
+def test_runs_are_not_recorded_when_the_browser_opts_out(recorded, header):
+    response = TestClient(app).post("/api/planner/run", params=FLAT, json=SCENARIO, headers=header)
+    assert response.status_code == 200
+    assert recorded == []
 
 
-def test_malformed_events_are_rejected(recorded):
-    response = TestClient(app).post(
-        "/api/events", content="not json", headers={"Content-Type": "text/plain"}
-    )
-    assert response.status_code == 422
+def test_frequent_runs_are_dropped(monkeypatch, recorded):
+    from asumisvalinta.api import throttle
+
+    monkeypatch.setattr(throttle, "allow", lambda ip, scope, seconds: False)
+    assert TestClient(app).post("/api/planner/run", params=FLAT, json=SCENARIO).status_code == 200
     assert recorded == []
 
 
@@ -214,8 +215,7 @@ def test_questions_are_recorded_redacted_unless_the_browser_opts_out(monkeypatch
 def test_reads_are_cached_and_writes_are_not(recorded):
     client = TestClient(app)
     assert "s-maxage" in client.get("/api/health").headers["cache-control"]
-    body = {"type": "area", "postal_code": "00100", "room_type": "two_room", "source": "map"}
-    assert "cache-control" not in client.post("/api/events", json=body).headers
+    assert "cache-control" not in client.post("/api/planner/run", json=SCENARIO).headers
 
 
 def test_questions_are_refused_once_the_daily_tokens_are_used(monkeypatch, recorded):
@@ -265,20 +265,6 @@ def test_unreachable_database_refuses_questions(monkeypatch):
 VISIT = "3f2b8c1e-9a4d-4c6b-8e2f-1a2b3c4d5e6f"
 
 
-def test_events_from_one_visit_share_its_number(recorded):
-    client = TestClient(app)
-    body = {
-        "type": "area",
-        "postal_code": "00100",
-        "room_type": "two_room",
-        "source": "map",
-        "visit": VISIT,
-    }
-    assert client.post("/api/events", json=body).status_code == 204
-    assert recorded[0][1]["visit"] == VISIT
-    assert client.post("/api/events", json={**body, "visit": "not a visit"}).status_code == 422
-
-
 def test_questions_keep_the_visit_number(monkeypatch, recorded):
     from asumisvalinta.api import app as app_module
 
@@ -310,15 +296,6 @@ def test_questions_must_wait_between_calls(monkeypatch, recorded):
     assert response.status_code == 429
     assert response.headers["retry-after"] == "15"
     assert calls == ["203.0.113.7"]
-    assert recorded == []
-
-
-def test_frequent_events_are_dropped(monkeypatch, recorded):
-    from asumisvalinta.api import throttle
-
-    monkeypatch.setattr(throttle, "allow", lambda ip, scope, seconds: False)
-    body = {"type": "area", "postal_code": "00100", "room_type": "two_room", "source": "map"}
-    assert TestClient(app).post("/api/events", json=body).status_code == 204
     assert recorded == []
 
 
@@ -390,7 +367,7 @@ def test_client_ip_is_the_address_the_platform_appended():
 
 def test_large_bodies_are_refused_before_they_are_read(recorded):
     client = TestClient(app)
-    response = client.post("/api/events", content="a" * (65 * 1024))
+    response = client.post("/api/planner/run", content="a" * (65 * 1024))
     assert response.status_code == 413
     assert recorded == []
 

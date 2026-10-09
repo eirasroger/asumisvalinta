@@ -8,7 +8,6 @@ import { Footer } from "@/components/Footer";
 import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { LogoMark } from "@/components/Logo";
 import { Nav } from "@/components/Nav";
-import { PageAnalytics } from "@/components/PageAnalytics";
 import { DEFAULT_LOCALE, LOCALES, type Locale, localePath } from "@/i18n/config";
 import { I18nProvider } from "@/i18n/I18nProvider";
 import { MESSAGES, type Messages } from "@/i18n/messages";
@@ -73,7 +72,6 @@ export function Shell({ locale, children }: { locale: Locale; children: React.Re
             </div>
           </header>
           {children}
-          <PageAnalytics />
           {ADS_LIVE && (
             <Script
               src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}

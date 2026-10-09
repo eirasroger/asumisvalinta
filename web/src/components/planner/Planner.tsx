@@ -9,7 +9,6 @@ import { Outcome } from "@/components/planner/Outcome";
 import { PlannerSkeleton } from "@/components/planner/PlannerSkeleton";
 import { YourNumbers } from "@/components/planner/YourNumbers";
 import { PostalCodeSearch } from "@/components/PostalCodeSearch";
-import { type ScenarioEvent, track } from "@/lib/analytics";
 import { Hint, NumberField, Popover, Segmented, Slider } from "@/components/ui";
 import { useI18n } from "@/i18n/I18nProvider";
 import { ApiError, api, type PlannerRun, type PlannerStart, ROOM_TYPES } from "@/lib/api";
@@ -25,8 +24,6 @@ import {
   offerValue,
   typicalValues,
 } from "@/lib/planner";
-
-const SETTLE_MS = 2000;
 
 function isAbort(error: unknown) {
   return error instanceof DOMException && error.name === "AbortError";
@@ -44,19 +41,7 @@ export function Planner() {
   const [run, setRun] = useState<PlannerRun | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
-  const inputs = useRef({ flat, offer, assumptions });
-  const latest = useRef<{ event: ScenarioEvent; key: string } | null>(null);
-  const updates = useRef(0);
-  const settling = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastSent = useRef("");
-
-  function flushScenario() {
-    const current = latest.current;
-    if (!current || current.key === lastSent.current) return;
-    lastSent.current = current.key;
-    const unsettled = settling.current ? 1 : 0;
-    track({ ...current.event, updates: Math.max(updates.current + unsettled, 1) });
-  }
+  const current = useRef(flat);
   const [refresh, setRefresh] = useState(0);
 
   const update = (patch: Partial<Flat>) => setFlat((current) => ({ ...current, ...patch }));
@@ -99,7 +84,7 @@ export function Planner() {
     const timer = setTimeout(() => {
       setRunning(true);
       api
-        .plannerRun(scenario, locale, controller.signal)
+        .plannerRun(scenario, current.current, locale, controller.signal)
         .then((next) => {
           setRun(next);
           setRunError(null);
@@ -118,57 +103,10 @@ export function Planner() {
     };
   }, [scenario, refresh, locale]);
 
-  // Usage is recorded once per flat looked at: the final configuration and how many times it was
-  // recalculated, sent when the visitor leaves the page, switches area or goes elsewhere.
+  // The flat goes with each run so the server can record it as anonymous usage.
   useEffect(() => {
-    inputs.current = { flat, offer, assumptions };
-  }, [flat, offer, assumptions]);
-
-  useEffect(() => {
-    if (!run) return;
-    const { flat: current, offer: own, assumptions: chosen } = inputs.current;
-    const event: ScenarioEvent = {
-      type: "scenario",
-      postal_code: current.postal_code,
-      room_type: current.room_type,
-      size_m2: current.size_m2,
-      building_year: current.building_year,
-      horizon_years: current.horizon_years,
-      own_numbers: Object.fromEntries(
-        Object.entries(own).filter((entry): entry is [string, number] => entry[1] !== null),
-      ),
-      assumptions: Object.fromEntries(
-        Object.entries(chosen).filter(
-          (entry): entry is [string, number | string | boolean] => entry[1] !== undefined,
-        ),
-      ),
-      best_option: [...run.result.options].sort((a, b) => b.end_wealth - a.end_wealth)[0].option,
-      end_wealth: Object.fromEntries(run.result.options.map((item) => [item.option, Math.round(item.end_wealth)])),
-      updates: 1,
-    };
-    if (latest.current?.event.postal_code !== event.postal_code) {
-      flushScenario();
-      updates.current = 0;
-    }
-    // A configuration counts once it stays unchanged for SETTLE_MS, so typing does not inflate it.
-    if (settling.current) clearTimeout(settling.current);
-    settling.current = setTimeout(() => {
-      updates.current += 1;
-      settling.current = null;
-    }, SETTLE_MS);
-    latest.current = { event, key: JSON.stringify(event) };
-  }, [run]);
-
-  useEffect(() => {
-    const onHide = () => document.visibilityState === "hidden" && flushScenario();
-    document.addEventListener("visibilitychange", onHide);
-    window.addEventListener("pagehide", flushScenario);
-    return () => {
-      document.removeEventListener("visibilitychange", onHide);
-      window.removeEventListener("pagehide", flushScenario);
-      flushScenario();
-    };
-  }, []);
+    current.current = flat;
+  }, [flat]);
 
   const area = start?.market;
 
@@ -195,10 +133,7 @@ export function Planner() {
           >
             <PostalCodeSearch
               autoFocus
-              onChange={(next) => {
-                update({ postal_code: next.postal_code });
-                track({ type: "area", postal_code: next.postal_code, room_type: flat.room_type, source: "compare" });
-              }}
+              onChange={(next) => update({ postal_code: next.postal_code })}
             />
             <Link
               href={`${href("/explore")}?postal=${flat.postal_code}&rooms=${flat.room_type}`}

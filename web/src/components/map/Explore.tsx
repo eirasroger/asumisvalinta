@@ -10,7 +10,6 @@ import { EChart, INK_3, LINE } from "@/components/charts/EChart";
 import type { HoverInfo, Padding } from "@/components/map/AreaMap";
 import { PostalCodeSearch } from "@/components/PostalCodeSearch";
 import { useI18n } from "@/i18n/I18nProvider";
-import { track } from "@/lib/analytics";
 import { Segmented } from "@/components/ui";
 import { type MapTrends, type MapValue, ROOM_TYPES, type RoomType } from "@/lib/api";
 import { formatEuro } from "@/lib/format";
@@ -111,8 +110,7 @@ export function Explore() {
     [rows, scope, metric],
   );
 
-  function select(code: string | null, source?: "map" | "search") {
-    if (code && source) track({ type: "area", postal_code: code, room_type: roomType, source, metric });
+  function select(code: string | null) {
     setSelected(code);
     router.replace(code ? `${href("/explore")}?postal=${code}&rooms=${roomType}` : href("/explore"), { scroll: false });
   }
@@ -125,7 +123,7 @@ export function Explore() {
         cuts={cuts}
         scope={scope}
         selected={selected}
-        onSelect={(code) => select(code, "map")}
+        onSelect={(code) => select(code)}
         onHover={setHover}
         onReady={() => setShown(true)}
         padding={padding}
@@ -133,7 +131,7 @@ export function Explore() {
 
       <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex flex-col gap-2 sm:inset-x-4 sm:top-4 sm:w-[360px]">
         <div className="pointer-events-auto space-y-2.5 rounded-xl bg-paper p-2.5 shadow-float">
-          <PostalCodeSearch onChange={(area) => select(area.postal_code, "search")} />
+          <PostalCodeSearch onChange={(area) => select(area.postal_code)} />
           <Segmented
             label={t.map.colourBy}
             size="sm"

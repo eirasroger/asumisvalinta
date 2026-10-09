@@ -10,9 +10,8 @@ from typing import Annotated, Any, Literal
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request, Response
 from fastapi import Path as PathParam
-from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
+from pydantic import BaseModel, Field
 
 from asumisvalinta.api import addresses, analytics, conversation, throttle, usage
 from asumisvalinta.api.limits import LimitReached, QuestionLimits
@@ -359,52 +358,9 @@ def ask(
     }
 
 
-class AreaEvent(BaseModel):
-    """An area someone chose, on the map, in search or on the comparison page."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    type: Literal["area"]
-    postal_code: str = Field(pattern=POSTAL_CODE)
-    room_type: RoomType
-    source: Literal["map", "search", "compare"]
-    metric: Literal["price", "rent", "ratio"] | None = None
-    visit: str | None = Field(default=None, pattern=VISIT_ID)
-
-
-class ScenarioEvent(BaseModel):
-    """A comparison someone looked at: the flat, the numbers they changed and the result."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    type: Literal["scenario"]
-    postal_code: str = Field(pattern=POSTAL_CODE)
-    room_type: RoomType
-    size_m2: float = Field(gt=0, le=500)
-    building_year: int | None = Field(default=None, ge=1800, le=2035)
-    horizon_years: int = Field(ge=1, le=30)
-    own_numbers: dict[str, float] = Field(max_length=10)
-    assumptions: dict[str, float | str | bool] = Field(max_length=25)
-    best_option: Literal["buy", "rent", "aso"]
-    end_wealth: dict[str, float] = Field(max_length=3)
-    updates: int = Field(default=1, ge=1, le=10_000)
-    visit: str | None = Field(default=None, pattern=VISIT_ID)
-
-
-Event = TypeAdapter(Annotated[AreaEvent | ScenarioEvent, Field(discriminator="type")])
-
-
-@app.post("/api/events", status_code=204)
-async def events(http: Request, background: BackgroundTasks) -> Response:
-    """Record an anonymous usage event, at most one of each type per client every few seconds."""
-    try:
-        event = Event.validate_json(await http.body())
-    except ValidationError as error:
-        errors = error.errors(include_url=False, include_context=False)
-        raise RequestValidationError(errors) from error
-    payload = event.model_dump(exclude={"type"})
-    background.add_task(_record_event, throttle.client_ip(http), event.type, payload)
-    return Response(status_code=204)
+def _opted_out(http: Request) -> bool:
+    """True when the browser sends Do Not Track or Global Privacy Control."""
+    return http.headers.get("sec-gpc") == "1" or http.headers.get("dnt") == "1"
 
 
 def _record_event(ip: str, event_type: str, payload: dict[str, Any]) -> None:
@@ -543,8 +499,20 @@ def _variant(scenario: ScenarioInput, key: str) -> ScenarioInput:
 
 
 @app.post("/api/planner/run")
-def planner_run(scenario: ScenarioInput, lang: Language = "en") -> dict[str, Any]:
-    """Run the scenario as given, plus what-if variants of it."""
+def planner_run(
+    scenario: ScenarioInput,
+    http: Request,
+    background: BackgroundTasks,
+    lang: Language = "en",
+    postal_code: Annotated[str | None, Query(pattern=POSTAL_CODE)] = None,
+    room_type: RoomType | None = None,
+    building_year: Annotated[int | None, Query(ge=1800, le=2035)] = None,
+) -> dict[str, Any]:
+    """Run the scenario as given, plus what-if variants of it.
+
+    The flat is given only to record the run as an anonymous usage event, at most one per client
+    every few seconds and none when the browser asks not to be tracked.
+    """
     try:
         result = simulate(scenario)
         what_ifs = []
@@ -560,6 +528,17 @@ def planner_run(scenario: ScenarioInput, lang: Language = "en") -> dict[str, Any
             )
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
+    if postal_code and room_type and not _opted_out(http):
+        options = sorted(result.options, key=lambda option: option.end_wealth, reverse=True)
+        payload = {
+            "postal_code": postal_code,
+            "room_type": room_type,
+            "building_year": building_year,
+            "scenario": scenario.model_dump(mode="json"),
+            "best_option": options[0].option,
+            "end_wealth": {option.option: round(option.end_wealth) for option in options},
+        }
+        background.add_task(_record_event, throttle.client_ip(http), "scenario", payload)
     return {
         "result": result.model_dump(),
         "monthly_costs": _monthly_costs(result),

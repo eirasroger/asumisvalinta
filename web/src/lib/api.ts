@@ -285,12 +285,20 @@ export const api = {
     if (params.building_year) query.set("building_year", String(params.building_year));
     return request<PlannerStart>(`/api/planner/start?${query}`, { signal });
   },
-  plannerRun: (scenario: ScenarioInput, lang: Locale, signal?: AbortSignal) =>
-    request<PlannerRun>(`/api/planner/run?lang=${lang}`, {
+  plannerRun: (
+    scenario: ScenarioInput,
+    flat: { postal_code: string; room_type: RoomType; building_year: number | null },
+    lang: Locale,
+    signal?: AbortSignal,
+  ) => {
+    const query = new URLSearchParams({ lang, postal_code: flat.postal_code, room_type: flat.room_type });
+    if (flat.building_year) query.set("building_year", String(flat.building_year));
+    return request<PlannerRun>(`/api/planner/run?${query}`, {
       method: "POST",
       body: JSON.stringify(scenario),
       signal,
-    }),
+    });
+  },
   ask: (question: string, sessionId: string, lang: Locale, consent: boolean, history: AskTurn[]) =>
     request<AskResponse>(`/api/ask?lang=${lang}`, {
       method: "POST",

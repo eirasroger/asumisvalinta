@@ -303,7 +303,7 @@ export const fi: Messages = {
     question: "Kysymyksesi",
     placeholder: "Esimerkiksi: mikä on yksiöiden keskimääräinen neliövuokra Oulussa?",
     consent:
-      "Kysymykset käsittelee tekoälypalvelun tarjoaja, ja niitä voidaan käyttää sen mallien kouluttamiseen. Älä kirjoita kysymyksiin henkilötietoja.",
+      "Kysymykset käsittelee tekoälypalvelun tarjoaja, ja niitä voidaan käyttää sen mallien kouluttamiseen. Kysymykset säilytetään kaksitoista kuukautta palvelun kehittämiseksi. Älä kirjoita kysymyksiin henkilötietoja.",
     agree: "Hyväksyn",
     personal: "Älä kirjoita henkilötietoja.",
     privacy: "Tietosuoja",
